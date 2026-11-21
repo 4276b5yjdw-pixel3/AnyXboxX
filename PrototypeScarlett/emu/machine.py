@@ -40,6 +40,8 @@ class Machine:
         self.c_locale = None
         self.ctype_table = None
         self.locale_names = None
+        self.crt_cells = {}
+        self.exception_filter = 0
         self._next_handle = FIRST_HANDLE
         self._pending = None
         self._fault = None

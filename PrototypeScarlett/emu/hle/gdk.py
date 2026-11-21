@@ -14,6 +14,7 @@ DEVICE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 SANDBOX = "RETAIL"
 OS_VERSION = (10, 0, 25398, 4908)
 FAMILY_FIELD = 64
+E_NOINTERFACE = 0x80004002
 
 
 @hle("gdk")
@@ -30,6 +31,35 @@ def runtime_initialize(c):
 @hle("gdk")
 def XGameRuntimeUninitialize(c):
     c.machine.runtime_ready = False
+
+
+# --- Interface interne de xgameruntime.dll utilisée par les titres GDK PC ---------
+# Sur PC, xgameruntime.lib charge la DLL puis passe par ces fonctions : chaque API
+# X* demande une interface à QueryApiImpl. Observé sur l'échantillon MIT
+# SimpleTriangleDesktop ; les interfaces elles-mêmes ne sont pas encore émulées.
+
+@hle("gdk", "InitializeApiImpl", "InitializeApiImplEx", "InitializeApiImplEx2")
+def initialize_api(c):
+    c.machine.runtime_ready = True
+    return S_OK
+
+
+@hle("gdk")
+def UninitializeApiImpl(c):
+    c.machine.runtime_ready = False
+
+
+@hle("gdk")
+def QueryApiImpl(c):
+    """QueryApiImpl(fournisseur, interface, void** sortie) : aucune interface fournie."""
+    if c.arg(2):
+        c.write_u64(c.arg(2), 0)
+    return E_NOINTERFACE
+
+
+@hle("gdk")
+def XErrorReport(c):
+    c.machine.log(f"[XErrorReport] code {c.arg(0) & 0xFFFF_FFFF:#x}")
 
 
 @hle("gdk")

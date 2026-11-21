@@ -21,18 +21,18 @@ class BenchRow:
     detail: str
 
 
-def run_one(path):
-    """Charge `path` avec ses DLL du même dossier, initialise le tout, puis le module.
+def run_one(path, extra_dirs=()):
+    """Charge `path` avec ses DLL (même dossier puis `extra_dirs`), initialise le tout.
 
     Une DLL réussit si son DllMain renvoie TRUE ; un exécutable, s'il se termine
     sans erreur.
     """
     try:
-        report = analyse(path)
+        report = analyse(path, extra_dirs)
     except ERRORS as error:
         return BenchRow(path.name, 0, 0.0, False, False, f"analyse : {error}")
     try:
-        machine = Machine(path)
+        machine = Machine(path, search_dirs=(path.parent, *extra_dirs))
     except ERRORS as error:
         return BenchRow(path.name, report.total, report.coverage, False, False, str(error))
     try:
@@ -50,10 +50,10 @@ def run_one(path):
     return BenchRow(path.name, report.total, report.coverage, True, ok, detail)
 
 
-def run(folder):
+def run(folder, extra_dirs=()):
     paths = sorted({p for pattern in PATTERNS for p in folder.glob(pattern)},
                    key=lambda p: p.name.lower())
-    return tuple(run_one(path) for path in paths if path.is_file())
+    return tuple(run_one(path, extra_dirs) for path in paths if path.is_file())
 
 
 def table(rows):
