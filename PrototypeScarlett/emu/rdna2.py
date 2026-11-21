@@ -128,12 +128,21 @@ def histogram(instructions):
     return dict(sorted(Counter(i.family for i in instructions).items()))
 
 
+RAW_COLUMN = 27     # trois mots de 32 bits en hexadécimal
+
+
 def listing(data):
-    """Une ligne par instruction : décalage, mnémonique (ou famille et opcode), mots bruts."""
+    """Une ligne par instruction : décalage, mots bruts, puis l'instruction au format de LLVM
+    (opérandes compris pour les familles scalaires et VOP1/VOP2/VOPC), sinon son mnémonique."""
+    from emu import rdna2_operands
+
     lines = []
     for instruction in decode(data):
         raw = struct.unpack_from(f"<{instruction.size}I", data, instruction.offset)
         name = mnemonic(instruction.family, instruction.opcode)
         label = name or f"{instruction.family.lower()}_op_0x{instruction.opcode:X}"
-        lines.append(f"{instruction.offset:06X}  {label:28} {' '.join(f'{w:08X}' for w in raw)}")
+        if instruction.family in rdna2_operands.FAMILIES:
+            label = rdna2_operands.text(data, instruction.offset) or label
+        words = " ".join(f"{w:08X}" for w in raw)
+        lines.append(f"{instruction.offset:06X}  {words:{RAW_COLUMN}} {label}")
     return lines

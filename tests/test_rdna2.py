@@ -1,7 +1,7 @@
 """Décodeur des encodages RDNA 2 (GPU de la Xbox Series X), d'après la documentation publique d'AMD."""
 import struct
 
-from emu import rdna2
+from emu import rdna2, rdna2_operands
 
 
 def words(*values):
@@ -81,5 +81,32 @@ def test_mnemonics_come_from_the_rdna2_table():
 def test_listing_names_each_instruction():
     program = words(0x7E000301, 0xBE8003FF, 0x12345678, 0xBF810000, 0xFFFFFFFF)
     lines = rdna2.listing(program)
-    assert [line.split()[1] for line in lines] == ["v_mov_b32", "s_mov_b32", "s_endpgm", "inconnue_op_0x0"]
-    assert lines[1].split()[2:] == ["BE8003FF", "12345678"]
+    assert [line[36:] for line in lines] == ["v_mov_b32 v0, v1", "s_mov_b32 s0, 0x12345678", "s_endpgm",
+                                             "inconnue_op_0x0"]
+    assert lines[1].split()[1:3] == ["BE8003FF", "12345678"]
+
+
+def test_operands_follow_llvm_syntax():
+    text = rdna2_operands.text
+    assert text(words(0xBE800301)) == "s_mov_b32 s0, s1"
+    assert text(words(0xBE8004FF, 0x12345678)) == "s_mov_b64 s[0:1], 0x12345678"
+    assert text(llvm(0x01, 0x02, 0x7F, 0x80)) == "s_add_u32 exec_hi, s1, s2"
+    assert text(llvm(0xC1, 0x02, 0x00, 0x80)) == "s_add_u32 s0, -1, s2"            # constante entière en ligne
+    assert text(llvm(0xF0, 0x02, 0x0A, 0x7E)) == "v_mov_b32 v5, 0.5"               # constante flottante en ligne
+    assert text(llvm(0x01, 0x05, 0x0A, 0x30)) == "v_ashrrev_i32 v5, v1, v2"
+    assert text(llvm(0x01, 0x07, 0x0A, 0x58, 0x41, 0x31, 0x21, 0x11)) == "v_fmamk_f32 v5, v1, 0x11213141, v3"
+    assert text(words(0x7C040501)) == "v_cmp_eq_f32 vcc_lo, v1, v2"            # VOPC, vcc implicite
+
+
+def test_symbolic_immediates():
+    assert rdna2_operands.waitcnt(0x1234) == "vmcnt(4) expcnt(3) lgkmcnt(18)"
+    assert rdna2_operands.waitcnt(0x0000) == "vmcnt(0) expcnt(0) lgkmcnt(0)"
+    assert rdna2_operands.hwreg(0x1234) == "hwreg(52, 8, 3)"
+    assert rdna2_operands.hwreg(0xF81D) == "hwreg(HW_REG_SHADER_CYCLES)"
+    assert rdna2_operands.immediate(64, "auto") == "64" and rdna2_operands.immediate(65, "auto") == "0x41"
+
+
+def test_implicit_vcc_and_scalar_destination():
+    text = rdna2_operands.text
+    assert text(llvm(0x01, 0x05, 0x0A, 0x02)) == "v_cndmask_b32 v5, v1, v2, vcc_lo"    # vcc implicite (wave32)
+    assert text(llvm(0x01, 0x05, 0x0A, 0x7E)) == "v_readfirstlane_b32 s5, v1"          # sdst dans le champ vdst

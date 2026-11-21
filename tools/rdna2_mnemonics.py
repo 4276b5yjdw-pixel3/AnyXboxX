@@ -17,21 +17,36 @@ sys.path.insert(0, str(ROOT / "PrototypeScarlett"))
 from emu import rdna2  # noqa: E402
 
 OUTPUT = ROOT / "PrototypeScarlett" / "emu" / "rdna2_ops.py"
-LINE = re.compile(r"^\s*(?://|;)\s*[A-Z0-9_,]*?:\s+([a-z][a-z0-9_]*)\b.*?encoding:\s*\[([^\]]*)\]")
+ENCODING = re.compile(r"^\s*(?://|;)\s*([A-Z0-9_,-]*?):\s*(.*?)\s*;?\s*encoding:\s*\[([^\]]*)\]")
 SUFFIX = re.compile(r"_(e32|e64|sdwa|dpp|dpp8)$")
 RDNA2_FILE = "gfx1030"
 # Les opcodes VOP3 reprennent VOPC (0x000), VOP2 (0x100) et VOP1 (0x180).
 VOP3_BASES = (("VOPC", 0x000, 0x100), ("VOP2", 0x100, 0x40), ("VOP1", 0x180, 0x80))
 
 
+def llvm_lines(folder):
+    """(fichier, préfixe, instruction, octets) de chaque ligne d'encodage des tests LLVM.
+
+    Quand le commentaire ne contient que l'encodage (« // W32: encoding: [...] »),
+    l'instruction est la dernière ligne source qui le précède."""
+    for path in sorted(Path(folder).glob("*.s")):
+        source = ""
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith(("//", ";", ".")):
+                source = stripped.split("//")[0].strip()
+                continue
+            match = ENCODING.match(line)
+            if match:
+                data = bytes(int(b, 16) for b in match.group(3).split(","))
+                yield path.name, match.group(1), match.group(2) or source, data
+
+
 def read_encodings(folder):
     """(fichier, mnémonique, octets) de chaque ligne d'encodage des tests LLVM."""
-    for path in sorted(Path(folder).glob("*.s")):
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            match = LINE.match(line)
-            if match:
-                data = bytes(int(b, 16) for b in match.group(2).split(","))
-                yield path.name, SUFFIX.sub("", match.group(1)), data
+    for name, _, instruction, data in llvm_lines(folder):
+        if instruction and instruction[0].isalpha():
+            yield name, SUFFIX.sub("", instruction.split()[0].rstrip(",")), data
 
 
 def collect(folder):
