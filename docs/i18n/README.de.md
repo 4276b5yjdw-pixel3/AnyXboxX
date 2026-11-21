@@ -14,16 +14,20 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 | PE32+-Laden: Sektionen und Schutzattribute, Relokationen, Importe, Exporte | ✅ erledigt |
 | TLS: Kopie der Vorlage, Index, Callbacks | ✅ erledigt |
 | TEB und PEB über das GS-Register erreichbar | ✅ erledigt |
-| HLE-Seite: 135 emulierte Funktionsnamen aus GDK, Kernel, CRT und Mathematik | ✅ erledigt |
+| HLE-Seite: 158 emulierte Funktionsnamen aus GDK, Kernel, CRT und Mathematik | ✅ erledigt |
 | Unbekannte Funktionen: `E_NOTIMPL` und Protokolleintrag statt Ablehnung | ✅ erledigt |
 | Globale C++-Konstruktoren (`_initterm`) als Gast-Code | ✅ erledigt |
 | Kompatibilitätsbericht (`--rapport`) und Prüfstand (`--banc`) | ✅ erledigt |
-| 16/16 DLLs eines handelsüblichen Scarlett-Pakets initialisiert (`DllMain` → `TRUE`) | ✅ erledigt |
-| 49 automatisierte Tests, 82 % Abdeckung | ✅ erledigt |
-| Laden mehrerer verknüpfter Module in derselben Maschine | ⏳ offen |
-| Freies Beispiel `Xbox-GDK-Samples` kompiliert und zum Prüfstand hinzugefügt | ⏳ offen |
+| Mehrere verknüpfte Module in derselben Maschine: DLLs des Pakets, Ordinale, Weiterleitungen, Relokation bei Konflikten | ✅ erledigt |
+| `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ erledigt |
+| 16/16 DLLs eines Scarlett-Pakets samt Abhängigkeiten initialisiert, 0 nicht emulierte Aufrufe | ✅ erledigt |
+| Freies Testspiel `SimpleTriangle` kompiliert: C-Start und GDK-Initialisierung laufen in AnyXboxX | ✅ erledigt |
+| Native Ausführung nach Wine-Art (`--natif`): **SimpleTriangle wird angezeigt**, GDK-Runtime von AnyXboxX bereitgestellt | ✅ erledigt |
+| 79 automatisierte Tests, 83 % Abdeckung | ✅ erledigt |
+| Übersetzung von D3D12.X (`d3d12_xs.dll`) und `kernelx.dll` für Konsolen-Binärdateien | ⏳ offen |
+| Schnittstellen der GDK-Runtime hinter `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ offen |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
-| Laden der zusätzlichen DLLs des Pakets | ⏳ offen |
+| Dynamisches Laden einer DLL zur Laufzeit (`LoadLibrary` + `DllMain`) | ⏳ offen |
 | D3D12.X-Grafik nach Direct3D 12 / Vulkan | ⏳ offen |
 | Audio, Controller, `XGameSave`-Spielstände | ⏳ offen |
 
@@ -50,6 +54,16 @@ py -3.12 -m venv .venv
 
 Das kompilierte Demoprogramm ist `PrototypeScarlett/demo.pe`; sein Quellcode ist `PrototypeScarlett/demo.c`.
 
+## Ein Spiel im nativen Modus starten
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
+```
+
+![SimpleTriangle, von AnyXboxX im nativen Modus gestartet](../images/simpletriangle-anyxboxx.png)
+
+AnyXboxX lädt die Programmdatei selbst und führt sie direkt auf dem Prozessor aus, wie Wine. Die Xbox-Runtime (`xgameruntime.dll`) wird von AnyXboxX bereitgestellt; das Fenster und DirectX 12 stammen vom PC. **Achtung: Im nativen Modus ist das Programm nicht isoliert.** Verwende diesen Modus nur für vertrauenswürdige Programme; `--rapport` und `--banc` bleiben in Unicorn isoliert. `ANYXBOXX_TRACE=1` zeigt die abgefangenen Aufrufe an. Details: [docs/jeu-de-test.md](../jeu-de-test.md) (auf Französisch).
+
 ## Ein Programm analysieren
 
 ```powershell
@@ -64,7 +78,7 @@ Der Prüfstand lädt alle PE-Module eines Ordners und führt deren Initialisieru
 
 ![Prüfstand für die DLLs eines Scarlett-Pakets](../images/banc-dll.svg)
 
-Detaillierte Ergebnisse und die Wahl eines freien Spiels für die Tests: [docs/avancee.md](../avancee.md) (auf Französisch).
+Detaillierte Ergebnisse: [docs/avancee.md](../avancee.md) (auf Französisch). Freies Testspiel im Vergleich zu seiner nativen Ausführung: [docs/jeu-de-test.md](../jeu-de-test.md) (auf Französisch). Ein zusätzlicher DLL-Ordner (zum Beispiel die Visual-C++-DLLs) kann auf das Ziel folgen: `--rapport <cible> <dossier>`.
 
 Der Bericht listet die importierten Funktionen, den bereits emulierten Anteil in Prozent und die fehlenden Funktionen auf. In der Oberfläche liest die Schaltfläche **Ouvrir un dossier Xbox…** (Xbox-Ordner öffnen) die Datei `MicrosoftGame.Config`, zeigt diesen Bericht an und startet dann das Programm; jeder nicht emulierte Aufruf erscheint im Protokoll.
 
@@ -79,7 +93,9 @@ Der Bericht listet die importierten Funktionen, den bereits emulierten Anteil in
 | `emu/machine.py` | Unicorn-Prozessor, Stack, Heap, TEB/PEB, Verteilung der Aufrufe |
 | `emu/hle/` | emulierte Funktionen: `gdk.py`, `kernel.py`, `crt.py`, `libm.py`, `guest.py` |
 | `emu/report.py` | Kompatibilitätsbericht |
+| `emu/modules.py` | lädt die DLLs des Pakets, bindet die Importe und ordnet die Initialisierungen |
 | `emu/bench.py` | Prüfstand für einen Ordner mit Modulen |
+| `emu/native/` | native Ausführung nach Wine-Art: Loader, echte Importe, GDK-Runtime von AnyXboxX |
 | `scarlett.py` | Tkinter-Oberfläche und Kommandozeile |
 
 Um eine Funktion hinzuzufügen, dekoriere einen Handler in `emu/hle/`:

@@ -1,4 +1,5 @@
 """Machine émulée : processeur Unicorn, mémoire, TEB/PEB et répartition HLE."""
+from pathlib import Path
 import struct
 import time
 
@@ -7,8 +8,8 @@ from unicorn.x86_const import UC_X86_REG_GS_BASE, UC_X86_REG_RAX, UC_X86_REG_RIP
 
 from . import hle
 from .hle.core import ARG_REGISTERS, MASK64
-from .loader import read_pe
 from .memory import PAGE, RW, RX, STACK, STACK_SIZE, SYSTEM, THUNK_PAGES, THUNKS, Heap
+from .modules import ModuleSet
 
 SLOT = 64                       # taille d'une entrée de la page HLE
 TIMEOUT_US = 2_000_000
@@ -22,7 +23,7 @@ TLS_ALIGNMENT = 64  # couvre alignas(64) ; le PE peut demander moins
 
 
 class Machine:
-    def __init__(self, path, title_id=0, log=None):
+    def __init__(self, path, title_id=0, log=None, search_dirs=None):
         self.cpu = Uc(UC_ARCH_X86, UC_MODE_64)
         self.heap = Heap(self.cpu)
         self.title_id = title_id
@@ -39,15 +40,21 @@ class Machine:
         self.c_locale = None
         self.ctype_table = None
         self.locale_names = None
+        self.crt_cells = {}
+        self.exception_filter = 0
         self._next_handle = FIRST_HANDLE
         self._pending = None
         self._fault = None
         self.exit_code = None
 
-        self.image, protections = read_pe(path, self.cpu)
+        self.system_modules = {}           # pseudo-handle → nom de DLL système
+        self._map_thunks()
+        path = Path(path)
+        self.modules = ModuleSet(self.cpu, search_dirs or (path.parent,),
+                                 self.thunk_for, self._protect_image)
+        self.main = self.modules.load(path)
+        self.image = self.main.image
         self.image_base = self.image.base
-        self._protect_image(protections)
-        self._build_thunks()
         self._build_system()
         self._init_tls()
         self.cpu.hook_add(UC_HOOK_CODE, self._on_thunk, begin=THUNKS,
@@ -56,37 +63,39 @@ class Machine:
 
     # --- Construction -------------------------------------------------------
 
-    def _protect_image(self, protections):
+    def _protect_image(self, image, protections):
         start = 0
         for index in range(1, len(protections) + 1):
             if index == len(protections) or protections[index] != protections[start]:
-                self.cpu.mem_protect(self.image.base + start * PAGE,
+                self.cpu.mem_protect(image.base + start * PAGE,
                                      (index - start) * PAGE, protections[start])
                 start = index
 
-    def _build_thunks(self):
-        """Place une entrée HLE par fonction importée et remplit l'IAT."""
-        size = THUNK_PAGES * PAGE
-        self.cpu.mem_map(THUNKS, size, RW)
+    def _map_thunks(self):
+        """Page HLE en lecture-exécution ; les entrées sont écrites à la demande."""
+        self.cpu.mem_map(THUNKS, THUNK_PAGES * PAGE, RX)
         self.stop = THUNKS                      # entrée 0 : retour vers l'émulateur
         self.cpu.mem_write(self.stop, b"\xc3")
         self.handlers = {}
         self.statuses = {}
-        slots = {}
-        for item in self.image.imports:
-            key = (item.dll.lower(), item.name)
-            if key not in slots:
-                if len(slots) + 1 >= size // SLOT:
-                    raise ValueError("Trop de fonctions importées pour la page HLE.")
-                address = THUNKS + (len(slots) + 1) * SLOT
-                kind, value = hle.resolve(item.dll, item.name)
-                self.cpu.mem_write(address, value if kind == "code" else b"\xc3")
-                if kind != "code":
-                    self.handlers[address] = (f"{item.dll}!{item.name}", value)
-                slots[key] = address
-                self.statuses[f"{item.dll}!{item.name}"] = kind
-            self.cpu.mem_write(item.slot, struct.pack("<Q", slots[key]))
-        self.cpu.mem_protect(THUNKS, size, RX)
+        self._slots = {}
+
+    def thunk_for(self, dll, name):
+        """Adresse de l'entrée HLE de `dll!name`, créée au premier besoin."""
+        key = (dll.lower(), name)
+        address = self._slots.get(key)
+        if address is not None:
+            return address
+        if len(self._slots) + 1 >= THUNK_PAGES * PAGE // SLOT:
+            raise ValueError("Trop de fonctions importées pour la page HLE.")
+        address = THUNKS + (len(self._slots) + 1) * SLOT
+        kind, value = hle.resolve(dll, name)
+        self.cpu.mem_write(address, value if kind == "code" else b"\xc3")
+        if kind != "code":
+            self.handlers[address] = (f"{dll}!{name}", value)
+        self._slots[key] = address
+        self.statuses[f"{dll}!{name}"] = kind
+        return address
 
     def _build_system(self):
         self.cpu.mem_map(STACK, STACK_SIZE, RW)
@@ -102,9 +111,16 @@ class Machine:
         self.cpu.reg_write(UC_X86_REG_GS_BASE, TEB)
 
     def _init_tls(self):
-        tls = self.image.tls
-        if tls is None:
-            return
+        """Un bloc TLS par module qui en déclare, à l'index suivant du tableau."""
+        index = 0
+        for module in self.modules.modules.values():
+            if module.image.tls is not None:
+                if index >= TLS_SLOTS:
+                    raise ValueError("Trop de modules avec stockage TLS.")
+                self._init_module_tls(module.image.tls, index)
+                index += 1
+
+    def _init_module_tls(self, tls, index):
         template = b""
         if tls.template_end > tls.template_start:
             template = bytes(self.cpu.mem_read(tls.template_start,
@@ -114,9 +130,9 @@ class Machine:
             raise ValueError("Mémoire insuffisante pour le bloc TLS.")
         if template:
             self.cpu.mem_write(block, template)
-        self.cpu.mem_write(self.tls_array, struct.pack("<Q", block))
+        self.cpu.mem_write(self.tls_array + 8 * index, struct.pack("<Q", block))
         if tls.index_address:
-            self.cpu.mem_write(tls.index_address, struct.pack("<I", 0))
+            self.cpu.mem_write(tls.index_address, struct.pack("<I", index))
 
     # --- Hooks --------------------------------------------------------------
 
@@ -198,9 +214,28 @@ class Machine:
         return self.cpu.reg_read(UC_X86_REG_RAX)
 
     def start(self):
-        """Lance les callbacks TLS puis le point d'entrée."""
-        for callback in self.image.tls.callbacks if self.image.tls else ():
-            self.call(callback, self.image.base, DLL_PROCESS_ATTACH, 0)
+        """Initialise les dépendances puis lance le module principal.
+
+        Pour une DLL principale, renvoie le résultat de DllMain ; pour un
+        exécutable, la valeur de retour de son point d'entrée.
+        """
+        result = 0
+        for module in self.modules.init_order(self.main):
+            result = self._initialise(module)
             if self.exit_code is not None:
                 return self.exit_code
-        return self.call(self.image.entry)
+            if module is not self.main and module.image.is_dll and result & 0xFFFF_FFFF != 1:
+                raise ValueError(f"{module.name} : DllMain a renvoyé FALSE, chargement annulé.")
+        return result
+
+    def _initialise(self, module):
+        image = module.image
+        for callback in image.tls.callbacks if image.tls else ():
+            self.call(callback, image.base, DLL_PROCESS_ATTACH, 0)
+            if self.exit_code is not None:
+                return self.exit_code
+        if not image.entry:
+            return 1                       # DLL sans DllMain
+        if image.is_dll:
+            return self.call(image.entry, image.base, DLL_PROCESS_ATTACH, 0)
+        return self.call(image.entry)

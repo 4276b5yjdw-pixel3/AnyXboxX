@@ -14,16 +14,20 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 | PE32+ の読み込み：セクションと保護属性、リロケーション、インポート、エクスポート | ✅ 完了 |
 | TLS：テンプレートのコピー、インデックス、コールバック | ✅ 完了 |
 | GS レジスタ経由で TEB と PEB にアクセス可能 | ✅ 完了 |
-| HLE ページ：GDK、カーネル、CRT、数学関数の 135 個の関数名をエミュレート | ✅ 完了 |
+| HLE ページ：GDK、カーネル、CRT、数学関数の 158 個の関数名をエミュレート | ✅ 完了 |
 | 未知の関数：拒否せず `E_NOTIMPL` を返しログに記録 | ✅ 完了 |
 | グローバル C++ コンストラクター（`_initterm`）をゲストコードで実行 | ✅ 完了 |
 | 互換性レポート（`--rapport`）とテストベンチ（`--banc`） | ✅ 完了 |
-| 市販の Scarlett パッケージの 16/16 個の DLL を初期化（`DllMain` → `TRUE`） | ✅ 完了 |
-| 49 件の自動テスト、カバレッジ 82 % | ✅ 完了 |
-| リンクされた複数のモジュールを同一のマシンに読み込む | ⏳ 未着手 |
-| フリーのサンプル `Xbox-GDK-Samples` をコンパイルしてベンチに追加 | ⏳ 未着手 |
+| リンクされた複数のモジュールを同一のマシンで実行：パッケージの DLL、序数、フォワーダー、競合時のリロケーション | ✅ 完了 |
+| `GetModuleHandle`、`GetProcAddress`、`LoadLibrary`、`RtlPcToFileHeader` | ✅ 完了 |
+| Scarlett パッケージの 16/16 個の DLL を依存関係ごと初期化、未エミュレートの呼び出しは 0 件 | ✅ 完了 |
+| フリーのテストゲーム `SimpleTriangle` をコンパイル：C のスタートアップと GDK の初期化が AnyXboxX で通る | ✅ 完了 |
+| Wine 方式のネイティブ実行（`--natif`）：**SimpleTriangle が表示される**、GDK ランタイムは AnyXboxX が提供 | ✅ 完了 |
+| 79 件の自動テスト、カバレッジ 83 % | ✅ 完了 |
+| コンソール用バイナリ向けの D3D12.X（`d3d12_xs.dll`）と `kernelx.dll` の変換 | ⏳ 未着手 |
+| `QueryApiImpl` の背後にある GDK ランタイムのインターフェース（`XUser`、`XTaskQueue`…） | ⏳ 未着手 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
-| パッケージ付属 DLL の読み込み | ⏳ 未着手 |
+| 実行中の DLL の動的読み込み（`LoadLibrary` + `DllMain`） | ⏳ 未着手 |
 | D3D12.X から Direct3D 12 / Vulkan へのグラフィックス変換 | ⏳ 未着手 |
 | オーディオ、コントローラー、`XGameSave` セーブデータ | ⏳ 未着手 |
 
@@ -50,6 +54,16 @@ py -3.12 -m venv .venv
 
 コンパイル済みのデモプログラムは `PrototypeScarlett/demo.pe` で、ソースコードは `PrototypeScarlett/demo.c` です。
 
+## ネイティブモードでゲームを起動する
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
+```
+
+![AnyXboxX のネイティブモードで起動した SimpleTriangle](../images/simpletriangle-anyxboxx.png)
+
+AnyXboxX は実行ファイル自体を読み込み、Wine と同じようにプロセッサ上で直接実行します。Xbox ランタイム（`xgameruntime.dll`）は AnyXboxX が提供し、ウィンドウと DirectX 12 は PC のものを使います。**注意：ネイティブモードではプログラムは隔離されません。** このモードは信頼できるプログラムにのみ使ってください。`--rapport` と `--banc` は引き続き Unicorn 内で隔離されます。`ANYXBOXX_TRACE=1` を指定すると、傍受した呼び出しが表示されます。詳細：[docs/jeu-de-test.md](../jeu-de-test.md)（フランス語）。
+
 ## プログラムを解析する
 
 ```powershell
@@ -64,7 +78,7 @@ py -3.12 -m venv .venv
 
 ![Scarlett パッケージの DLL に対するテストベンチ](../images/banc-dll.svg)
 
-詳細な結果とテスト用のフリーゲームの選定：[docs/avancee.md](../avancee.md)（フランス語）。
+詳細な結果：[docs/avancee.md](../avancee.md)（フランス語）。ネイティブ実行と比較したフリーのテストゲーム：[docs/jeu-de-test.md](../jeu-de-test.md)（フランス語）。追加の DLL フォルダー（例：Visual C++ の DLL）をターゲットの後ろに指定できます：`--rapport <cible> <dossier>`。
 
 レポートには、インポートされた関数、すでにエミュレートされている割合、不足している関数が一覧表示されます。インターフェースでは、**Ouvrir un dossier Xbox…**（Xbox フォルダーを開く）ボタンが `MicrosoftGame.Config` を読み取り、このレポートを表示してからプログラムを起動します。エミュレートされていない呼び出しはすべてログに表示されます。
 
@@ -79,7 +93,9 @@ py -3.12 -m venv .venv
 | `emu/machine.py` | Unicorn プロセッサ、スタック、ヒープ、TEB/PEB、呼び出しの振り分け |
 | `emu/hle/` | エミュレートされた関数：`gdk.py`、`kernel.py`、`crt.py`、`libm.py`、`guest.py` |
 | `emu/report.py` | 互換性レポート |
+| `emu/modules.py` | パッケージの DLL を読み込み、インポートをリンクし、初期化の順序を決める |
 | `emu/bench.py` | モジュールのフォルダーに対するテストベンチ |
+| `emu/native/` | Wine 方式のネイティブ実行：ローダー、実際のインポート、AnyXboxX の GDK ランタイム |
 | `scarlett.py` | Tkinter インターフェースとコマンドライン |
 
 関数を追加するには、`emu/hle/` のハンドラーにデコレーターを付けます。

@@ -13,13 +13,17 @@ Cas de test utilisés :
 
 ## Résultats sur les 16 DLL
 
-![Part des imports émulés par module](images/banc-dll.svg)
+![Part des imports résolus par module](images/banc-dll.svg)
 
-| Version | Modules chargés | `DllMain` réussi | Imports émulés |
-|---|---|---|---|
-| Première version (un seul import GDK accepté) | 0/16 | 0/16 | 1 fonction |
-| Couche HLE, première passe | 16/16 | 4/16 | non mesuré |
-| Ajout de `_initialize_onexit_table`, `IsProcessorFeaturePresent`, locale, maths | 16/16 | **16/16** | **523/1337 (39 %)** |
+| Version | Modules chargés | `DllMain` réussi | Imports résolus | Appels non émulés |
+|---|---|---|---|---|
+| Première version (un seul import GDK accepté) | 0/16 | 0/16 | 1 fonction | — |
+| Couche HLE, première passe | 16/16 | 4/16 | non mesuré | — |
+| Ajout de `_initialize_onexit_table`, `IsProcessorFeaturePresent`, locale, maths | 16/16 | 16/16 | 523/1337 (39 %) | 7 |
+| Plusieurs modules liés : chaque DLL charge ses dépendances du paquet | 16/16 | 16/16 | 782/1337 (58 %) | 0 |
+| Démarrage d'un `.exe`, texte du CRT, événements, interface GDK PC | 16/16 | **16/16** | **871/1337 (65 %)** | **0** |
+
+Un import est **résolu** quand il pointe vers une fonction émulée en Python ou vers l'export d'une autre DLL du paquet. Depuis le chargement multi-modules, `msvcp140.dll` tourne avec le vrai `vcruntime140.dll` du paquet, et `concrt140.dll` avec le vrai `msvcp140.dll`.
 
 Fonctions qui ont débloqué le plus de modules :
 
@@ -30,7 +34,23 @@ Fonctions qui ont débloqué le plus de modules :
 | `setlocale`, `__pctype_func`, `___lc_locale_name_func` | `msvcp140.dll` lisait un code d'erreur comme un pointeur |
 | `exp`, `log`, `floor` (XMM0) | premières fonctions à argument flottant |
 
-Appels encore absents pendant l'initialisation : `RegisterTraceGuidsW`, `___mb_cur_max_func`, `RtlPcToFileHeader`, `_SetWinRTOutOfMemoryExceptionCallback`, et un constructeur exporté par `msvcp140.dll` vers une autre DLL. Ce dernier cas demande de charger plusieurs modules dans la même machine.
+| `RtlPcToFileHeader`, `GetProcAddress`, `RegisterTraceGuidsW`, `___mb_cur_max_func` | derniers appels manquants des DLL liées |
+
+Plus aucun appel non émulé pendant l'initialisation des 16 DLL. Les prochains manques apparaîtront quand le code du jeu lui-même s'exécutera.
+
+## Exécution native
+
+Depuis le 21 novembre 2026, `--natif` charge un exécutable et le lance directement sur le processeur (approche Wine). Premier résultat : le jeu de test **SimpleTriangle s'affiche**, avec le runtime GDK servi par AnyXboxX. Détails, captures et limites : [jeu-de-test.md](jeu-de-test.md).
+
+## Chargement multi-modules
+
+Ordre de résolution d'un import `dll!fonction` (`emu/modules.py`) :
+
+1. DLL système (`kernel32`, `api-ms-win-*`, `xgameruntime`…) : toujours la couche HLE, même si un fichier du même nom est dans le paquet.
+2. DLL présente dans le dossier du paquet : chargée comme module, l'import pointe vers son export. Les ordinaux et les redirections (`DLL.Fonction`) sont suivis.
+3. Sinon : entrée HLE, ou `E_NOTIMPL` si la fonction n'est pas émulée.
+
+Chaque module garde sa base préférée si elle est libre ; sinon il est relocalisé dans une zone dédiée (`0x6000_0000_0000`). Les dépendances sont initialisées avant le module qui les importe ; un `DllMain` qui renvoie `FALSE` annule le chargement, comme sous Windows.
 
 ## Limite connue
 
@@ -38,10 +58,4 @@ Une fonction absente renvoie `E_NOTIMPL` (`0x80004001`). C'est correct pour une 
 
 ## Jeu libre pour les tests
 
-Recherche faite le 21 novembre 2026 :
-
-- Aucun jeu libre n'est publié sous forme de binaire Xbox Series X|S. Compiler pour `Gaming.Xbox.Scarlett.x64` exige le GDKX, réservé aux studios sous accord de confidentialité.
-- **Candidat retenu** : un échantillon de [microsoft/Xbox-GDK-Samples](https://github.com/microsoft/Xbox-GDK-Samples) (licence MIT), par exemple `SystemInfo` ou `Gamepad`, compilé en `Gaming.Desktop.x64` avec le [GDK public](https://github.com/microsoft/GDK). Il importe `xgameruntime.dll` et utilise `MicrosoftGame.Config`, comme un titre Series X.
-- **Alternative** : les programmes de test de [SDL](https://github.com/libsdl-org/SDL) (licence zlib), qui ont une cible GDK documentée dans [README-gdk.md](https://github.com/libsdl-org/SDL/blob/main/docs/README-gdk.md).
-
-Prochaine étape (~1 h) : installer Visual Studio 2022 avec la charge C++ et le GDK public, compiler `SystemInfo` en x64, puis l'ajouter au banc.
+Le jeu de test retenu est **SimpleTriangle** (`microsoft/Xbox-GDK-Samples`, licence MIT), compilé pour PC et comparé à son exécution native : voir [jeu-de-test.md](jeu-de-test.md). Aucun jeu libre n'existe en binaire Series X : la cible `Gaming.Xbox.Scarlett.x64` exige le GDKX, réservé aux studios sous accord de confidentialité.

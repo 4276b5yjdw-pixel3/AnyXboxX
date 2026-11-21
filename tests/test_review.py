@@ -6,8 +6,9 @@ import pytest
 
 from emu import hle
 from emu.config import read_package
-from emu.loader import DEFAULT_BASE, read_pe
+from emu.loader import read_pe
 from emu.machine import Machine
+from emu.modules import MODULE_AREA
 from scarlett import DEMO
 
 
@@ -28,9 +29,10 @@ def rebased_demo(tmp_path, with_relocations=True):
 
 def test_rebased_image_runs(tmp_path):
     machine = Machine(rebased_demo(tmp_path))
-    assert machine.image.base == DEFAULT_BASE and machine.image.relocated
+    base = machine.image.base
+    assert base == MODULE_AREA and machine.image.relocated
     slot = machine.image.imports[0].slot
-    assert DEFAULT_BASE <= slot < DEFAULT_BASE + machine.image.size
+    assert base <= slot < base + machine.image.size
     assert machine.start() == 7
 
 
@@ -90,3 +92,14 @@ def test_handler_crash_becomes_value_error():
     m.handlers[address] = (name, lambda c: 1 / 0)
     with pytest.raises(ValueError, match="division"):
         m.start()
+
+
+def test_strlen_stops_at_end_of_mapping():
+    m = Machine(DEMO)
+    from emu.memory import PAGE
+    end = m.heap.mapped
+    text = end - 3
+    m.cpu.mem_write(text, b"ab\0")
+    m.cpu.reg_write(hle.core.ARG_REGISTERS[0], text)
+    assert end % PAGE == 0
+    assert hle.resolve("ucrtbase.dll", "strlen")[1](hle.Call(m)) == 2

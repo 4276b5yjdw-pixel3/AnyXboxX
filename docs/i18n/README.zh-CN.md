@@ -14,16 +14,20 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 | PE32+ 加载：节与保护属性、重定位、导入、导出 | ✅ 已完成 |
 | TLS：模板复制、索引、回调 | ✅ 已完成 |
 | 可通过 GS 寄存器访问 TEB 和 PEB | ✅ 已完成 |
-| HLE 页：模拟了 135 个 GDK、内核、CRT 和数学函数名 | ✅ 已完成 |
+| HLE 页：模拟了 158 个 GDK、内核、CRT 和数学函数名 | ✅ 已完成 |
 | 未知函数：返回 `E_NOTIMPL` 并写入日志，而不是拒绝 | ✅ 已完成 |
 | 全局 C++ 构造函数（`_initterm`）以客体代码方式运行 | ✅ 已完成 |
 | 兼容性报告（`--rapport`）和测试台（`--banc`） | ✅ 已完成 |
-| 商业 Scarlett 包中的 16/16 个 DLL 已初始化（`DllMain` → `TRUE`） | ✅ 已完成 |
-| 49 个自动化测试，82 % 覆盖率 | ✅ 已完成 |
-| 在同一台机器中加载多个相互链接的模块 | ⏳ 待完成 |
-| 编译免费示例 `Xbox-GDK-Samples` 并加入测试台 | ⏳ 待完成 |
+| 在同一台机器中运行多个相互链接的模块：包中的 DLL、序号、转发、冲突时重定位 | ✅ 已完成 |
+| `GetModuleHandle`、`GetProcAddress`、`LoadLibrary`、`RtlPcToFileHeader` | ✅ 已完成 |
+| Scarlett 包中的 16/16 个 DLL 连同依赖项完成初始化，0 个未模拟的调用 | ✅ 已完成 |
+| 已编译免费测试游戏 `SimpleTriangle`：C 启动代码和 GDK 初始化可在 AnyXboxX 中通过 | ✅ 已完成 |
+| Wine 式原生执行（`--natif`）：**SimpleTriangle 成功显示**，GDK 运行时由 AnyXboxX 提供 | ✅ 已完成 |
+| 79 个自动化测试，83 % 覆盖率 | ✅ 已完成 |
+| 为主机二进制文件翻译 D3D12.X（`d3d12_xs.dll`）和 `kernelx.dll` | ⏳ 待完成 |
+| `QueryApiImpl` 背后的 GDK 运行时接口（`XUser`、`XTaskQueue`…） | ⏳ 待完成 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
-| 加载安装包中的附属 DLL | ⏳ 待完成 |
+| 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |
 | 音频、手柄、`XGameSave` 存档 | ⏳ 待完成 |
 
@@ -50,6 +54,16 @@ py -3.12 -m venv .venv
 
 编译好的演示程序是 `PrototypeScarlett/demo.pe`，其源代码是 `PrototypeScarlett/demo.c`。
 
+## 以原生模式运行游戏
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
+```
+
+![由 AnyXboxX 以原生模式启动的 SimpleTriangle](../images/simpletriangle-anyxboxx.png)
+
+AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器上运行它。Xbox 运行时（`xgameruntime.dll`）由 AnyXboxX 提供；窗口和 DirectX 12 则使用电脑自身的。**注意：在原生模式下，程序没有被隔离。** 请仅对可信的程序使用此模式；`--rapport` 和 `--banc` 仍然在 Unicorn 中隔离运行。`ANYXBOXX_TRACE=1` 会显示被拦截的调用。详情：[docs/jeu-de-test.md](../jeu-de-test.md)（法语）。
+
 ## 分析程序
 
 ```powershell
@@ -64,7 +78,7 @@ py -3.12 -m venv .venv
 
 ![针对 Scarlett 包中 DLL 的测试台](../images/banc-dll.svg)
 
-详细结果以及用于测试的免费游戏的选择：[docs/avancee.md](../avancee.md)（法语）。
+详细结果：[docs/avancee.md](../avancee.md)（法语）。与原生运行结果对比的免费测试游戏：[docs/jeu-de-test.md](../jeu-de-test.md)（法语）。目标之后可以再跟一个额外的 DLL 文件夹（例如 Visual C++ 的 DLL）：`--rapport <cible> <dossier>`。
 
 报告会列出导入的函数、已模拟的百分比以及缺失的函数。在界面中，**Ouvrir un dossier Xbox…**（打开 Xbox 文件夹）按钮会读取 `MicrosoftGame.Config`，显示该报告，然后启动程序；每个未模拟的调用都会出现在日志中。
 
@@ -79,7 +93,9 @@ py -3.12 -m venv .venv
 | `emu/machine.py` | Unicorn 处理器、栈、堆、TEB/PEB、调用分发 |
 | `emu/hle/` | 被模拟的函数：`gdk.py`、`kernel.py`、`crt.py`、`libm.py`、`guest.py` |
 | `emu/report.py` | 兼容性报告 |
+| `emu/modules.py` | 加载包中的 DLL、链接导入、安排初始化顺序 |
 | `emu/bench.py` | 针对模块文件夹的测试台 |
+| `emu/native/` | Wine 式原生执行：加载器、真实导入、AnyXboxX 的 GDK 运行时 |
 | `scarlett.py` | Tkinter 界面和命令行 |
 
 要添加一个函数，请在 `emu/hle/` 中为处理函数加上装饰器：

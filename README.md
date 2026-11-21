@@ -14,16 +14,20 @@ AnyXboxX charge des exécutables Xbox GDK (format PE32+ x86-64) et exécute leur
 | Chargement PE32+ : sections et protections, relocations, imports, exports | ✅ fait |
 | TLS : copie du modèle, index, callbacks | ✅ fait |
 | TEB et PEB accessibles par le registre GS | ✅ fait |
-| Page HLE : 135 noms de fonctions GDK, kernel, CRT et maths émulés | ✅ fait |
+| Page HLE : 158 noms de fonctions GDK, kernel, CRT et maths émulés | ✅ fait |
 | Fonctions inconnues : `E_NOTIMPL` et journal au lieu d'un refus | ✅ fait |
 | Constructeurs C++ globaux (`_initterm`) en code invité | ✅ fait |
 | Rapport de compatibilité (`--rapport`) et banc d'essai (`--banc`) | ✅ fait |
-| 16/16 DLL d'un paquet Scarlett du commerce initialisées (`DllMain` → `TRUE`) | ✅ fait |
-| 49 tests automatisés, 82 % de couverture | ✅ fait |
-| Chargement de plusieurs modules liés dans une même machine | ⏳ à faire |
-| Échantillon libre `Xbox-GDK-Samples` compilé et ajouté au banc | ⏳ à faire |
+| Plusieurs modules liés dans une même machine : DLL du paquet, ordinaux, redirections, relocation en cas de conflit | ✅ fait |
+| `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ fait |
+| 16/16 DLL d'un paquet Scarlett initialisées avec leurs dépendances, 0 appel non émulé | ✅ fait |
+| Jeu de test libre `SimpleTriangle` compilé : démarrage C et initialisation GDK passent dans AnyXboxX | ✅ fait |
+| Exécution native façon Wine (`--natif`) : **SimpleTriangle s'affiche**, runtime GDK servi par AnyXboxX | ✅ fait |
+| 79 tests automatisés, 83 % de couverture | ✅ fait |
+| Traduction de D3D12.X (`d3d12_xs.dll`) et `kernelx.dll` pour les binaires console | ⏳ à faire |
+| Interfaces du runtime GDK derrière `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ à faire |
 | Exceptions SEH x64 (`.pdata`), threads multiples | ⏳ à faire |
-| Chargement des DLL annexes du paquet | ⏳ à faire |
+| Chargement dynamique d'une DLL pendant l'exécution (`LoadLibrary` + `DllMain`) | ⏳ à faire |
 | Graphismes D3D12.X vers Direct3D 12 / Vulkan | ⏳ à faire |
 | Audio, manette, sauvegardes `XGameSave` | ⏳ à faire |
 
@@ -50,6 +54,16 @@ py -3.12 -m venv .venv
 
 Le programme de démonstration compilé est `PrototypeScarlett/demo.pe` ; son code source est `PrototypeScarlett/demo.c`.
 
+## Lancer un jeu en mode natif
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
+```
+
+![SimpleTriangle lancé par AnyXboxX en mode natif](docs/images/simpletriangle-anyxboxx.png)
+
+AnyXboxX charge l'exécutable lui-même et l'exécute directement sur le processeur, comme Wine. Le runtime Xbox (`xgameruntime.dll`) est fourni par AnyXboxX ; la fenêtre et DirectX 12 sont ceux du PC. **Attention : en mode natif, le programme n'est pas isolé.** Réservez ce mode aux programmes de confiance ; `--rapport` et `--banc` restent isolés dans Unicorn. `ANYXBOXX_TRACE=1` affiche les appels interceptés. Détails : [docs/jeu-de-test.md](docs/jeu-de-test.md).
+
 ## Analyser un programme
 
 ```powershell
@@ -64,7 +78,7 @@ Le banc d'essai charge tous les modules PE d'un dossier et lance leur initialisa
 
 ![Banc d'essai sur les DLL d'un paquet Scarlett](docs/images/banc-dll.svg)
 
-Résultats détaillés et choix d'un jeu libre pour les tests : [docs/avancee.md](docs/avancee.md).
+Résultats détaillés : [docs/avancee.md](docs/avancee.md). Jeu de test libre comparé à son exécution native : [docs/jeu-de-test.md](docs/jeu-de-test.md). Un dossier de DLL supplémentaire (par exemple les DLL Visual C++) peut suivre la cible : `--rapport <cible> <dossier>`.
 
 Le rapport liste les fonctions importées, le pourcentage déjà émulé et les fonctions manquantes. Dans l'interface, le bouton **Ouvrir un dossier Xbox…** lit `MicrosoftGame.Config`, affiche ce rapport puis lance le programme ; chaque appel non émulé apparaît dans le journal.
 
@@ -79,7 +93,9 @@ Le rapport liste les fonctions importées, le pourcentage déjà émulé et les 
 | `emu/machine.py` | processeur Unicorn, pile, tas, TEB/PEB, répartition des appels |
 | `emu/hle/` | fonctions émulées : `gdk.py`, `kernel.py`, `crt.py`, `libm.py`, `guest.py` |
 | `emu/report.py` | rapport de compatibilité |
+| `emu/modules.py` | charge les DLL du paquet, lie les imports, ordonne les initialisations |
 | `emu/bench.py` | banc d'essai sur un dossier de modules |
+| `emu/native/` | exécution native façon Wine : chargeur, imports réels, runtime GDK d'AnyXboxX |
 | `scarlett.py` | interface Tkinter et ligne de commande |
 
 Pour ajouter une fonction, décore un gestionnaire dans `emu/hle/` :
