@@ -60,7 +60,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | Tabelle der 396 GDK-Funktionen: Schnittstelle und Methodennummer, aus `xgameruntime.lib` extrahiert (`tools/gdk_interfaces.py`) | ✅ erledigt |
 | `XTaskQueue`, `XAsync`, `XThread` von AnyXboxX bereitgestellt: testgdk läuft ohne die Runtime von Windows | ✅ erledigt |
 | Übrige GDK-Schnittstellen: an die GDK-Runtime von Windows delegiert, von der Ablaufverfolgung benannt | 🟡 in Arbeit |
-| 180 automatisierte Tests | ✅ erledigt |
+| 188 automatisierte Tests | ✅ erledigt |
 | D3D12.X: `D3D12XboxCreateDevice` und die `ID3D12*`-Schnittstellen der Konsole | ⏳ offen |
 | `XUser` offline: immer angemeldetes lokales Profil, einstellbarer Gamertag (`ANYXBOXX_GAMERTAG`), Anmeldung von testgdk erfolgreich | ✅ erledigt |
 | Identität der Xbox Series X: Konsolentyp (simulierter Registrierungswert `ConsoleMode`, auch in den DLLs des Spiels), `XSystem`, Title ID aus `MicrosoftGame.config`, Analytics „Xbox Series X“ | ✅ erledigt |
@@ -73,7 +73,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | `kernelx.dll` (Konsolenkernel): 2.661 Funktionen an `kernel32`/`kernelbase` von Windows weitergeleitet | ✅ erledigt |
 | Implizites TLS (`thread_local`) für Spiele im nativen Modus: Träger-DLL `anyxboxx_tls.dll`, jeder Thread erhält seine Kopie (bis 256 KiB) | ✅ erledigt |
 | Nativer C++-Launcher ohne Python (`runtime/build/bin/anyxboxx.exe <spiel.exe \| ordner> [--fps]`): SimpleTriangle und testgdk mit ~12.000 B/s | ✅ erledigt |
-| Decoder für RDNA-2-GPU-Kodierungen (Familien, Opcodes, Längen, Literale): `scarlett.py --rdna2 <shader.bin>` | 🟡 in Arbeit |
+| RDNA-2-GPU-Disassembler: 1.384 Mnemonics und Operanden in LLVM-Syntax (skalar, VOP1/VOP2/VOPC), geprüft an 29.527 öffentlichen LLVM-Kodierungen: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in Arbeit |
 | Übrige von AnyXboxX geschriebene GDK-Schnittstellen (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ offen |
 | Shader-Rekompilierer RDNA 2 → DXIL | ⏳ offen |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |

@@ -60,7 +60,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Tabela das 396 funções do GDK: interface e número do método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ feito |
 | `XTaskQueue`, `XAsync`, `XThread` fornecidas pelo AnyXboxX: o testgdk roda sem o runtime do Windows | ✅ feito |
 | Outras interfaces do GDK: delegadas ao runtime GDK do Windows, nomeadas pelo rastreamento | 🟡 em andamento |
-| 180 testes automatizados | ✅ feito |
+| 188 testes automatizados | ✅ feito |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` do console | ⏳ a fazer |
 | `XUser` offline: perfil local sempre conectado, gamertag configurável (`ANYXBOXX_GAMERTAG`), login do testgdk bem-sucedido | ✅ feito |
 | Identidade do Xbox Series X: tipo de console (valor de registro `ConsoleMode` simulado, inclusive nas DLLs do jogo), `XSystem`, Title ID lido de `MicrosoftGame.config`, análise de uso «Xbox Series X» | ✅ feito |
@@ -73,7 +73,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | `kernelx.dll` (kernel do console): 2 661 funções redirecionadas para `kernel32`/`kernelbase` do Windows | ✅ feito |
 | TLS implícito (`thread_local`) dos jogos no modo nativo: DLL portadora `anyxboxx_tls.dll`, cada thread recebe sua cópia (até 256 KiB) | ✅ feito |
 | Inicializador nativo em C++ sem Python (`runtime/build/bin/anyxboxx.exe <jogo.exe \| pasta> [--fps]`): SimpleTriangle e testgdk a ~12 000 qps | ✅ feito |
-| Decodificador das codificações de GPU RDNA 2 (famílias, opcodes, tamanhos, literais): `scarlett.py --rdna2 <shader.bin>` | 🟡 em andamento |
+| Desmontador de GPU RDNA 2: 1.384 mnemônicos e operandos na sintaxe do LLVM (escalares, VOP1/VOP2/VOPC), verificado em 29.527 codificações públicas do LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 em andamento |
 | Outras interfaces do GDK escritas pelo AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ a fazer |
 | Recompilador de shaders RDNA 2 → DXIL | ⏳ a fazer |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |
