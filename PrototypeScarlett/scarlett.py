@@ -281,6 +281,18 @@ def main(argv):
                 print(f"Arrêt : {error}", file=sys.stderr)
                 return 1
             return 0
+        if "--spirv" in argv[2:]:
+            # --spirv [vs|ps|cs|ms|gs] : SPIR-V par le traducteur de Leonida (third_party/leonida)
+            from emu import rdna2_spirv
+
+            after = argv[argv.index("--spirv") + 1:]
+            stage = after[0] if after and after[0] in rdna2_spirv.STAGES else "cs"
+            try:
+                print(rdna2_spirv.translate(data, stage))
+            except rdna2_spirv.Untranslatable as error:
+                print(f"Arrêt : {error}", file=sys.stderr)
+                return 1
+            return 0
         instructions = rdna2.decode(data)
         for family, count in rdna2.histogram(instructions).items():
             print(f"{family:10} {count}")
