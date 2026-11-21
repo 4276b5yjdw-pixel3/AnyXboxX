@@ -14,3 +14,7 @@ EXPORTS
   AnyXboxX_RegOpenKeyExW
   AnyXboxX_RegQueryValueExW
   AnyXboxX_RegCloseKey
+  ; Compteur d'images (ANYXBOXX_FPS / ANYXBOXX_FPS_CSV) : le mode natif les branche à la place de DXGI
+  AnyXboxX_CreateDXGIFactory
+  AnyXboxX_CreateDXGIFactory1
+  AnyXboxX_CreateDXGIFactory2

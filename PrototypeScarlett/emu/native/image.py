@@ -140,7 +140,7 @@ class NativeImage:
         if local is not None:
             handle = win32.LoadLibraryExW(str(local), None, win32.LOAD_WITH_ALTERED_SEARCH_PATH)
             if handle:
-                redirects.patch_module(self.shims.runtime, handle, local)   # DLL du jeu : registre simulé
+                redirects.patch_module(self.shims.runtime, handle, local, self.shims.loader)   # registre, DXGI…
         else:
             handle = win32.LoadLibraryExW(dll, None, 0)
         if not handle:
