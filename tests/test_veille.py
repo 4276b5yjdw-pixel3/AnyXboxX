@@ -16,12 +16,12 @@ def test_start_date_comes_from_option_then_state_then_one_day():
 
 
 def test_section_lists_news_and_our_contributions(monkeypatch):
-    answers = {
+    answers = {                                                   # « search » avant « issues »
+        "search": {"items": [{"number": 9, "state": "closed", "title": "Patch", "comments": 2,
+                              "pull_request": {"merged_at": "2026-11-21T19:00:00Z"}}]},
         "commits": [{"sha": "abcdef123", "commit": {"message": "gpu: fix\n\ncorps"}}],
         "issues": [{"number": 5, "state": "open", "title": "Bug"},
                    {"number": 9, "state": "closed", "title": "Patch", "pull_request": {}}],
-        "search": {"items": [{"number": 9, "state": "closed", "title": "Patch", "comments": 2,
-                              "pull_request": {"merged_at": "2026-11-21T19:00:00Z"}}]},
     }
     monkeypatch.setattr(veille, "gh", lambda path: next(v for k, v in answers.items() if k in path))
     text = "\n".join(veille.section("x/y", "2026-11-21T00:00:00Z", "moi"))
