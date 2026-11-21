@@ -4,7 +4,7 @@ Guide for AI coding agents and contributors working in this repository. Human co
 
 ## What the project is
 
-AnyXboxX is an LGPL-2.1 prototype that runs Xbox Series X (GDK, "Scarlett") executables on Windows by high-level emulation: console system calls are served by a C++ runtime (native mode, Wine-style) or by Python handlers inside a Unicorn sandbox (isolated mode). A second track translates console RDNA 2 GPU shaders to HLSL/DXIL. It does not run commercial games.
+AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett") executables on Windows by high-level emulation: console system calls are served by a C++ runtime (native mode, Wine-style) or by Python handlers inside a Unicorn sandbox (isolated mode). A second track translates console RDNA 2 GPU shaders to HLSL/DXIL. It does not run commercial games.
 
 ## Layout
 

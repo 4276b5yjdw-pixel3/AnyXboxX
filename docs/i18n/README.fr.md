@@ -203,6 +203,6 @@ La branche `main` est protégée : toute contribution passe par une pull request
 
 ## Licence
 
-AnyXboxX est distribué sous [GNU LGPL 2.1 ou ultérieure](../../LICENSE). Les parties tierces gardent leur licence : le module `Task` de libHttpClient (MIT, `runtime/third_party/libhttpclient-task`) et les tables RDNA 2 générées depuis les tests d'encodage publics de LLVM (Apache 2.0 avec exception LLVM, `PrototypeScarlett/emu/rdna2_ops.py` et `rdna2_shapes.py`).
+AnyXboxX est distribué sous [GNU GPL 3.0 ou ultérieure](../../LICENSE). Les parties tierces gardent leur licence : le module `Task` de libHttpClient (MIT, `runtime/third_party/libhttpclient-task`) et les tables RDNA 2 générées depuis les tests d'encodage publics de LLVM (Apache 2.0 avec exception LLVM, `PrototypeScarlett/emu/rdna2_ops.py` et `rdna2_shapes.py`).
 
 Composants tiers et crédits : [THIRD_PARTY.md](../../THIRD_PARTY.md).
