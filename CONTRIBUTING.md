@@ -9,10 +9,20 @@ La branche `main` est protégée. **Personne ne peut y pousser directement.** Po
 1. Fais un fork du dépôt.
 2. Crée une branche depuis `main` : `git checkout -b feat/ma-fonction`.
 3. Ajoute tes commits, avec des messages au format `type: description` (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`).
-4. Lance les tests : `python -m pytest`. Ils doivent tous passer.
-5. Ouvre une pull request vers `main` et remplis le modèle proposé.
+4. Lance les tests : `python -m pytest`, puis `python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools`. Tout doit passer.
+5. Ouvre une pull request vers `main` et remplis le modèle proposé : les commandes lancées et leur résultat exact.
 
-Une pull request n'est fusionnée qu'après la relecture et l'accord du mainteneur, et quand les tests passent.
+Une pull request n'est fusionnée qu'après la relecture et l'accord du mainteneur, et quand les deux checks de la CI passent :
+
+- `lint` (Linux, ~1 min) : ruff et cohérence des README dans les 8 langues ;
+- `pytest` (Windows) : build du runtime C++ et du Rust, puis toute la suite. Elle vérifie aussi que le nombre de tests annoncé dans les README est exact.
+
+### Bonnes pratiques
+
+- **Une PR = un comportement.** Deux corrections indépendantes vont dans deux PR, plus faciles à relire.
+- **Conflit avec `main`** : fais un rebase (`git fetch && git rebase origin/main`), garde les deux versions quand elles se complètent, relance les tests, puis `git push --force-with-lease`.
+- **Check en échec sans rapport avec ta PR** (test GPU sur WARP, par exemple) : signale-le dans la PR, avec le nom du test et la ligne d'erreur ; le mainteneur relancera le job.
+- **Aide d'une IA** : indique-le dans la description de la PR.
 
 ## Issues
 
