@@ -17,6 +17,7 @@ from . import shader_cache
 REPOSITORY = Path(__file__).resolve().parents[2]
 KITS = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Windows Kits" / "10" / "bin"
 SHADER_MODEL = "cs_6_0"
+VERTEX_MODEL, PIXEL_MODEL = "vs_6_0", "ps_6_0"
 TIMEOUT = 120
 
 
@@ -45,30 +46,50 @@ def available():
     return find_dxc() is not None and find_runner() is not None
 
 
-def compile_hlsl(hlsl, folder):
+def compile_hlsl(hlsl, folder, model=SHADER_MODEL):
     dxc = find_dxc()
     if dxc is None:
         raise GpuUnavailable("dxc introuvable : installez le SDK Windows ou définissez ANYXBOXX_DXC")
     source, output = Path(folder) / "shader.hlsl", Path(folder) / "shader.dxil"
     source.write_text(hlsl, encoding="utf-8")
-    result = subprocess.run([str(dxc), "-nologo", "-T", SHADER_MODEL, "-E", "main", "-Fo", str(output), str(source)],
+    result = subprocess.run([str(dxc), "-nologo", "-T", model, "-E", "main", "-Fo", str(output), str(source)],
                             capture_output=True, text=True, timeout=TIMEOUT)
     if result.returncode != 0:
         raise RuntimeError(f"dxc a refusé le HLSL généré :\n{result.stderr}")
     return output
 
 
-def compile_dxil(hlsl, cache=None):
+def compile_dxil(hlsl, cache=None, model=SHADER_MODEL):
     """DXIL de `hlsl` : depuis le cache disque si possible, sinon compilé par dxc puis mis en cache."""
     cache = cache if cache is not None else _CACHE
-    key = shader_cache.cache_key(hlsl, SHADER_MODEL, find_dxc())
+    key = shader_cache.cache_key(hlsl, model, find_dxc())
     cached = cache.get(key)
     if cached is not None:
         return cached
     with tempfile.TemporaryDirectory(prefix="anyxboxx-dxc-") as folder:
-        dxil = compile_hlsl(hlsl, folder).read_bytes()
+        dxil = compile_hlsl(hlsl, folder, model).read_bytes()
     cache.put(key, dxil)
     return dxil
+
+
+def draw(vertex_hlsl, pixel_hlsl, memory, vertices, width, height, cache=None):
+    """Dessine `vertices` sommets (liste de triangles) avec le VS et le PS (None : sans PS) sur une
+    cible width × height ; u0 = `memory` (bytes). Renvoie la mémoire finale."""
+    runner = find_runner()
+    if runner is None:
+        raise GpuUnavailable("anyxboxx_gpu_run.exe introuvable : compilez runtime/ avec CMake")
+    with tempfile.TemporaryDirectory(prefix="anyxboxx-draw-") as folder:
+        vs, ps, image = Path(folder) / "vs.dxil", Path(folder) / "ps.dxil", Path(folder) / "memory.bin"
+        vs.write_bytes(compile_dxil(vertex_hlsl, cache, VERTEX_MODEL))
+        if pixel_hlsl is not None:
+            ps.write_bytes(compile_dxil(pixel_hlsl, cache, PIXEL_MODEL))
+        image.write_bytes(memory)
+        arguments = [str(runner), "--draw", str(vs), str(ps) if pixel_hlsl is not None else "-", str(image),
+                     str(vertices), str(width), str(height)]
+        result = subprocess.run(arguments, capture_output=True, text=True, timeout=TIMEOUT)
+        if result.returncode != 0:
+            raise RuntimeError(f"dessin GPU impossible :\n{result.stderr}")
+        return image.read_bytes()
 
 
 def run(hlsl, memory, groups=1, cache=None):

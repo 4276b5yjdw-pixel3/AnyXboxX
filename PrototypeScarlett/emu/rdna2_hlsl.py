@@ -25,6 +25,7 @@ CARRY = {"v_add_co_u32": ("x + y", "r < x"), "v_sub_co_u32": ("x - y", "x < y"),
 OUTPUT_SCALE = {1: "2.0f", 2: "4.0f", 3: "0.5f"}
 
 PRELUDE = """// Généré par AnyXboxX (emu/rdna2_hlsl.py) : programme RDNA 2 recompilé en HLSL.
+#define END_PC 0xFFFFFFFFu
 RWByteAddressBuffer g_memory : register(u0);
 groupshared uint g_lds[8128];      // D3D12 : 32 Kio de mémoire partagée par groupe au plus
 groupshared uint g_ballot;
@@ -131,13 +132,19 @@ def _vop3(name, opcode, fields, literal):
     return [f"if ({ACTIVE}) v[{fields.vdst}] = {expression};"]
 
 
-def statements(data, instruction):
-    """Instructions HLSL d'une instruction RDNA 2 (hors branchements)."""
+def statements(data, instruction, finish="return;", special=None):
+    """Instructions HLSL d'une instruction RDNA 2 (hors branchements).
+
+    `finish` : texte de s_endpgm ; `special(famille, nom, mot 64 bits)` traduit les familles
+    propres à un étage graphique (VINTRP, EXP) et renvoie None pour les autres."""
     family, opcode = instruction.family, instruction.opcode
     name = rdna2.mnemonic(family, opcode) or f"{family}#{opcode}"
     first, pair = _words(data, instruction)
     if name == "s_endpgm":
-        return ["return;"]
+        return [finish]
+    translated = special(family, name, pair) if special else None
+    if translated is not None:
+        return translated
     if family in SCALAR_FAMILIES:
         if name not in SCALAR:
             raise Untranslatable(f"non traduite en HLSL : {name}")
@@ -165,11 +172,15 @@ def _leaders(data, instructions):
 
 def translate(data, sgprs=None):
     """Texte HLSL d'un programme RDNA 2 ; `sgprs` : valeurs initiales {numéro: valeur}."""
+    return "\n".join([PRELUDE.rstrip("\n"), *body(data, sgprs), "}", ""])
+
+
+def body(data, sgprs=None, finish="return;", special=None):
+    """Lignes du corps : SGPR initiaux puis boucle `while` + `switch (pc)` sur les blocs de base."""
     instructions = [i for i in rdna2.decode(data) if i.family != "tronquée"]
     leaders = _leaders(data, instructions)
-    lines = [PRELUDE.rstrip("\n")]
-    lines += [f"  s[{number}] = {hexa(value)};" for number, value in sorted((sgprs or {}).items())]
-    lines += ["  uint pc = 0;", "  [loop] while (true) {", "    switch (pc) {"]
+    lines = [f"  s[{number}] = {hexa(value)};" for number, value in sorted((sgprs or {}).items())]
+    lines += ["  uint pc = 0;", "  [loop] while (pc != END_PC) {", "    switch (pc) {"]
     for index, instruction in enumerate(instructions):
         if instruction.offset in leaders:
             lines.append(f"    case {instruction.offset}u:")
@@ -180,12 +191,11 @@ def translate(data, sgprs=None):
                 raise Untranslatable(f"cible de branchement invalide : {target}")
             lines.append(f"      if ({BRANCHES[name]}) {{ pc = {target}u; break; }}")
         else:
-            lines += [f"      {line}" for line in statements(data, instruction)]
+            lines += [f"      {line}" for line in statements(data, instruction, finish, special)]
         following = instructions[index + 1].offset if index + 1 < len(instructions) else None
         if following in leaders and name not in ("s_endpgm",):
             lines.append(f"      pc = {following}u; break;")
-    lines += ["    default:", "      return;", "    }", "  }", "}", ""]
-    return "\n".join(lines)
+    return lines + ["    default:", f"      {finish}", "    }", "  }"]
 
 
 def coverage_names():

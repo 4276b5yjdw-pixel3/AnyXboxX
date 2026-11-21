@@ -8,7 +8,7 @@ qui les nomme, ce qui mesure ce qui reste à traduire.
 """
 import struct
 
-from emu import rdna2, rdna2_exec_memory, rdna2_exec_vop3
+from emu import rdna2, rdna2_exec_graphics, rdna2_exec_memory, rdna2_exec_vop3
 from emu.rdna2_exec_ops import SCALAR, VECTOR, VECTOR_COMPARE, BRANCHES, float_bits
 
 LANES = 32
@@ -100,6 +100,11 @@ def step(wave, data):
     if not executable(family, name):
         raise Untranslated(f"instruction non traduite : {name} ({family}, opcode 0x{opcode:X})")
     wave.steps += 1
+    if family in rdna2_exec_graphics.FAMILIES:
+        word = int.from_bytes(data[wave.pc:wave.pc + 2 * rdna2.DWORD].ljust(8, b"\0"), "little")
+        rdna2_exec_graphics.execute(wave, family, name, word)
+        wave.pc += size * rdna2.DWORD
+        return True
     if family in MEMORY_FAMILIES:
         word = int.from_bytes(data[wave.pc:wave.pc + 2 * rdna2.DWORD], "little")
         rdna2_exec_memory.execute(wave, family, name, word)
@@ -168,6 +173,8 @@ def executable(family, name):
     """Vrai si l'interpréteur exécute cette instruction dans cet encodage."""
     if family == "VOP3":
         return name in rdna2_exec_vop3.EXECUTABLE
+    if family in rdna2_exec_graphics.FAMILIES:
+        return rdna2_exec_graphics.supports(family, name)
     if family in MEMORY_FAMILIES:
         return rdna2_exec_memory.supports(name)
     return family in DECODED_FAMILIES and name in EXECUTABLE

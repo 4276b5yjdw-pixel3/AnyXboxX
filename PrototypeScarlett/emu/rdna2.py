@@ -102,11 +102,18 @@ def classify(data, offset=0):
     return family, _opcode(family, word), _size(family, word, second)
 
 
+# Encodages absents des tests d'encodage gfx10 de LLVM (qui n'ont que la forme VOP3 0x200-0x202) :
+# opcodes VINTRP du chapitre « Parameter Interpolation » de la documentation ISA RDNA 2 d'AMD.
+ISA_ONLY_MNEMONICS = {("VINTRP", 0): "v_interp_p1_f32", ("VINTRP", 1): "v_interp_p2_f32",
+                      ("VINTRP", 2): "v_interp_mov_f32"}
+
+
 def mnemonic(family, opcode):
-    """Nom de l'instruction (table tirée des tests d'encodage de LLVM), ou None."""
+    """Nom de l'instruction (table tirée des tests d'encodage de LLVM, complétée par l'ISA), ou None."""
     from emu.rdna2_ops import MNEMONICS
 
-    return MNEMONICS.get((family, opcode))      # FLAT, GLOBAL et SCRATCH ont chacun leurs noms
+    found = MNEMONICS.get((family, opcode))     # FLAT, GLOBAL et SCRATCH ont chacun leurs noms
+    return found if found is not None else ISA_ONLY_MNEMONICS.get((family, opcode))
 
 
 def decode(data):
