@@ -93,3 +93,19 @@ def test_tombox_dir_serves_missing_console_libraries(tmp_path, runtime_dir):
                             timeout=60, env=environment)
     pointer = result.returncode & 0xFFFF_FFFF                        # XMemAlloc de TomBox : alignement par défaut 16
     assert pointer not in (0, 1) and pointer % 16 == 0, result.stderr
+
+
+NEW_TOMBOX_LIBRARIES = {"d3d12_x.dll": "D3D12XboxCreateDevice", "xapu.dll": "XApuGetUtilization",
+                        "xgs12.dll": "OpenAdapter12"}
+
+
+@pytest.mark.skipif(not all((TOMBOX_DIR / name).is_file() for name in NEW_TOMBOX_LIBRARIES),
+                    reason="DLL de TomBox non compilées (tools/build_tombox.py d3d12_x xapu xgs12)")
+def test_tombox_dir_serves_esram_apu_and_umd_libraries(tmp_path, runtime_dir):
+    imports = list(NEW_TOMBOX_LIBRARIES.items())
+    exe = build_pe(tmp_path / "libs.exe", lambda iat: Asm().mov_eax(42).ret().build(), imports=imports, dll=False)
+    assert launch(runtime_dir, exe).returncode != 42                 # bibliothèques absentes d'AnyXboxX
+    environment = {**os.environ, "ANYXBOXX_TOMBOX_DIR": str(TOMBOX_DIR)}
+    result = subprocess.run([str(runtime_dir / "anyxboxx.exe"), str(exe)], capture_output=True, text=True,
+                            timeout=60, env=environment)
+    assert result.returncode == 42, result.stderr

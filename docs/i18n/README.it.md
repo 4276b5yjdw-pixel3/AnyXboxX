@@ -60,7 +60,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 298 test automatizzati | ✅ fatto |
+| 299 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
 | Librerie console di TomBox (Rust, MIT) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
@@ -80,6 +80,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Primi vertex e pixel shader RDNA 2 disegnati con D3D12 (`anyxboxx_gpu_run.exe --draw`): ogni vertice e ogni pixel identici all'interprete di riferimento, sulla GPU e con WARP | ✅ fatto |
 | Texture negli shader RDNA 2 ricompilati: descrittori T#/S# e `image_sample` (2D, texel più vicino, wrap o clamp-to-edge, 8_8_8_8_UNORM e 32_32_32_32_FLOAT), identici all'interprete di riferimento sulla GPU e con WARP, compreso un pixel shader con texture; layout dei descrittori da Leonida e Mesa | ✅ fatto |
 | Secondo traduttore RDNA 2 → SPIR-V (Vulkan): quello di Leonida (GPL-3.0), copiato senza modifiche in `third_party/leonida/` e alimentato dal disassembler di AnyXboxX, senza `llvm-mc`; un vertex shader e un pixel shader tradotti (`scarlett.py --rdna2 <shader.bin> --spirv ps`) | 🟡 in corso |
+| TomBox aggiornato all'ultima versione (D3D12.X: 194 metodi su 200 secondo il loro conteggio) e 4 altre librerie della console compilate e servite da `ANYXBOXX_TOMBOX_DIR`: `d3d12_x` (ESRAM), `XAudio2_9` (voci XMA), `xapu`, `xgs12`; `tools/build_tombox.py d3d12_xs xg_xs xmem d3d12_x xaudio2_9 xapu xgs12` | 🟡 in corso |
 | Conversione del DXIL della console in DXIL del PC (`dxil-ms-xb2` → `dxil-ms-dx`, senza passare per HLSL): lo strumento di Xbox2Windows (MIT), copiato senza modifiche con il suo test in `third_party/xbox2windows/`; `python third_party/xbox2windows/tools/dxil_retarget.py <ingresso> <uscita>` o `--pe <gioco.exe>` | ✅ fatto |
 | Controlli delle pull request: lint e allineamento degli 8 README (righe, immagini, numero di test) a ogni pull request | ✅ fatto |
 | Texture console in Rust: decodifica BC7 e de-tiling GFX10 `SW_4K_S` portati da Xbox2Windows (MIT), digest di riferimento riprodotti; `anyxboxx_texture bc7 <blocchi.bin> <l> <a> <uscita.png> [--4k-s]` | 🟡 in corso |
