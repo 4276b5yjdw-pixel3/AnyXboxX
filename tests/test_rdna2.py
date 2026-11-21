@@ -3,7 +3,7 @@ import struct
 
 import pytest
 
-from emu import rdna2, rdna2_operands
+from emu import rdna2, rdna2_operands, rdna2_swizzle
 
 
 def words(*values):
@@ -118,6 +118,35 @@ def test_smem_operands_follow_llvm_syntax(encoding, expected):
 def test_smem_offset_is_signed_21_bits():
     word = 0xF4000141 | (0x7D << 57) | (0x1FFFFF << 32)              # s_load_dword, offset -1, soffset null
     assert rdna2_operands.text(word.to_bytes(8, "little")) == "s_load_dword s5, s[2:3], -0x1"
+
+
+@pytest.mark.parametrize("encoding, expected", [                 # encodages des tests MC de LLVM (gfx10)
+    ((0xFF, 0xFF, 0x82, 0xD9, 0x01, 0x02, 0x00, 0x05), "ds_add_rtn_u64 v[5:6], v1, v[2:3] offset:65535 gds"),
+    ((0x7F, 0xFF, 0x38, 0xD9, 0x01, 0xFE, 0x03, 0x00), "ds_write2_b64 v1, v[254:255], v[3:4] offset0:127 offset1:255"),
+    ((0xFF, 0xFF, 0xD8, 0xD8, 0x01, 0x00, 0x00, 0xFF), "ds_read_b32 v255, v1 offset:65535"),
+    ((0x00, 0x00, 0x34, 0xD8, 0x00, 0x01, 0x00, 0x00), "ds_write_b32 v0, v1"),
+    ((0x04, 0x00, 0xD4, 0xD8, 0x01, 0x00, 0x00, 0x05), 'ds_swizzle_b32 v5, v1 offset:swizzle(BITMASK_PERM,"00p00")'),
+    ((0xFF, 0xFF, 0xD6, 0xD8, 0x01, 0x00, 0x00, 0x05), "ds_swizzle_b32 v5, v1 offset:swizzle(FFT,31) gds"),
+    ((0x00, 0x00, 0x72, 0xD8, 0x00, 0x00, 0x00, 0x00), "ds_gws_sema_p gds"),
+    ((0x00, 0x00, 0x50, 0xD8, 0x00, 0x00, 0x00, 0x00), "ds_nop"),
+])
+def test_ds_operands_follow_llvm_syntax(encoding, expected):
+    assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+@pytest.mark.parametrize("offset, expected", [                   # AMDGPUInstPrinter::printSwizzle de LLVM
+    (0x0000, ""),
+    (0x80E4, "swizzle(QUAD_PERM,0,1,2,3)"),
+    (0x041F, "swizzle(SWAP,1)"),
+    (0x0C1F, "swizzle(REVERSE,4)"),
+    (0x005C, "swizzle(BROADCAST,4,2)"),
+    (0x0004, 'swizzle(BITMASK_PERM,"00p00")'),
+    (0xC4A0, "swizzle(ROTATE,1,5)"),
+    (0xFFFF, "swizzle(FFT,31)"),
+    (0x8100, "33024"),                                           # ni quad_perm ni bitmask : décimal
+])
+def test_swizzle_offsets(offset, expected):
+    assert rdna2_swizzle.text(offset) == expected
 
 
 def test_symbolic_immediates():
