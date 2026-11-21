@@ -8,6 +8,8 @@ from .machine import Machine
 from .report import analyse
 
 PATTERNS = ("*.dll", "*.exe")
+PE_SIGNATURE = b"PE\0\0"
+PE32_PLUS_MAGIC = (0x20B).to_bytes(2, "little")
 ERRORS = (ValueError, OSError, UcError, pefile.PEFormatError)
 
 
@@ -50,10 +52,25 @@ def run_one(path, extra_dirs=()):
     return BenchRow(path.name, report.total, report.coverage, True, ok, detail)
 
 
+def is_pe32_plus(path):
+    """Vrai pour un module PE32+ (x86-64) ; un lanceur 32 bits ou .NET n'est pas un module du jeu."""
+    try:
+        with path.open("rb") as file:
+            header = file.read(0x400)
+    except OSError:
+        return False
+    if header[:2] != b"MZ" or len(header) < 0x40:
+        return False
+    pe = int.from_bytes(header[0x3C:0x40], "little")
+    return (pe + 26 <= len(header) and header[pe:pe + 4] == PE_SIGNATURE
+            and header[pe + 24:pe + 26] == PE32_PLUS_MAGIC)
+
+
 def run(folder, extra_dirs=()):
     paths = sorted({p for pattern in PATTERNS for p in folder.glob(pattern)},
                    key=lambda p: p.name.lower())
-    return tuple(run_one(path, extra_dirs) for path in paths if path.is_file())
+    return tuple(run_one(path, extra_dirs) for path in paths
+                 if path.is_file() and is_pe32_plus(path))
 
 
 def table(rows):

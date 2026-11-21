@@ -83,3 +83,29 @@ def test_relocated_when_preferred_base_is_taken(tmp_path):
             b.close()
     finally:
         a.close()
+
+
+def test_game_sees_its_own_command_line(tmp_path):
+    """Sous-processus : la ligne de commande du processus est celle du jeu, pas de python."""
+    import subprocess
+
+    script = ("import ctypes, sys; sys.path.insert(0, 'PrototypeScarlett');"
+              "from emu.native.shims import adopt_command_line;"
+              r"adopt_command_line(r'C:\Jeux\jeu.exe');"
+              "k = ctypes.windll.kernel32;"
+              "k.GetCommandLineW.restype = ctypes.c_wchar_p; k.GetCommandLineA.restype = ctypes.c_char_p;"
+              "print(k.GetCommandLineW()); print(k.GetCommandLineA().decode())")
+    out = subprocess.run([sys.executable, "-c", script, "--argument-long-de-python" * 4],
+                         capture_output=True, text=True, check=True).stdout.splitlines()
+    assert out == [r'"C:\Jeux\jeu.exe"'] * 2
+
+
+def test_game_runs_from_its_own_folder(tmp_path, monkeypatch):
+    from emu import native
+
+    monkeypatch.chdir(os.path.dirname(__file__))
+    folder = tmp_path / "jeu"
+    folder.mkdir()
+    exe = build_pe(folder / "answer.exe", lambda iat: Asm().mov_eax(5).ret().build(), dll=False)
+    assert native.run(exe, log=lambda *_: None) & 0xFFFF_FFFF == 5
+    assert os.path.samefile(os.getcwd(), folder)

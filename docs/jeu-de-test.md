@@ -71,6 +71,26 @@ Analyse dans AnyXboxX, avec le dossier des DLL Visual C++ en second argument :
 python PrototypeScarlett\scarlett.py --rapport <...>\x64\Release\SimpleTriangleDesktop.exe "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Redist\MSVC\<version>\x64\Microsoft.VC145.CRT"
 ```
 
+## Deuxième jeu de test : `testgdk` de SDL3
+
+Mesures du 21 novembre 2026. `testgdk` est le programme de démonstration GDK de [SDL3](https://github.com/libsdl-org/SDL) (licence zlib) : des sprites, du son, la manette et la connexion `XUser`. Il passe par `SDL3.dll`, qui charge `xgameruntime.dll` lui-même par `LoadLibrary`.
+
+![testgdk lancé par AnyXboxX en mode natif](images/testgdk-natif.png)
+
+| Mode | Résultat |
+|---|---|
+| Natif (`--natif`) | ✅ fenêtre, sprites et son. `XUserAddAsync` échoue proprement (`E_NOINTERFACE`) : AnyXboxX ne fournit pas encore l'interface `XUser` derrière `QueryApiImpl`. |
+| Isolé (`--lancer`) | Démarrage C et SDL passent ; arrêt sur la fenêtre et le texte (`USER32`, `GDI32`), non émulés en mode isolé. |
+
+Deux corrections ont été nécessaires en mode natif :
+
+1. **Ligne de commande** : le jeu lisait celle de Python (`python scarlett.py --natif …`) et la prenait pour ses arguments. AnyXboxX réécrit sur place les tampons de `GetCommandLineW` et `GetCommandLineA`, que relisent le CRT et toutes les DLL, même celles chargées par Windows.
+2. **Dossier courant** : le jeu ouvre `icon.png` en chemin relatif. AnyXboxX se place dans le dossier du jeu avant de le lancer.
+
+En mode isolé, `GetCommandLineW/A`, `CommandLineToArgvW` et `GetEnvironmentStringsW` sont maintenant émulées.
+
+Compilation : `VisualC-GDK` de SDL3 vise encore `Gaming.Desktop.x64`, absente du GDK 2610. Il faut remplacer cette plateforme par `x64` dans les projets, ajouter `_GAMING_DESKTOP` et les dossiers `include`/`lib` du GDK (`windows\include`, `windows\lib\x64`), puis compiler `tests\testgdk\testgdk.vcxproj` en `Release|x64` avec `-p:PlatformToolset=v145` et `-p:SolutionDir=<…>\VisualC-GDK\`.
+
 ## Instructions processeur et shaders
 
 - **Processeur** : la Series X utilise un AMD Zen 2 en x86-64, le même jeu d'instructions qu'un PC. Rien n'est à traduire. Seules les extensions AVX/AVX2 manquent dans Unicorn ; l'exécution native les apportera.

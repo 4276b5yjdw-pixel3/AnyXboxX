@@ -23,7 +23,9 @@ O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o cód
 | 16/16 DLLs de um pacote Scarlett inicializadas com suas dependências, 0 chamadas não emuladas | ✅ feito |
 | Jogo de teste livre `SimpleTriangle` compilado: a inicialização em C e a inicialização do GDK funcionam no AnyXboxX | ✅ feito |
 | Execução nativa no estilo Wine (`--natif`): **o SimpleTriangle é exibido**, runtime GDK fornecido pelo AnyXboxX | ✅ feito |
-| 79 testes automatizados, 83 % de cobertura | ✅ feito |
+| Segundo jogo de teste livre, `testgdk` do SDL3: **roda em modo nativo** (janela, sprites, som) | ✅ feito |
+| Execução isolada de um pacote ou de um exe (`--lancer`) com a lista das chamadas a emular | ✅ feito |
+| 89 testes automatizados | ✅ feito |
 | Tradução do D3D12.X (`d3d12_xs.dll`) e do `kernelx.dll` para os binários de console | ⏳ a fazer |
 | Interfaces do runtime GDK por trás de `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ a fazer |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |
@@ -63,6 +65,14 @@ O programa de demonstração compilado é `PrototypeScarlett/demo.pe`; o código
 ![SimpleTriangle iniciado pelo AnyXboxX em modo nativo](../images/simpletriangle-anyxboxx.png)
 
 O AnyXboxX carrega o próprio executável e o executa diretamente no processador, como o Wine. O runtime do Xbox (`xgameruntime.dll`) é fornecido pelo AnyXboxX; a janela e o DirectX 12 são os do PC. **Atenção: no modo nativo, o programa não é isolado.** Reserve esse modo para programas de confiança; `--rapport` e `--banc` continuam isolados dentro do Unicorn. `ANYXBOXX_TRACE=1` exibe as chamadas interceptadas. Detalhes: [docs/jeu-de-test.md](../jeu-de-test.md) (em francês).
+
+## Executar um pacote em modo isolado
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --lancer <dossier du paquet ou fichier .exe> [dossiers de DLL…]
+```
+
+Com uma pasta, o AnyXboxX lê o `MicrosoftGame.Config`, pega o executável declarado para `Scarlett` e o executa na máquina isolada (Unicorn): o programa não toca no PC. O relatório indica as importações não resolvidas e depois as chamadas não emuladas, da mais frequente à mais rara: é a lista de trabalho para completar o emulador. Se o executável estiver ausente, a mensagem o nomeia.
 
 ## Analisar um programa
 
