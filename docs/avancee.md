@@ -38,6 +38,10 @@ Fonctions qui ont débloqué le plus de modules :
 
 Plus aucun appel non émulé pendant l'initialisation des 16 DLL. Les prochains manques apparaîtront quand le code du jeu lui-même s'exécutera.
 
+## Exécution native
+
+Depuis le 21 novembre 2026, `--natif` charge un exécutable et le lance directement sur le processeur (approche Wine). Premier résultat : le jeu de test **SimpleTriangle s'affiche**, avec le runtime GDK servi par AnyXboxX. Détails, captures et limites : [jeu-de-test.md](jeu-de-test.md).
+
 ## Chargement multi-modules
 
 Ordre de résolution d'un import `dll!fonction` (`emu/modules.py`) :

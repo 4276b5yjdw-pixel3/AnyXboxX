@@ -22,9 +22,10 @@ AnyXboxX loads Xbox GDK executables (PE32+ x86-64 format) and runs their code wi
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ done |
 | 16/16 DLLs of a Scarlett package initialized with their dependencies, 0 non-emulated calls | ✅ done |
 | Free `SimpleTriangle` test game compiled: C startup and GDK initialization run in AnyXboxX | ✅ done |
-| 74 automated tests, 83% coverage | ✅ done |
-| Win32 window (`USER32`) and DirectX 12 (`d3d12`, `dxgi`) to display the triangle | ⏳ to do |
-| Native code execution (Wine approach) instead of Unicorn | ⏳ to do |
+| Wine-style native execution (`--natif`): **SimpleTriangle is displayed**, GDK runtime served by AnyXboxX | ✅ done |
+| 79 automated tests, 83% coverage | ✅ done |
+| Translation of D3D12.X (`d3d12_xs.dll`) and `kernelx.dll` for console binaries | ⏳ to do |
+| GDK runtime interfaces behind `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ to do |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
 | Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |
@@ -52,6 +53,16 @@ py -3.12 -m venv .venv
 ```
 
 The compiled demo program is `PrototypeScarlett/demo.pe`; its source code is `PrototypeScarlett/demo.c`.
+
+## Run a game in native mode
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
+```
+
+![SimpleTriangle launched by AnyXboxX in native mode](../images/simpletriangle-anyxboxx.png)
+
+AnyXboxX loads the executable itself and runs it directly on the processor, like Wine. The Xbox runtime (`xgameruntime.dll`) is provided by AnyXboxX; the window and DirectX 12 are the PC's. **Warning: in native mode, the program is not isolated.** Reserve this mode for trusted programs; `--rapport` and `--banc` remain isolated inside Unicorn. `ANYXBOXX_TRACE=1` displays the intercepted calls. Details: [docs/jeu-de-test.md](../jeu-de-test.md) (in French).
 
 ## Analyze a program
 
@@ -84,6 +95,7 @@ The report lists the imported functions, the percentage already emulated and the
 | `emu/report.py` | compatibility report |
 | `emu/modules.py` | loads the package DLLs, links the imports, orders the initializations |
 | `emu/bench.py` | test bench on a folder of modules |
+| `emu/native/` | Wine-style native execution: loader, real imports, AnyXboxX's GDK runtime |
 | `scarlett.py` | Tkinter interface and command line |
 
 To add a function, decorate a handler in `emu/hle/`:

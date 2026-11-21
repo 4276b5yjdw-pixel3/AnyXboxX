@@ -189,6 +189,27 @@ class Asm:
     def store_dword(self, offset, value):
         return self.raw(b"\xc7\x05" + self._disp(rva(offset), 10) + struct.pack("<I", value))
 
+    def lea_rcx(self, offset):
+        return self.raw(b"\x48\x8d\x0d" + self._disp(rva(offset), 7))
+
+    def lea_rdx(self, offset):
+        return self.raw(b"\x48\x8d\x15" + self._disp(rva(offset), 7))
+
+    def zero_rcx(self):
+        return self.raw(b"\x31\xc9")
+
+    def zero_rdx(self):
+        return self.raw(b"\x31\xd2")
+
+    def zero_r8(self):
+        return self.raw(b"\x45\x31\xc0")
+
+    def mov_rcx_rax(self):
+        return self.raw(b"\x48\x89\xc1")
+
+    def call_rax(self):
+        return self.raw(b"\xff\xd0")
+
     def frame(self):
         return self.raw(b"\x48\x83\xec\x28")
 

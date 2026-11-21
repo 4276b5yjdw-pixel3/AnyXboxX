@@ -146,6 +146,24 @@ class Window:
             self.message.set(str(error))
 
 
+NATIVE_WARNING = ("ATTENTION : en mode --natif, le programme s'exécute directement sur ce PC, "
+                  "sans isolation. N'utilisez ce mode qu'avec des programmes de confiance.")
+
+
+def run_native(target, extra_dirs=()):
+    """Exécution façon Wine : le code tourne sur le processeur, les imports Xbox sont servis
+    par AnyXboxX et le reste par Windows. Le processus se termine avec le jeu."""
+    print(NATIVE_WARNING, file=sys.stderr)
+    try:
+        from emu import native
+
+        exe, _ = resolve_target(target)
+        return native.run(exe, (exe.parent, *extra_dirs)) & 0xFFFF_FFFF
+    except (ImportError, MemoryError, *ERRORS) as error:
+        print(f"Erreur : {error}", file=sys.stderr)
+        return 1
+
+
 def find_package_folder():
     start = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve().parent
     return next((c for c in (start, start.parent, start.parent.parent)
@@ -164,6 +182,8 @@ def main(argv):
 
         print(bench.table(bench.run(Path(argv[1]), extra_dirs)))
         return 0
+    if len(argv) >= 2 and argv[0] == "--natif":
+        return run_native(Path(argv[1]), extra_dirs)
     import tkinter as tk
 
     root = tk.Tk()
