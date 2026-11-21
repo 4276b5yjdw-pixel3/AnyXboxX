@@ -47,7 +47,7 @@ Mesure : `python PrototypeScarlett/scarlett.py --traduction <dossier du paquet> 
 
 | DLL | Fonctions importées | Traduction (runtime C++, `runtime/`) |
 |---|---|---|
-| `xmem.dll` | `XMemAlloc`, `XMemFree`, `XMemVirtualQuery`, `XMemGetWorkingSetStatistics` | Tas du PC aligné (64 octets, ou 4 Kio pour les gros blocs), crochets d'allocation ; `VirtualQuery`. Les statistiques renvoient un échec propre : leur structure n'est pas publique. |
+| `xmem.dll` | `XMemAlloc`, `XMemFree`, `XMemVirtualQuery`, `XMemGetWorkingSetStatistics` | Attributs `XALLOC_ATTRIBUTES` décodés avec la disposition ERA (portée de Xbox2Windows) : tas du PC à l'alignement demandé (64 octets au moins, 4 Kio pour les gros blocs), types graphiques dans leur propre région de pages, mémoire physique refusée ; crochets d'allocation ; `XMemVirtualQuery(processus, adresse, tampon)` avec un drapeau de mémoire graphique à +0x30 (politique du PC, champ non confirmé). Les statistiques renvoient un échec propre : leur structure n'est pas publique. |
 | `d3d12_xs.dll` | `D3D12SerializeVersionedRootSignature`, `D3D12CreateRootSignatureDeserializer` | Redirigées vers le `d3d12.dll` du PC : même contrat, structures publiques. |
 
 Le runtime C++ est préchargé par son chemin complet. Windows retrouve ensuite ces DLL par leur nom : une DLL du jeu chargée par Windows lui-même reçoit aussi celles d'AnyXboxX.

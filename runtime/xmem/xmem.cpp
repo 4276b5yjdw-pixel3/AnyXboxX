@@ -1,55 +1,72 @@
-// xmem.dll d'AnyXboxX : allocateur mémoire de la console, traduit vers le tas du PC.
+// xmem.dll d'AnyXboxX : allocateur mémoire de la console, traduit vers la mémoire du PC.
 //
-// Signatures publiques : XMemAlloc(taille, attributs) et XMemFree(pointeur, attributs),
-// redirigées vers des crochets que le jeu peut remplacer (XMemSetAllocationHooks).
-// Les attributs (type de mémoire, alignement) ne sont pas documentés publiquement :
-// on aligne de façon prudente et on les ignore.
+// Signatures relevées aux appels (pas d'en-tête public) : XMemAlloc(taille, attributs) et
+// XMemFree(pointeur, attributs), redirigées vers des crochets que le jeu peut remplacer
+// (XMemSetAllocationHooks) ; XMemVirtualQuery(processus, adresse, tampon de 64 octets).
+// Les attributs XALLOC_ATTRIBUTES sont décodés avec la disposition ERA (era_heap.h, porté
+// de Xbox2Windows) : tas et types graphiques servis, mémoire physique refusée.
 //
 // Chaque bloc revient à l'allocateur qui l'a produit : les blocs par défaut sont
-// enregistrés, et les deux crochets sont publiés ensemble (une seule paire atomique).
+// enregistrés avec leur placement, et les deux crochets sont publiés ensemble (une seule
+// paire atomique). Les blocs graphiques sont aussi déclarés à XMemVirtualQuery.
 #include <windows.h>
 
-#include <malloc.h>
-
 #include <atomic>
-#include <unordered_set>
+#include <optional>
+#include <unordered_map>
 
+#include "era_heap.h"
+#include "era_query.h"
 #include "trace.h"
 
 namespace {
 
 using AllocRoutine = void*(WINAPI*)(SIZE_T, ULONGLONG);
 using FreeRoutine = void(WINAPI*)(void*, ULONGLONG);
+using anyxboxx::era::Block;
+using anyxboxx::era::Placement;
 
 struct Hooks {
   AllocRoutine alloc;
   FreeRoutine release;
 };
 
-constexpr SIZE_T kSmallAlignment = 64;    // ligne de cache, suffisant pour SIMD
-constexpr SIZE_T kPageAlignment = 4096;   // gros blocs : alignés comme une page
-constexpr SIZE_T kPageThreshold = 4096;
+constexpr SIZE_T kQueryBufferBytes = 64;  // tampon des appelants BVH (relevé par Xbox2Windows)
 
 constexpr Hooks kNoHooks{nullptr, nullptr};
 std::atomic<const Hooks*> g_hooks{&kNoHooks};
 
 SRWLOCK g_blocks_lock = SRWLOCK_INIT;
-std::unordered_set<void*>& DefaultBlocks() {
-  static auto* blocks = new std::unordered_set<void*>();  // jamais détruit : vit jusqu'à la fin du processus
+std::unordered_map<void*, Placement>& DefaultBlocks() {
+  static auto* blocks = new std::unordered_map<void*, Placement>();  // jamais détruit : vit jusqu'à la fin du processus
   return *blocks;
 }
 
-void Remember(void* block) {
+void Remember(const Block& block) {
   AcquireSRWLockExclusive(&g_blocks_lock);
-  DefaultBlocks().insert(block);
+  DefaultBlocks().emplace(block.address, block.placement);
   ReleaseSRWLockExclusive(&g_blocks_lock);
 }
 
-bool Forget(void* block) {
+std::optional<Block> Forget(void* address) {
   AcquireSRWLockExclusive(&g_blocks_lock);
-  const bool known = DefaultBlocks().erase(block) != 0;
+  std::optional<Block> found;
+  auto& blocks = DefaultBlocks();
+  if (const auto it = blocks.find(address); it != blocks.end()) {
+    found = Block{address, it->second};
+    blocks.erase(it);
+  }
   ReleaseSRWLockExclusive(&g_blocks_lock);
-  return known;
+  return found;
+}
+
+// Libère un bloc par défaut ; faux s'il n'en est pas un.
+bool ReleaseDefault(void* address) {
+  const std::optional<Block> block = Forget(address);
+  if (!block) return false;
+  if (block->placement == Placement::kGraphics) anyxboxx::era_query::UnregisterGraphicsRegion(address);
+  anyxboxx::era::Release(*block);
+  return true;
 }
 
 }  // namespace
@@ -57,20 +74,22 @@ bool Forget(void* block) {
 extern "C" {
 
 void* WINAPI XMemAllocDefault(SIZE_T size, ULONGLONG attributes) {
-  const SIZE_T alignment = size >= kPageThreshold ? kPageAlignment : kSmallAlignment;
-  void* block = _aligned_malloc(size == 0 ? 1 : size, alignment);
-  if (block != nullptr) Remember(block);
-  ANYXBOXX_TRACE("[xmem] XMemAlloc %zu octets (attributs 0x%llx) -> %p", size, attributes, block);
-  return block;
+  const Block block = anyxboxx::era::Allocate(size, attributes);
+  if (block.address != nullptr && block.placement == Placement::kGraphics &&
+      !anyxboxx::era_query::RegisterGraphicsRegion(block.address, size == 0 ? 1 : size)) {
+    anyxboxx::Log("[xmem] XMemAlloc : région graphique %p déjà enregistrée", block.address);
+    anyxboxx::era::Release(block);
+    SetLastError(ERROR_INVALID_ADDRESS);
+    return nullptr;
+  }
+  if (block.address != nullptr) Remember(block);
+  ANYXBOXX_TRACE("[xmem] XMemAlloc %zu octets (attributs 0x%llx) -> %p", size, attributes, block.address);
+  return block.address;
 }
 
 void WINAPI XMemFreeDefault(void* address, ULONGLONG) {
   if (address == nullptr) return;
-  if (Forget(address)) {
-    _aligned_free(address);
-  } else {
-    anyxboxx::Log("[xmem] XMemFreeDefault : bloc %p inconnu, ignoré", address);
-  }
+  if (!ReleaseDefault(address)) anyxboxx::Log("[xmem] XMemFreeDefault : bloc %p inconnu, ignoré", address);
 }
 
 void* WINAPI XMemAlloc(SIZE_T size, ULONGLONG attributes) {
@@ -80,10 +99,7 @@ void* WINAPI XMemAlloc(SIZE_T size, ULONGLONG attributes) {
 
 void WINAPI XMemFree(void* address, ULONGLONG attributes) {
   if (address == nullptr) return;
-  if (Forget(address)) {  // alloué par défaut, même si des crochets ont été posés depuis
-    _aligned_free(address);
-    return;
-  }
+  if (ReleaseDefault(address)) return;  // alloué par défaut, même si des crochets ont été posés depuis
   const Hooks* hooks = g_hooks.load(std::memory_order_acquire);
   if (hooks->release != nullptr) {
     hooks->release(address, attributes);
@@ -104,9 +120,9 @@ void WINAPI XMemGetAllocationHooks(AllocRoutine* alloc, FreeRoutine* release) {
   if (release != nullptr) *release = hooks->release;
 }
 
-// Même contrat que VirtualQuery (hypothèse : la console reprend l'API Windows).
-SIZE_T WINAPI XMemVirtualQuery(const void* address, MEMORY_BASIC_INFORMATION* info, SIZE_T size) {
-  return VirtualQuery(address, info, size);
+// MEMORY_BASIC_INFORMATION puis l'octet +0x30 (bit 0 : mémoire graphique), voir era_query.h.
+BOOL WINAPI XMemVirtualQuery(HANDLE process, LPCVOID address, void* buffer) {
+  return anyxboxx::era_query::Query(process, address, buffer, kQueryBufferBytes) != 0;
 }
 
 // La structure XMEM_WORKING_SET_STATISTICS n'est pas publique : on signale l'échec
@@ -115,6 +131,11 @@ BOOL WINAPI XMemGetWorkingSetStatistics(int type, void*) {
   ANYXBOXX_TRACE("[xmem] XMemGetWorkingSetStatistics(%d) non disponible", type);
   SetLastError(ERROR_NOT_SUPPORTED);
   return FALSE;
+}
+
+// Outil d'AnyXboxX (pas une fonction de la console) : champs ERA d'un mot d'attributs.
+void WINAPI AnyXboxX_DecodeAllocAttributes(ULONGLONG attributes, anyxboxx::era::Fields* fields) {
+  if (fields != nullptr) *fields = anyxboxx::era::Decode(attributes);
 }
 
 }  // extern "C"
