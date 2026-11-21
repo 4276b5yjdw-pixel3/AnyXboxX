@@ -60,7 +60,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 224 test automatizzati | ✅ fatto |
+| 229 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
 | Librerie console di TomBox (Rust, MIT) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
@@ -78,6 +78,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Texture console in Rust: decodifica BC7 e de-tiling GFX10 `SW_4K_S` portati da Xbox2Windows (MIT), digest di riferimento riprodotti; `anyxboxx_texture bc7 <blocchi.bin> <l> <a> <uscita.png> [--4k-s]` | 🟡 in corso |
 | Altre interfacce GDK scritte da AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ da fare |
 | Ricompilatore di shader RDNA 2 → DXIL: primi programmi tradotti in HLSL, compilati in DXIL ed eseguiti sulla GPU del PC con D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP senza GPU), memoria identica a un interprete di riferimento wave32 che esegue 519 codifiche su 1.444 (scalari, VOP1/VOP2/VOPC/VOP3, memoria: SMEM, LDS, GLOBAL, MUBUF con limiti V#, atomiche, salti, divergenza con `exec`): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in corso |
+| Cache degli shader: shader tradotti compilati una sola volta in DXIL, poi ripresi dal disco (1,4 ms) o dalla memoria (0,8 ms) invece di dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` o `ANYXBOXX_SHADER_CACHE`, dimensione limitata | 🟡 in corso |
 | Eccezioni SEH x64 (`.pdata`), thread multipli | ⏳ da fare |
 | Caricamento dinamico di una DLL durante l'esecuzione (`LoadLibrary` + `DllMain`) | ⏳ da fare |
 | Grafica D3D12.X verso Direct3D 12 / Vulkan | ⏳ da fare |

@@ -56,6 +56,9 @@ void main(uint lane : SV_GroupIndex) {
   for (uint j = 0; j < 256; ++j) v[j] = 0u;
   v[0] = lane;
   s[126] = 0xFFFFFFFFu;
+  // La mémoire groupshared n'est pas remise à zéro par D3D12 : on la vide, comme l'interpréteur.
+  for (uint w = lane; w < 8128u; w += 32u) g_lds[w] = 0u;
+  GroupMemoryBarrierWithGroupSync();
 """
 
 

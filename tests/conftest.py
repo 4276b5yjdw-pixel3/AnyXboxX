@@ -6,12 +6,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(ROOT))
 
 import os  # noqa: E402
+import tempfile  # noqa: E402
 
 import pytest  # noqa: E402
 
 # Tests déterministes : AnyXboxX gère seul le runtime GDK, même si Gaming Services est
 # installé. Les tests de délégation lancent un sous-processus avec la valeur "1".
 os.environ.setdefault("ANYXBOXX_SYSTEM_RUNTIME", "0")
+# Cache de shaders propre à la session de tests : jamais celui de l'utilisateur.
+os.environ.setdefault("ANYXBOXX_SHADER_CACHE", tempfile.mkdtemp(prefix="anyxboxx-shader-cache-"))
 
 RUNTIME_DIR = Path(os.environ.get("ANYXBOXX_RUNTIME")
                    or Path(__file__).resolve().parents[1] / "runtime" / "build" / "bin")
