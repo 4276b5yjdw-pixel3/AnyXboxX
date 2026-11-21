@@ -189,3 +189,7 @@ def XSystemGetDeviceType(c):
 ## Contribuir
 
 A branch `main` é protegida: toda contribuição passa por uma pull request revisada, e os testes precisam passar. Bugs e funções a emular são reportados nas issues. As regras completas estão em [CONTRIBUTING.md](../../CONTRIBUTING.md) (em francês).
+
+## Licença
+
+O AnyXboxX é distribuído sob a [GNU LGPL 2.1 ou posterior](../../LICENSE). As partes de terceiros mantêm a própria licença: o módulo `Task` do libHttpClient (MIT, `runtime/third_party/libhttpclient-task`) e as tabelas RDNA 2 geradas a partir dos testes de codificação públicos do LLVM (Apache 2.0 com exceção LLVM, `PrototypeScarlett/emu/rdna2_ops.py` e `rdna2_shapes.py`).
