@@ -9,7 +9,7 @@ import os
 from ctypes import c_uint32, c_void_p
 
 from . import win32
-from . import runtime
+from . import redirects, runtime
 from .runtime import GAME_RUNTIME
 
 LOAD_W = ctypes.WINFUNCTYPE(c_void_p, c_void_p, c_void_p, c_uint32)
@@ -74,6 +74,8 @@ class Shims:
             label = f"#{name}" if name <= 0xFFFF else ctypes.string_at(name).decode(errors="replace")
             if self.trace:
                 self.log(f"[trace] GetProcAddress {module or 0:#x} {label}")
+            if label in redirects.DXGI_FUNCTIONS and redirects.measuring_frames()                     and module == win32.GetModuleHandleW("dxgi.dll"):
+                return self.runtime.export(redirects.EXPORT_PREFIX + label)   # compteur d'images
             address = win32.GetProcAddress(module, name)
             if not address and self.runtime.owns(module):
                 self.log(f"[natif] {label} pas encore fourni par le runtime d'AnyXboxX")

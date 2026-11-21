@@ -43,7 +43,8 @@ anyxboxx_dll(xgameruntime xgameruntime/xgameruntime.cpp xgameruntime/served_inte
              xgameruntime/system_interface.cpp xgameruntime/game_config.cpp
              xgameruntime/registry.cpp xgameruntime/save_store.cpp xgameruntime/save_interface.cpp
              xgameruntime/local_storage_interface.cpp xgameruntime/package_interface.cpp
+             xgameruntime/frame_counter.cpp
              xgameruntime/xgameruntime.def)
-target_link_libraries(xgameruntime PRIVATE anyxboxx_task)
+target_link_libraries(xgameruntime PRIVATE anyxboxx_task dxgi)
 anyxboxx_dll(xmem xmem/xmem.cpp xmem/xmem.def)
 anyxboxx_dll(d3d12_xs d3d12_xs/d3d12_xs.cpp d3d12_xs/d3d12_xs.def)

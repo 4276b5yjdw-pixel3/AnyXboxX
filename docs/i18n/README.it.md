@@ -18,9 +18,24 @@ Rigenerare: `scarlett.py --carte <cartella del pacchetto> docs/images/carte-avan
 - **Istruzioni della GPU: 0%.** Gli shader di un gioco per console sono compilati per la GPU RDNA 2 della Series X. Serve un ricompilatore RDNA 2 → DXIL, non ancora iniziato.
 - **Funzioni di sistema: 66%** delle 1 337 funzioni importate dalle DLL del pacchetto di prova sono risolte in modalità isolata.
 - **DLL proprie della console**: `xmem.dll` (3/4) e `d3d12_xs.dll` (2/2) sono tradotte per le funzioni che il pacchetto usa. La creazione del dispositivo D3D12.X resta da scrivere.
-- **Runtime GDK: 121 delle 396 funzioni** sono scritte in AnyXboxX, in C++: la coda di attività (`XTaskQueue`, `XAsync`, `XThread`), l'utente (`XUser`, un profilo locale offline), l'identità Xbox Series X (`XSystem`, Title ID, analisi, funzionalità del runtime) e i salvataggi (`XGameSave`, `XGameSaveFiles`, `XPersistentLocalStorage`). Entrano in gioco quando AnyXboxX gestisce il runtime da solo: senza Gaming Services, oppure con `ANYXBOXX_SYSTEM_RUNTIME=0`. Se il runtime GDK di Windows è presente, serve tutte le interfacce, coda di attività compresa, perché le sue API accettano solo le proprie code. La traccia (`ANYXBOXX_TRACE=1`) nomina ogni interfaccia richiesta.
+- **Runtime GDK: 152 delle 396 funzioni** sono scritte in AnyXboxX, in C++: la coda di attività (`XTaskQueue`, `XAsync`, `XThread`), l'utente (`XUser`, un profilo locale offline), l'identità Xbox Series X (`XSystem`, Title ID, analisi, funzionalità del runtime), i salvataggi (`XGameSave`, `XGameSaveFiles`, `XPersistentLocalStorage`) e il pacchetto del gioco (`XPackage`). Entrano in gioco quando AnyXboxX gestisce il runtime da solo: senza Gaming Services, oppure con `ANYXBOXX_SYSTEM_RUNTIME=0`. Se il runtime GDK di Windows è presente, serve tutte le interfacce, coda di attività compresa, perché le sue API accettano solo le proprie code. La traccia (`ANYXBOXX_TRACE=1`) nomina ogni interfaccia richiesta.
 
 Il grafico viene rigenerato con `scarlett.py --traduction <cartella del pacchetto> docs/images/traduction.svg`.
+
+## Prestazioni (obiettivo: 60 fotogrammi al secondo costanti)
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --banc-perf <jeu.exe> [secondes] [courbe.svg]
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <jeu.exe> --fps
+```
+
+Il runtime C++ cronometra ogni `Present` della swap chain DXGI del gioco, anche quando DXGI è caricata dinamicamente da una DLL del gioco (SDL3). Ne ricava i fotogrammi al secondo, il tempo medio di un fotogramma e l'«1% basso» (la cadenza dell'1% di fotogrammi più lenti, che rivela gli scatti). `--fps` mostra questi valori nel titolo della finestra. `--banc-perf` misura per N secondi, senza contare il primo (caricamento), ed emette un verdetto «60 f/s costanti» (codice di uscita 2 se l'obiettivo non viene raggiunto). Senza queste opzioni, non viene intercettato nulla.
+
+![SimpleTriangle: fotogrammi al secondo](../images/fps-simpletriangle.svg)
+
+![testgdk: fotogrammi al secondo](../images/fps-testgdk.svg)
+
+I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s per SimpleTriangle e 12 600 f/s per testgdk, in modalità nativa.
 
 ## Avanzamento del progetto
 
@@ -47,18 +62,22 @@ Il grafico viene rigenerato con `scarlett.py --traduction <cartella del pacchett
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 149 test automatizzati | ✅ fatto |
+| 164 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice` e interfacce `ID3D12*` della console | ⏳ da fare |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
 | Identità Xbox Series X: tipo di console (valore di registro `ConsoleMode` simulato, anche nelle DLL del gioco), `XSystem`, Title ID letto da `MicrosoftGame.config`, analisi «Xbox Series X» | ✅ fatto |
 | Mappa dell'avanzamento: una casella per funzione (`--carte`) | ✅ fatto |
+| Controller (`GameInput`) e audio (`XAudio2`): stessa API su console e su PC, collegati alle DLL di Windows in modalità nativa | ✅ fatto |
+| Resoconto Markdown degli import mancanti per DLL e delle chiamate non emulate (`--lancer … --md rapport.md`) | ✅ fatto |
+| Contatore di fotogrammi (`--fps`) e banco di prova delle prestazioni con verdetto «60 f/s costanti» e curva (`--banc-perf`) | ✅ fatto |
 | Salvataggi `XGameSave` (contenitori, blob, quota, lettura asincrona) e archiviazione locale persistente, sul disco del PC (`%LOCALAPPDATA%\AnyXboxX\<TitleId>`, oppure `ANYXBOXX_SAVE_DIR`) | ✅ fatto |
-| Altre interfacce GDK scritte da AnyXboxX (`XPackage`, `XStore`, `XGameUi`…) | ⏳ da fare |
+| `XPackage`: pacchetto installato in locale (identificativo, lingua, blocchi pronti, montaggio sulla cartella del gioco) | ✅ fatto |
+| Altre interfacce GDK scritte da AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ da fare |
 | Ricompilatore di shader RDNA 2 → DXIL | ⏳ da fare |
 | Eccezioni SEH x64 (`.pdata`), thread multipli | ⏳ da fare |
 | Caricamento dinamico di una DLL durante l'esecuzione (`LoadLibrary` + `DllMain`) | ⏳ da fare |
 | Grafica D3D12.X verso Direct3D 12 / Vulkan | ⏳ da fare |
-| Audio, controller, salvataggi `XGameSave` | ⏳ da fare |
+| Decodifica audio XMA della console (il resto dell'audio passa da XAudio2) | ⏳ da fare |
 
 <table>
 <tr>
@@ -108,7 +127,7 @@ AnyXboxX carica l'eseguibile stesso e lo esegue direttamente sul processore, com
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --lancer <dossier du paquet ou fichier .exe> [dossiers de DLL…]
 ```
 
-Con una cartella, AnyXboxX legge `MicrosoftGame.Config`, prende l'eseguibile dichiarato per `Scarlett` e lo avvia nella macchina isolata (Unicorn): il programma non tocca il PC. Il resoconto indica prima gli import non risolti, poi le chiamate non emulate, dalla più frequente alla più rara: è l'elenco di lavoro per completare l'emulatore. Se l'eseguibile manca, il messaggio lo nomina.
+Con una cartella, AnyXboxX legge `MicrosoftGame.Config`, prende l'eseguibile dichiarato per `Scarlett` e lo avvia nella macchina isolata (Unicorn): il programma non tocca il PC. Il resoconto indica prima gli import non risolti, poi le chiamate non emulate, dalla più frequente alla più rara: è l'elenco di lavoro per completare l'emulatore. Se l'eseguibile manca, il messaggio lo nomina. Con `--md rapport.md`, lo stesso resoconto viene scritto in Markdown, con gli import mancanti raggruppati per DLL.
 
 ## Analizzare un programma
 

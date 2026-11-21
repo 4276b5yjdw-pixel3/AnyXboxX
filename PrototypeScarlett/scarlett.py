@@ -235,7 +235,22 @@ def main(argv):
     if len(argv) >= 3 and argv[0] == "--carte":
         return print_map(Path(argv[1]), Path(argv[2]))
     if len(argv) >= 2 and argv[0] == "--natif":
-        return run_native(Path(argv[1]), extra_dirs)
+        # --natif <cible> [dossiers de DLL…] [--fps] : --fps affiche les i/s dans le titre de la fenêtre
+        options = [arg for arg in argv[2:] if arg != "--fps"]
+        if "--fps" in argv[2:]:
+            os.environ["ANYXBOXX_FPS"] = "1"
+        return run_native(Path(argv[1]), tuple(Path(d) for d in options))
+    if len(argv) >= 2 and argv[0] == "--banc-perf":
+        # --banc-perf <exe> [secondes] [graphique.svg] : objectif 60 i/s constants
+        from emu import perf
+
+        try:
+            seconds = float(argv[2]) if len(argv) > 2 else 10.0
+            chart = Path(argv[3]) if len(argv) > 3 else None
+            return 0 if perf.run(Path(argv[1]), seconds, chart).constant_60 else 2
+        except (OSError, ValueError) as error:
+            print(f"Erreur : {error}", file=sys.stderr)
+            return 1
     import tkinter as tk
 
     root = tk.Tk()
