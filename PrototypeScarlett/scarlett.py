@@ -241,14 +241,18 @@ def main(argv):
             os.environ["ANYXBOXX_FPS"] = "1"
         return run_native(Path(argv[1]), tuple(Path(d) for d in options))
     if len(argv) >= 2 and argv[0] == "--rdna2":
-        # --rdna2 <shader.bin> : instructions GPU RDNA 2 par famille d'encodage
+        # --rdna2 <shader.bin> [--liste] : instructions GPU RDNA 2 par famille, ou listing
         from emu import rdna2
 
         try:
-            instructions = rdna2.decode(Path(argv[1]).read_bytes())
+            data = Path(argv[1]).read_bytes()
         except OSError as error:
             print(f"Erreur : {error}", file=sys.stderr)
             return 1
+        if "--liste" in argv[2:]:
+            print("\n".join(rdna2.listing(data)))
+            return 0
+        instructions = rdna2.decode(data)
         for family, count in rdna2.histogram(instructions).items():
             print(f"{family:10} {count}")
         print(f"Total : {len(instructions)} instructions")

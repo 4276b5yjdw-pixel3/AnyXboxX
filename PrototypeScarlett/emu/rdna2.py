@@ -34,8 +34,10 @@ OPCODE = {
 }
 WIDE = frozenset({"VOP3", "VOP3P", "DS", "FLAT", "MUBUF", "MTBUF", "MIMG", "SMEM", "EXP"})
 FLAT_SEGMENTS = {0: "FLAT", 1: "SCRATCH", 2: "GLOBAL"}
-VOP2_WITH_LITERAL = frozenset({0x17, 0x18, 0x2C, 0x2D})   # v_madmk/madak_f32, v_fmamk/fmaak_f32
+VOP2_WITH_LITERAL = frozenset({0x20, 0x21, 0x2C, 0x2D, 0x37, 0x38})   # v_madmk/madak_f32, v_fmamk/fmaak_f32 et _f16
 SOPK_SETREG_IMM32 = 0x15
+VOP_EXTENSIONS = frozenset({0xE9, 0xEA, 0xF9, 0xFA})     # DPP8, DPP8 FI, SDWA, DPP16
+OPCODE_HIGH_BIT = {"MIMG": 0, "MUBUF": 25}
 
 
 @dataclass(frozen=True)
@@ -69,11 +71,27 @@ def _has_literal(family, word, second):
     return False
 
 
+def _has_extension(family, word):
+    """SDWA ou DPP : le src0 des VOP1/VOP2/VOPC annonce un mot de contrôle en plus."""
+    return family in ("VOP1", "VOP2", "VOPC") and word & 0x1FF in VOP_EXTENSIONS
+
+
 def _size(family, word, second):
     size = 2 if family in WIDE or family in FLAT_SEGMENTS.values() else 1
     if family == "MIMG":
         size += (word >> 1) & 0x3            # adresses NSA : mots supplémentaires
+    if _has_extension(family, word):
+        return size + 1
     return size + (1 if _has_literal(family, word, second) else 0)
+
+
+def _opcode(family, word):
+    base = "FLAT" if family in FLAT_SEGMENTS.values() else family
+    shift, mask = OPCODE.get(base, (0, 0))
+    opcode = (word >> shift) & mask
+    if base in OPCODE_HIGH_BIT:              # bit OPM : 8e bit de l'opcode
+        opcode |= ((word >> OPCODE_HIGH_BIT[base]) & 1) << 7
+    return opcode
 
 
 def classify(data, offset=0):
@@ -81,9 +99,15 @@ def classify(data, offset=0):
     word = struct.unpack_from("<I", data, offset)[0]
     second = struct.unpack_from("<I", data, offset + DWORD)[0] if len(data) >= offset + 2 * DWORD else None
     family = _family(word)
+    return family, _opcode(family, word), _size(family, word, second)
+
+
+def mnemonic(family, opcode):
+    """Nom de l'instruction (table tirée des tests d'encodage de LLVM), ou None."""
+    from emu.rdna2_ops import MNEMONICS
+
     base = "FLAT" if family in FLAT_SEGMENTS.values() else family
-    shift, mask = OPCODE.get(base, (0, 0))
-    return family, (word >> shift) & mask, _size(family, word, second)
+    return MNEMONICS.get((base, opcode))
 
 
 def decode(data):
@@ -102,3 +126,14 @@ def decode(data):
 def histogram(instructions):
     """Nombre d'instructions par famille, trié par nom."""
     return dict(sorted(Counter(i.family for i in instructions).items()))
+
+
+def listing(data):
+    """Une ligne par instruction : décalage, mnémonique (ou famille et opcode), mots bruts."""
+    lines = []
+    for instruction in decode(data):
+        raw = struct.unpack_from(f"<{instruction.size}I", data, instruction.offset)
+        name = mnemonic(instruction.family, instruction.opcode)
+        label = name or f"{instruction.family.lower()}_op_0x{instruction.opcode:X}"
+        lines.append(f"{instruction.offset:06X}  {label:28} {' '.join(f'{w:08X}' for w in raw)}")
+    return lines
