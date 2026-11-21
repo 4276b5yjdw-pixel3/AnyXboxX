@@ -100,3 +100,69 @@ def test_semantics_only_name_real_rdna2_instructions():
     assert sorted(named - known) == []
     done, total = rdna2_exec.coverage()
     assert 150 <= done < total
+
+
+def vop3(name, vdst, src0, src1=128, src2=128, neg=0, abs_=0, clamp=0, omod=0, sdst=0):
+    """Deux mots VOP3 (src* = codes source 9 bits, 128 = constante 0)."""
+    low = 0x35 << 26 | OPCODES["VOP3", name] << 16 | clamp << 15 | (abs_ | sdst) << 8 | vdst
+    high = neg << 29 | omod << 27 | src2 << 18 | src1 << 9 | src0
+    return low, high
+
+
+def test_vop3_fma_with_source_modifiers():
+    wave = rdna2_exec.run(program(
+        vop1("v_cvt_f32_u32", 1, V + 0),
+        *vop3("v_fma_f32", 2, V + 1, TWO, ONE),                     # v2 = v1 × 2 + 1
+        *vop3("v_fma_f32", 3, V + 1, TWO, ONE, neg=0b001)))         # v3 = -v1 × 2 + 1
+    assert [bits_float(x) for x in wave.v[2][:4]] == [1.0, 3.0, 5.0, 7.0]
+    assert [bits_float(x) for x in wave.v[3][:4]] == [1.0, -1.0, -3.0, -5.0]
+
+
+def test_vop3_integer_and_bitfield_operations():
+    wave = rdna2_exec.run(program(
+        *vop3("v_mad_u32_u24", 1, V + 0, const(3), V + 0),          # 3 × ligne + ligne
+        *vop3("v_bfe_u32", 2, V + 0, const(1), const(2)),           # (ligne >> 1) & 3
+        *vop3("v_add3_u32", 3, V + 0, V + 0, const(7)),
+        *vop3("v_med3_i32", 4, V + 0, const(4), const(9))))         # ligne bornée à [4, 9]
+    assert wave.v[1][5] == 20 and wave.v[2][6] == 3 and wave.v[3][10] == 27
+    assert [wave.v[4][lane] for lane in (0, 6, 31)] == [4, 6, 9]
+
+
+def test_vop3_compare_writes_a_scalar_mask():
+    wave = rdna2_exec.run(program(*vop3("v_cmp_gt_u32", 4, const(16), V + 0)))
+    assert wave.s[4] == 0xFFFF and wave.vcc == 0
+
+
+def test_vop3b_carry_chain():
+    minus_one = 193
+    wave = rdna2_exec.run(program(
+        *vop3("v_add_co_u32", 5, minus_one, V + 0, sdst=6),         # ligne - 1, retenue si ligne ≥ 1
+        *vop3("v_add_co_ci_u32", 6, const(0), const(0), 6, sdst=7)))  # v6 = retenue entrante
+    assert wave.v[5][0] == 0xFFFF_FFFF and wave.v[5][3] == 2
+    assert wave.s[6] == 0xFFFF_FFFE and wave.v[6][:3] == [0, 1, 1]
+
+
+def test_lane_operations():
+    minus_one = 193
+    wave = rdna2_exec.run(program(
+        *vop3("v_mbcnt_lo_u32_b32", 7, minus_one, const(0)),        # idiome : numéro de ligne
+        *vop3("v_readlane_b32", 8, V + 0, const(5)),
+        *vop3("v_writelane_b32", 9, const(42), const(3))))
+    assert wave.v[7] == list(range(32)) and wave.s[8] == 5
+    assert wave.v[9][3] == 42 and wave.v[9][2] == 0
+
+
+def test_output_modifiers_clamp_and_multiply():
+    wave = rdna2_exec.run(program(
+        vop1("v_cvt_f32_u32", 1, V + 0),
+        *vop3("v_mul_f32", 10, ONE, V + 1, clamp=1, omod=1)))       # min(1, 2 × ligne)
+    assert [bits_float(x) for x in wave.v[10][:3]] == [0.0, 1.0, 1.0]
+
+
+def test_vop3_text_matches_llvm_syntax():
+    from emu import rdna2_operands
+
+    data = struct.pack("<2I", *vop3("v_fma_f32", 2, V + 1, TWO, ONE, neg=0b001, abs_=0b001))
+    assert rdna2_operands.text(data) == "v_fma_f32 v2, -|v1|, 2.0, 1.0"
+    data = struct.pack("<2I", *vop3("v_mul_f32", 10, ONE, V + 1, clamp=1, omod=1))
+    assert rdna2_operands.text(data) == "v_mul_f32_e64 v10, 1.0, v1 clamp mul:2"

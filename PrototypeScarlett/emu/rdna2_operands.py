@@ -29,8 +29,20 @@ FIELDS = {
     "VOP1": {"vdst": (17, 0xFF, "vgpr"), "src0": (0, 0x1FF, "src"), "sdst": (17, 0xFF, "src")},
     "VOP2": {"vdst": (17, 0xFF, "vgpr"), "src0": (0, 0x1FF, "src"), "vsrc1": (9, 0xFF, "vgpr")},
     "VOPC": {"src0": (0, 0x1FF, "src"), "vsrc1": (9, 0xFF, "vgpr")},
+    # VOP3 : deux mots lus comme un entier 64 bits. Genre « modN » : source N avec ses bits
+    # abs (8 + N) et neg (61 + N). « sdst8 » : destination scalaire des comparaisons en VOP3.
+    "VOP3": {"vdst": (0, 0xFF, "vgpr"), "src0": (32, 0x1FF, "mod0"), "src1": (41, 0x1FF, "mod1"),
+             "src2": (50, 0x1FF, "mod2"), "sdst8": (0, 0xFF, "src")},
+    # VOP3b (retenues, v_div_scale) : le champ abs porte une destination scalaire.
+    "VOP3B": {"vdst": (0, 0xFF, "vgpr"), "sdst": (8, 0x7F, "src"), "src0": (32, 0x1FF, "neg0"),
+              "src1": (41, 0x1FF, "neg1"), "src2": (50, 0x1FF, "neg2")},
 }
-FAMILIES = frozenset(FIELDS)
+FAMILIES = frozenset(FIELDS) - {"VOP3B"}
+VOP3_LIKE = frozenset({"VOP3", "VOP3B"})
+VOP3B_MARK = ("@", "VOP3B")
+OUTPUT_MODIFIERS = {1: "mul:2", 2: "mul:4", 3: "div:2"}
+# Opcodes VOP3 qui encodent une instruction VOPC, VOP2, VOP1 ou VINTRP : LLVM ajoute « _e64 ».
+E64_RANGES = ((0x000, 0x100), (0x100, 0x140), (0x180, 0x200), (0x200, 0x203))   # + v_interp_*
 IMMEDIATE_FORMATS = ("auto", "dec", "sdec", "hex", "hwreg", "waitcnt")
 INLINE_INTEGER_MAX = 64                  # LLVM écrit en décimal jusqu'à 64, en hexadécimal au-delà
 HWREG_DEFAULT_SIZE = 32
@@ -112,15 +124,53 @@ def render(family, word, literal, element):
         return immediate(value, option)
     if kind == "vgpr":
         return _range("v", value, option)
-    return source(value, option, literal)
+    operand = source(value, option, literal)
+    if kind.startswith(("mod", "neg")):
+        index = int(kind[-1])
+        if kind.startswith("mod") and word >> (8 + index) & 1:
+            operand = f"|{operand}|"
+        if word >> (61 + index) & 1:
+            operand = f"-{operand}"
+    return operand
 
 
-ALIASES = frozenset({("VOP1", "sdst")})
+def vop3_suffix(family, word, shape):
+    """Modificateurs écrits après les opérandes : op_sel, clamp, mul/div."""
+    parts = []
+    sources = sum(1 for name, _ in shape if name in ("src0", "src1", "src2"))
+    op_sel = (word >> 11) & 0xF if family == "VOP3" else 0
+    if op_sel:
+        bits = [op_sel >> i & 1 for i in range(sources)] + [op_sel >> 3 & 1]
+        parts.append(f"op_sel:[{','.join(map(str, bits))}]")
+    if word >> 15 & 1:
+        parts.append("clamp")
+    if (word >> 59) & 3:
+        parts.append(OUTPUT_MODIFIERS[(word >> 59) & 3])
+    return " ".join(parts)
+
+
+ALIASES = frozenset({("VOP1", "sdst"), ("VOP3", "sdst8")})
 
 
 def default_shape(family):
     return tuple((name, "dec" if kind == "imm" else 1) for name, (_, _, kind) in FIELDS[family].items()
                  if (family, name) not in ALIASES)
+
+
+def vop3_name(name, opcode):
+    return f"{name}_e64" if any(low <= opcode < high for low, high in E64_RANGES) else name
+
+
+def _words(data, offset, family, size):
+    """(mot de l'instruction, littéral) ; en VOP3 le mot fait 64 bits et le littéral suit."""
+    count = 2 if family == "VOP3" else 1
+    if len(data) < offset + count * rdna2.DWORD:
+        return None, None
+    word = int.from_bytes(data[offset:offset + count * rdna2.DWORD], "little")
+    literal = None
+    if size > count and len(data) >= offset + (count + 1) * rdna2.DWORD:
+        literal = struct.unpack_from("<I", data, offset + count * rdna2.DWORD)[0]
+    return word, literal
 
 
 def text(data, offset=0):
@@ -131,10 +181,14 @@ def text(data, offset=0):
     name = rdna2.mnemonic(family, opcode)
     if family not in FAMILIES or name is None:
         return None
-    word = struct.unpack_from("<I", data, offset)[0]
-    literal = None
-    if size > 1 and len(data) >= offset + 2 * rdna2.DWORD:
-        literal = struct.unpack_from("<I", data, offset + rdna2.DWORD)[0]
+    word, literal = _words(data, offset, family, size)
+    if word is None:
+        return None
     shape = SHAPES.get((family, opcode), default_shape(family))
+    if shape[:1] == (VOP3B_MARK,):
+        family, shape = "VOP3B", shape[1:]
     operands = ", ".join(render(family, word, literal, element) for element in shape)
+    if family in VOP3_LIKE:
+        name = vop3_name(name, opcode)
+        operands = f"{operands} {vop3_suffix(family, word, shape)}".strip()
     return f"{name} {operands}".rstrip()
