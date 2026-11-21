@@ -53,4 +53,6 @@ cargo build --release --manifest-path rust/Cargo.toml
 
 ## Where to start
 
+When a console executable becomes available, start with `python tools/jour_j.py <package folder>` ([docs/jour-j.md](docs/jour-j.md)): its report stays outside the repository.
+
 Open issues list what remains, each with a "done when" checklist. Most console-library and Direct3D 12.x work is blocked on a legally usable Scarlett executable; RDNA 2 shader work (`emu/rdna2*`) and GDK runtime functions (`runtime/xgameruntime`) can progress from public documentation.

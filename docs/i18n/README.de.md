@@ -60,7 +60,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | Tabelle der 396 GDK-Funktionen: Schnittstelle und Methodennummer, aus `xgameruntime.lib` extrahiert (`tools/gdk_interfaces.py`) | ✅ erledigt |
 | `XTaskQueue`, `XAsync`, `XThread` von AnyXboxX bereitgestellt: testgdk läuft ohne die Runtime von Windows | ✅ erledigt |
 | Übrige GDK-Schnittstellen: an die GDK-Runtime von Windows delegiert, von der Ablaufverfolgung benannt | 🟡 in Arbeit |
-| 229 automatisierte Tests | ✅ erledigt |
+| 232 automatisierte Tests | ✅ erledigt |
 | D3D12.X: `D3D12XboxCreateDevice`, `ID3D12*`-Schnittstellen der Konsole und `DXGIXPresentArray`, bereitgestellt von TomBox' Rust-`d3d12_xs.dll` (MIT, 48 implementierte Exporte, gebaut mit `tools/build_tombox.py d3d12_xs`, geladen mit `ANYXBOXX_D3D12_XS=<Pfad>`); ohne Konsolen-Executable hier nicht testbar | 🟡 in Arbeit |
 | Konsolenbibliotheken von TomBox (Rust, MIT) für das, was AnyXboxX fehlt: `xg_xs` (Texturlayouts, 23 Exporte) und vollständiges `xmem` (38 Exporte), mit `ANYXBOXX_TOMBOX_DIR=<Ordner>`; gebaut mit `tools/build_tombox.py xg_xs xmem` | 🟡 in Arbeit |
 | `XUser` offline: immer angemeldetes lokales Profil, einstellbarer Gamertag (`ANYXBOXX_GAMERTAG`), Anmeldung von testgdk erfolgreich | ✅ erledigt |
@@ -68,6 +68,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | Fortschrittskarte: ein Feld pro Funktion (`--carte`) | ✅ erledigt |
 | Controller (`GameInput`) und Audio (`XAudio2`): dieselbe API auf Konsole und PC, im nativen Modus an die Windows-DLLs gebunden | ✅ erledigt |
 | Markdown-Bericht der fehlenden Importe pro DLL und der nicht emulierten Aufrufe (`--lancer … --md rapport.md`) | ✅ erledigt |
+| Erststart-Werkzeug für eine Konsolen-Executable: Inventar, Anbieter jedes Imports (Paket, AnyXboxX, TomBox, Windows, fehlend), isolierte Läufe, optionaler nativer Lauf; Bericht außerhalb des Repositorys: `python tools/jour_j.py <Paket> [--natif]` ([Anleitung](../jour-j.md), auf Französisch) | ✅ erledigt |
 | Bildzähler (`--fps`) und Leistungs-Benchmark mit dem Urteil „konstant 60 Bilder/s“ und einer Kurve (`--banc-perf`) | ✅ erledigt |
 | Speicherstände `XGameSave` (Container, Blobs, Kontingent, asynchrones Lesen) und lokaler dauerhafter Speicher, auf der Festplatte des PCs (`%LOCALAPPDATA%\AnyXboxX\<TitleId>` oder `ANYXBOXX_SAVE_DIR`) | ✅ erledigt |
 | `XPackage`: lokal installiertes Paket (Kennung, Sprache, fertige Blöcke, Einbindung in den Spielordner) | ✅ erledigt |

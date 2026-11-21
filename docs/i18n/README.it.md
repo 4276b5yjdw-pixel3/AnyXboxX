@@ -60,7 +60,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 229 test automatizzati | ✅ fatto |
+| 232 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
 | Librerie console di TomBox (Rust, MIT) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
@@ -68,6 +68,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Mappa dell'avanzamento: una casella per funzione (`--carte`) | ✅ fatto |
 | Controller (`GameInput`) e audio (`XAudio2`): stessa API su console e su PC, collegati alle DLL di Windows in modalità nativa | ✅ fatto |
 | Resoconto Markdown degli import mancanti per DLL e delle chiamate non emulate (`--lancer … --md rapport.md`) | ✅ fatto |
+| Strumento di primo avvio di un eseguibile console: inventario, fornitore di ogni import (pacchetto, AnyXboxX, TomBox, Windows, mancante), esecuzioni isolate, esecuzione nativa facoltativa; rapporto fuori dal repository: `python tools/jour_j.py <pacchetto> [--natif]` ([guida](../jour-j.md), in francese) | ✅ fatto |
 | Contatore di fotogrammi (`--fps`) e banco di prova delle prestazioni con verdetto «60 f/s costanti» e curva (`--banc-perf`) | ✅ fatto |
 | Salvataggi `XGameSave` (contenitori, blob, quota, lettura asincrona) e archiviazione locale persistente, sul disco del PC (`%LOCALAPPDATA%\AnyXboxX\<TitleId>`, oppure `ANYXBOXX_SAVE_DIR`) | ✅ fatto |
 | `XPackage`: pacchetto installato in locale (identificativo, lingua, blocchi pronti, montaggio sulla cartella del gioco) | ✅ fatto |

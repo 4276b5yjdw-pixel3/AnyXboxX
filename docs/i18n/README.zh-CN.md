@@ -60,7 +60,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 396 个 GDK 函数的表：接口和方法编号，提取自 `xgameruntime.lib`（`tools/gdk_interfaces.py`） | ✅ 已完成 |
 | `XTaskQueue`、`XAsync`、`XThread` 由 AnyXboxX 提供：testgdk 无需 Windows 的运行时即可运行 | ✅ 已完成 |
 | 其他 GDK 接口：委托给 Windows 的 GDK 运行时，由跟踪列出名称 | 🟡 进行中 |
-| 229 个自动化测试 | ✅ 已完成 |
+| 232 个自动化测试 | ✅ 已完成 |
 | D3D12.X：`D3D12XboxCreateDevice`、主机的 `ID3D12*` 接口和 `DXGIXPresentArray`，由 TomBox 的 Rust 版 `d3d12_xs.dll` 提供（MIT，48 个已实现导出，用 `tools/build_tombox.py d3d12_xs` 构建，通过 `ANYXBOXX_D3D12_XS=<路径>` 加载）；没有主机可执行文件，此处无法测试 | 🟡 进行中 |
 | 用 TomBox（Rust，MIT）的主机库补足 AnyXboxX 缺少的部分：`xg_xs`（纹理布局，23 个导出）和完整的 `xmem`（38 个导出），通过 `ANYXBOXX_TOMBOX_DIR=<文件夹>` 使用；由 `tools/build_tombox.py xg_xs xmem` 构建 | 🟡 进行中 |
 | 离线 `XUser`：始终已登录的本地档案、可设置的游戏玩家标签（`ANYXBOXX_GAMERTAG`）、testgdk 登录成功 | ✅ 已完成 |
@@ -68,6 +68,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 进展地图：每个函数一格（`--carte`） | ✅ 已完成 |
 | 手柄（`GameInput`）与音频（`XAudio2`）：主机与 PC 使用相同的 API，原生模式下绑定到 Windows 的 DLL | ✅ 完成 |
 | 按 DLL 列出缺失导入与未模拟调用的 Markdown 报告（`--lancer … --md rapport.md`） | ✅ 完成 |
+| 主机可执行文件首次启动工具：清单、每个导入的提供者（游戏包、AnyXboxX、TomBox、Windows、缺失）、隔离运行、可选的原生运行；报告保存在仓库之外：`python tools/jour_j.py <游戏包> [--natif]`（[指南](../jour-j.md)，法语） | ✅ 完成 |
 | 帧计数器（`--fps`）与性能测试台，给出“恒定 60 fps”结论和曲线（`--banc-perf`） | ✅ 完成 |
 | `XGameSave` 存档（容器、blob、配额、异步读取）和持久化本地存储，保存在 PC 的磁盘上（`%LOCALAPPDATA%\AnyXboxX\<TitleId>`，或 `ANYXBOXX_SAVE_DIR`） | ✅ 已完成 |
 | `XPackage`：本地安装的包（标识符、语言、已就绪的数据块、挂载到游戏文件夹） | ✅ 已完成 |
