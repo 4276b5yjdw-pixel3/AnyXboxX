@@ -48,3 +48,4 @@ anyxboxx_dll(xgameruntime xgameruntime/xgameruntime.cpp xgameruntime/served_inte
 target_link_libraries(xgameruntime PRIVATE anyxboxx_task dxgi)
 anyxboxx_dll(xmem xmem/xmem.cpp xmem/xmem.def)
 anyxboxx_dll(d3d12_xs d3d12_xs/d3d12_xs.cpp d3d12_xs/d3d12_xs.def)
+anyxboxx_dll(kernelx kernelx/kernelx.cpp)
