@@ -19,7 +19,7 @@ MIN_CELL, MAX_CELL, PITCH_AREA = 3, 10, 81      # taille d'une case, aire visée
 MIN_SECTION_H = 110
 GPU_FAMILIES = ("SOP1", "SOP2", "SOPK", "SOPC", "SOPP", "SMEM", "VOP1", "VOP2", "VOP3", "VOP3P",
                 "VOPC", "DS", "MUBUF", "MTBUF", "MIMG", "FLAT", "GLOBAL", "SCRATCH", "EXP", "VINTRP")
-GPU_NOTE = "recompiler not started"
+GPU_TITLE = "RDNA 2 GPU instructions (reference interpreter)"
 
 
 @dataclass(frozen=True)
@@ -166,6 +166,18 @@ def console_blocks(package_dir, runtime_dir):
     return tuple(Block(a.name, a.done, a.total) for a in areas)
 
 
+def gpu_blocks():
+    """Un bloc par famille d'encodage RDNA 2 : encodages exécutés par l'interpréteur de référence."""
+    from .rdna2_exec import executable
+    from .rdna2_ops import MNEMONICS
+
+    blocks = []
+    for family in GPU_FAMILIES:
+        names = [name for (key, _), name in MNEMONICS.items() if key == family]
+        blocks.append(Block(family, sum(executable(family, n) for n in names), len(names)))
+    return tuple(b for b in blocks if b.total)
+
+
 def _badge(label, done, total):
     return (label, f"{done}/{total}", done / total if total else 0.0)
 
@@ -175,13 +187,12 @@ def collect(package_dir, runtime_dir):
     gdk = Section("GDK runtime", gdk_blocks())
     imports = Section("Package imports", package_blocks(package_dir))
     console = Section("Console DLLs", console_blocks(package_dir, runtime_dir))
-    gpu = Section("RDNA 2 GPU instructions",
-                  tuple(Block(name, 0, 0) for name in GPU_FAMILIES), counted=False, note=GPU_NOTE)
+    gpu = Section(GPU_TITLE, gpu_blocks())
     badges = (("CPU x86-64", "100%", 1.0),
               _badge("GDK runtime", gdk.done, gdk.total),
               _badge("Package imports", imports.done, imports.total),
               _badge("Console DLLs", console.done, console.total),
-              ("GPU RDNA 2", "0%", 0.0))
+              _badge("GPU RDNA 2", gpu.done, gpu.total))
     return Status((gdk, imports, console, gpu), badges)
 
 

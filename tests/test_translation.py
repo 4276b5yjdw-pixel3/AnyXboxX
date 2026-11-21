@@ -112,10 +112,11 @@ def test_functions_area_sums_bench_rows():
 
 
 def test_instruction_areas_show_a_share_only():
-    image = translation.svg((translation.CPU_AREA, translation.GPU_AREA), "Avancée")
-    assert "100%" in image and "0%" in image
-    assert "1/1" not in image and "0/1" not in image
-    assert translation.CPU_AREA.share == 1.0 and translation.GPU_AREA.share == 0.0
+    gpu = translation.gpu_area()
+    image = translation.svg((translation.CPU_AREA, gpu), "Avancée")
+    assert "100%" in image and "1/1" not in image
+    assert translation.CPU_AREA.share == 1.0 and 0.0 < gpu.share < 1.0
+    assert f"{gpu.done}/{gpu.total}" in image
 
 
 def test_gdk_runtime_area_counts_functions_of_served_interfaces(tmp_path):

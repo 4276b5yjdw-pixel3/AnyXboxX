@@ -62,7 +62,7 @@ Les deux jeux de test tournent sans synchronisation verticale : environ 11 700 i
 | Table des 396 fonctions GDK : interface et n° de méthode, extraits de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fait |
 | `XTaskQueue`, `XAsync`, `XThread` servies par AnyXboxX : testgdk tourne sans le runtime de Windows | ✅ fait |
 | Autres interfaces GDK : déléguées au runtime GDK de Windows, nommées par la trace | 🟡 en cours |
-| 188 tests automatisés | ✅ fait |
+| 195 tests automatisés | ✅ fait |
 | D3D12.X : `D3D12XboxCreateDevice` et interfaces `ID3D12*` de la console | ⏳ à faire |
 | `XUser` hors ligne : profil local toujours connecté, gamertag réglable (`ANYXBOXX_GAMERTAG`), connexion de testgdk réussie | ✅ fait |
 | Identité Xbox Series X : type de console (registre `ConsoleMode` simulé, y compris dans les DLL du jeu), `XSystem`, Title ID lu dans `MicrosoftGame.config`, analytique « Xbox Series X » | ✅ fait |
@@ -77,7 +77,7 @@ Les deux jeux de test tournent sans synchronisation verticale : environ 11 700 i
 | Lanceur natif en C++ sans Python (`runtime/build/bin/anyxboxx.exe <jeu.exe \| dossier> [--fps]`) : SimpleTriangle et testgdk à ~12 000 i/s | ✅ fait |
 | Désassembleur GPU RDNA 2 : 1 384 mnémoniques et opérandes au format LLVM (scalaires, VOP1/VOP2/VOPC), vérifié sur 29 527 encodages publics de LLVM : `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 en cours |
 | Autres interfaces GDK écrites par AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ à faire |
-| Recompilateur de shaders RDNA 2 → DXIL | ⏳ à faire |
+| Recompilateur de shaders RDNA 2 → DXIL : première étape faite, un interpréteur de référence wave32 qui exécute 217 encodages sur 1 384 (scalaires, VOP1/VOP2/VOPC, branchements, divergence par `exec`) : `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 en cours |
 | Exceptions SEH x64 (`.pdata`), threads multiples | ⏳ à faire |
 | Chargement dynamique d'une DLL pendant l'exécution (`LoadLibrary` + `DllMain`) | ⏳ à faire |
 | Graphismes D3D12.X vers Direct3D 12 / Vulkan | ⏳ à faire |

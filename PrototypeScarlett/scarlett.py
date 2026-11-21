@@ -168,7 +168,7 @@ def print_translation(package, svg_path=None):
         from emu import bench, translation
 
         runtime = os.environ.get("ANYXBOXX_RUNTIME") or HERE.parent / "runtime" / "build" / "bin"
-        overview = (translation.CPU_AREA, translation.GPU_AREA,
+        overview = (translation.CPU_AREA, translation.gpu_area(),
                     translation.functions_area(bench.run(Path(package))))
         areas = translation.measure(package, Path(runtime),
                                     extra=(*translation.STATIC_AREAS, translation.gdk_runtime_area()))
@@ -206,6 +206,24 @@ def find_package_folder():
                  if (c / MANIFEST).is_file()), start)
 
 
+def run_rdna2(data):
+    """--rdna2 <shader.bin> --executer : un wave32 dans l'interpréteur de référence."""
+    from emu import rdna2_exec
+
+    try:
+        wave = rdna2_exec.run(data)
+    except (rdna2_exec.Untranslated, RuntimeError) as error:
+        print(f"Arrêt : {error}", file=sys.stderr)
+        return 1
+    used = [n for n in range(106) if wave.s[n]]
+    print("SGPR : " + (", ".join(f"s{n}=0x{wave.s[n]:x}" for n in used) or "tous nuls"))
+    print(f"VCC=0x{wave.vcc:08x} EXEC=0x{wave.exec:08x} SCC={int(wave.scc)}")
+    for n in range(1, len(wave.v)):
+        if any(wave.v[n]):
+            print(f"v{n} (lignes 0-3) : " + " ".join(f"{x:08x}" for x in wave.v[n][:4]))
+    return 0
+
+
 def main(argv):
     if sys.stdout is not None:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -241,7 +259,7 @@ def main(argv):
             os.environ["ANYXBOXX_FPS"] = "1"
         return run_native(Path(argv[1]), tuple(Path(d) for d in options))
     if len(argv) >= 2 and argv[0] == "--rdna2":
-        # --rdna2 <shader.bin> [--liste] : instructions GPU RDNA 2 par famille, ou listing
+        # --rdna2 <shader.bin> [--liste | --executer] : familles, listing ou exécution (wave32)
         from emu import rdna2
 
         try:
@@ -252,6 +270,8 @@ def main(argv):
         if "--liste" in argv[2:]:
             print("\n".join(rdna2.listing(data)))
             return 0
+        if "--executer" in argv[2:]:
+            return run_rdna2(data)
         instructions = rdna2.decode(data)
         for family, count in rdna2.histogram(instructions).items():
             print(f"{family:10} {count}")

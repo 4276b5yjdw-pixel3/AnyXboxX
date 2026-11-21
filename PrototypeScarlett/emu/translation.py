@@ -42,8 +42,13 @@ PARTIAL = {
 CPU_AREA = Area("CPU instructions (x86-64, Zen 2)", 1, 1,
                 "same instruction set as the PC: run as-is in native mode",
                 counted=False)
-GPU_AREA = Area("GPU instructions (RDNA 2, console shaders)", 0, 1,
-                "RDNA 2 to DXIL recompiler not started", counted=False)
+def gpu_area():
+    """Instructions RDNA 2 exécutées par l'interpréteur de référence (première étape du recompilateur)."""
+    from .rdna2_exec import coverage
+
+    done, total = coverage()
+    return Area("GPU instructions (RDNA 2, console shaders)", done, total,
+                "run by the reference interpreter (wave32); DXIL recompiler not started")
 
 STATIC_AREAS = (
     Area("D3D12.X: device and ID3D12* interfaces", 0, 1,

@@ -60,7 +60,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 396 个 GDK 函数的表：接口和方法编号，提取自 `xgameruntime.lib`（`tools/gdk_interfaces.py`） | ✅ 已完成 |
 | `XTaskQueue`、`XAsync`、`XThread` 由 AnyXboxX 提供：testgdk 无需 Windows 的运行时即可运行 | ✅ 已完成 |
 | 其他 GDK 接口：委托给 Windows 的 GDK 运行时，由跟踪列出名称 | 🟡 进行中 |
-| 188 个自动化测试 | ✅ 已完成 |
+| 195 个自动化测试 | ✅ 已完成 |
 | D3D12.X：`D3D12XboxCreateDevice` 和主机的 `ID3D12*` 接口 | ⏳ 待完成 |
 | 离线 `XUser`：始终已登录的本地档案、可设置的游戏玩家标签（`ANYXBOXX_GAMERTAG`）、testgdk 登录成功 | ✅ 已完成 |
 | Xbox Series X 的身份：主机类型（模拟注册表值 `ConsoleMode`，游戏的 DLL 内同样有效）、`XSystem`、从 `MicrosoftGame.config` 读取的 Title ID、“Xbox Series X”分析数据 | ✅ 已完成 |
@@ -75,7 +75,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 不依赖 Python 的 C++ 原生启动器（`runtime/build/bin/anyxboxx.exe <游戏.exe \| 文件夹> [--fps]`）：SimpleTriangle 和 testgdk 约 12,000 帧/秒 | ✅ 完成 |
 | RDNA 2 GPU 反汇编器：1,384 个助记符及 LLVM 语法的操作数（标量、VOP1/VOP2/VOPC），已用 LLVM 的 29,527 条公开编码验证：`scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 进行中 |
 | 由 AnyXboxX 自行编写的其他 GDK 接口（`XStore`、`XGameUi`、`XNetworking`…） | ⏳ 待完成 |
-| RDNA 2 → DXIL 着色器重编译器 | ⏳ 待完成 |
+| RDNA 2 → DXIL 着色器重编译器：第一步已完成，wave32 参考解释器可执行 1,384 种编码中的 217 种（标量、VOP1/VOP2/VOPC、分支、`exec` 分歧）：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 进行中 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
 | 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |

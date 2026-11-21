@@ -60,7 +60,7 @@ Los dos juegos de prueba funcionan sin sincronización vertical: unos 11 700 f/s
 | Tabla de las 396 funciones GDK: interfaz y número de método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ hecho |
 | `XTaskQueue`, `XAsync`, `XThread` servidas por AnyXboxX: testgdk funciona sin el runtime de Windows | ✅ hecho |
 | Otras interfaces GDK: delegadas al runtime GDK de Windows, nombradas por la traza | 🟡 en curso |
-| 188 pruebas automatizadas | ✅ hecho |
+| 195 pruebas automatizadas | ✅ hecho |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` de la consola | ⏳ pendiente |
 | `XUser` sin conexión: perfil local siempre conectado, gamertag configurable (`ANYXBOXX_GAMERTAG`), inicio de sesión de testgdk correcto | ✅ hecho |
 | Identidad de la Xbox Series X: tipo de consola (valor de registro `ConsoleMode` simulado, también dentro de las DLL del juego), `XSystem`, Title ID leído de `MicrosoftGame.config`, analítica «Xbox Series X» | ✅ hecho |
@@ -75,7 +75,7 @@ Los dos juegos de prueba funcionan sin sincronización vertical: unos 11 700 f/s
 | Lanzador nativo en C++ sin Python (`runtime/build/bin/anyxboxx.exe <juego.exe \| carpeta> [--fps]`): SimpleTriangle y testgdk a ~12 000 i/s | ✅ hecho |
 | Desensamblador de GPU RDNA 2: 1.384 mnemónicos y operandos con sintaxis LLVM (escalares, VOP1/VOP2/VOPC), verificado con 29.527 codificaciones públicas de LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 en curso |
 | Otras interfaces GDK escritas por AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ pendiente |
-| Recompilador de shaders RDNA 2 → DXIL | ⏳ pendiente |
+| Recompilador de shaders RDNA 2 → DXIL: primer paso hecho, un intérprete de referencia wave32 que ejecuta 217 de 1.384 codificaciones (escalares, VOP1/VOP2/VOPC, saltos, divergencia con `exec`): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 en curso |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
 | Carga dinámica de una DLL durante la ejecución (`LoadLibrary` + `DllMain`) | ⏳ pendiente |
 | Gráficos D3D12.X hacia Direct3D 12 / Vulkan | ⏳ pendiente |

@@ -9,9 +9,9 @@
 <text x="300" y="110" font-size="11" fill="#4b5263">same instruction set as the PC: run as-is in native mode</text>
 <text x="270" y="136" text-anchor="end" fill="#1d2230">GPU instructions (RDNA 2, console shaders)</text>
 <rect x="300" y="122" width="220" height="18" rx="3" fill="#e3e6ee"/>
-<rect x="300" y="122" width="0" height="18" rx="3" fill="#c42b1c"/>
-<text x="532" y="136" fill="#1d2230">0%</text>
-<text x="300" y="156" font-size="11" fill="#4b5263">RDNA 2 to DXIL recompiler not started</text>
+<rect x="300" y="122" width="34" height="18" rx="3" fill="#e8890c"/>
+<text x="532" y="136" fill="#1d2230">217/1384 (16%)</text>
+<text x="300" y="156" font-size="11" fill="#4b5263">run by the reference interpreter (wave32); DXIL recompiler not started</text>
 <text x="270" y="182" text-anchor="end" fill="#1d2230">System functions imported by the package</text>
 <rect x="300" y="168" width="220" height="18" rx="3" fill="#e3e6ee"/>
 <rect x="300" y="168" width="144" height="18" rx="3" fill="#e8890c"/>
