@@ -34,3 +34,9 @@ Aucun émulateur public sérieux ne lance des jeux Xbox Series X|S. Les projets 
 | Ne pas bloquer sur une fonction inconnue | Speakeasy | renvoie `E_NOTIMPL` et l'écrit au journal |
 | Relocations, TLS, TEB/PEB via GS | Qiling, chargeurs PE | `emu/loader.py`, `emu/machine.py` |
 | Rapport de compatibilité | journaux de compatibilité de Xenia | `scarlett.py --rapport` |
+
+## Mise à jour du 21 novembre 2026
+
+- [omonkeyz/xbox-emulator](https://github.com/omonkeyz/xbox-emulator), suite de [TomBox](https://github.com/drycheetah84/TomBox) (Rust, MIT ou Apache-2.0) : DLL console de remplacement, Direct3D 12.x console, traducteur de shaders RDNA 2. Fortnite y atteint le salon Battle Royale. Détails et reprise dans AnyXboxX : [tombox.md](tombox.md).
+- [xodus-gaming/xgameruntime](https://github.com/xodus-gaming/xgameruntime) (C++, LGPL-2.1) : réimplémentation libre de `xgameruntime.dll` pour Wine, issue de WineGDK (archivé le 13 novembre 2026).
+- WinDurango (Xbox One, LGPL-3.0) reste actif ; XWine1 n'a toujours pas de dépôt public.

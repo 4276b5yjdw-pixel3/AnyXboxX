@@ -178,6 +178,7 @@ def XSystemGetDeviceType(c):
 - [Xbox Series X 的硬件架构](../recherche/architecture-xbox-series-x.md)（法语）：Zen 2 CPU、RDNA 2 GPU、内存、Velocity Architecture、安全性。
 - [现有的模拟器和兼容层](../recherche/etat-de-l-art.md)（法语）：WinDurango、XWine1、Xenia、XVD 工具。
 - [所研究 Scarlett 游戏包的逆向工程笔记](../recherche/paquet/README.md)（法语，由 Codex 撰写）：RDS5/ETPF 表、RPF 文件头、游戏包结构。
+- [TomBox 及其后续项目](../recherche/tombox.md)（法语）：Rust 编写的主机 DLL、Direct3D 12.x、RDNA 2 着色器翻译器，以及 AnyXboxX 复用的内容（MIT，已注明出处）。
 
 ## 测试
 
@@ -193,3 +194,5 @@ def XSystemGetDeviceType(c):
 ## 许可证
 
 AnyXboxX 以 [GNU LGPL 2.1 或更高版本](../../LICENSE) 发布。第三方部分保留各自的许可证：libHttpClient 的 `Task` 模块（MIT，`runtime/third_party/libhttpclient-task`），以及根据 LLVM 公开编码测试生成的 RDNA 2 表（Apache 2.0 附 LLVM 例外，`PrototypeScarlett/emu/rdna2_ops.py` 和 `rdna2_shapes.py`）。
+
+第三方组件与致谢：[THIRD_PARTY.md](../../THIRD_PARTY.md)。

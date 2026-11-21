@@ -178,6 +178,7 @@ def XSystemGetDeviceType(c):
 - [Architettura hardware della Xbox Series X](../recherche/architecture-xbox-series-x.md) (in francese): CPU Zen 2, GPU RDNA 2, memoria, Velocity Architecture, sicurezza.
 - [Emulatori e livelli di compatibilità esistenti](../recherche/etat-de-l-art.md) (in francese): WinDurango, XWine1, Xenia, strumenti XVD.
 - [Note di reverse engineering sul pacchetto Scarlett studiato](../recherche/paquet/README.md) (in francese, scritte da Codex): tabelle RDS5/ETPF, intestazioni RPF, organizzazione del pacchetto.
+- [TomBox e la sua prosecuzione](../recherche/tombox.md) (in francese): DLL console in Rust, Direct3D 12.x, traduttore di shader RDNA 2, ciò che AnyXboxX riprende (MIT, citato).
 
 ## Test
 
@@ -193,3 +194,5 @@ Il ramo `main` è protetto: ogni contributo passa da una pull request revisionat
 ## Licenza
 
 AnyXboxX è distribuito con licenza [GNU LGPL 2.1 o successiva](../../LICENSE). Le parti di terzi mantengono la propria licenza: il modulo `Task` di libHttpClient (MIT, `runtime/third_party/libhttpclient-task`) e le tabelle RDNA 2 generate dai test di codifica pubblici di LLVM (Apache 2.0 con eccezione LLVM, `PrototypeScarlett/emu/rdna2_ops.py` e `rdna2_shapes.py`).
+
+Componenti di terzi e crediti: [THIRD_PARTY.md](../../THIRD_PARTY.md).
