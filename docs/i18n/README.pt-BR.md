@@ -147,7 +147,7 @@ A bancada de testes carrega todos os módulos PE de uma pasta e executa a inicia
 
 Resultados detalhados: [docs/avancee.md](../avancee.md) (em francês). Jogo de teste livre comparado com a execução nativa dele: [docs/jeu-de-test.md](../jeu-de-test.md) (em francês). Uma pasta de DLLs adicional (por exemplo, as DLLs do Visual C++) pode acompanhar o alvo: `--rapport <cible> <dossier>`.
 
-O relatório lista as funções importadas, a porcentagem já emulada e as funções que faltam. Na interface, o botão **Ouvrir un dossier Xbox…** (Abrir uma pasta Xbox) lê `MicrosoftGame.Config`, exibe esse relatório e depois inicia o programa; cada chamada não emulada aparece no log.
+O relatório lista as funções importadas, a porcentagem já emulada e as funções que faltam. Na interface, o botão **Open an Xbox folder…** (Abrir uma pasta Xbox) lê `MicrosoftGame.Config`, exibe esse relatório e depois inicia o programa; cada chamada não emulada aparece no log.
 
 ## Arquitetura
 
@@ -188,7 +188,3 @@ def XSystemGetDeviceType(c):
 ## Contribuir
 
 A branch `main` é protegida: toda contribuição passa por uma pull request revisada, e os testes precisam passar. Bugs e funções a emular são reportados nas issues. As regras completas estão em [CONTRIBUTING.md](../../CONTRIBUTING.md) (em francês).
-
-## Limites
-
-O AnyXboxX é um protótipo. Ele não executa jogos comerciais: eles exigem a GPU do console (D3D12.X) e muitos serviços de sistema, e são distribuídos em contêineres criptografados cujas chaves permanecem dentro do console. O projeto não contém nem aceita nenhum conteúdo protegido.

@@ -38,7 +38,7 @@ def test_chart_is_valid_svg_with_the_60_fps_line():
     image = perf.svg(perf.parse_csv(CSV), "SimpleTriangle")
     root = ET.fromstring(image)
     assert root.tag.endswith("svg")
-    assert "60 i/s" in image and "SimpleTriangle" in image
+    assert "60 fps" in image and "SimpleTriangle" in image
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="exécution native sous Windows")

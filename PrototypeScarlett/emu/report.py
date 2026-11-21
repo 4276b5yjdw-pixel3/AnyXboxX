@@ -27,17 +27,17 @@ class Report:
 
     def text(self):
         lines = [
-            f"Exécutable : {self.executable}",
-            f"Fonctions importées : {self.total} · émulées : {len(self.emulated)}"
-            f" · fournies par le paquet : {len(self.provided)} ({self.coverage:.1f} % résolues)",
-            f"TLS : {'oui' if self.has_tls else 'non'} · relocalisé : "
-            f"{'oui' if self.relocated else 'non'}",
+            f"Executable: {self.executable}",
+            f"Imported functions: {self.total} · emulated: {len(self.emulated)}"
+            f" · provided by the package: {len(self.provided)} ({self.coverage:.1f} % resolved)",
+            f"TLS: {'yes' if self.has_tls else 'no'} · relocated: "
+            f"{'yes' if self.relocated else 'no'}",
         ]
         if self.missing:
-            lines.append("Fonctions manquantes (renvoient E_NOTIMPL) :")
+            lines.append("Missing functions (return E_NOTIMPL):")
             lines += [f"  - {name}" for name in self.missing[:MAX_LISTED]]
             if len(self.missing) > MAX_LISTED:
-                lines.append(f"  … et {len(self.missing) - MAX_LISTED} autres")
+                lines.append(f"  … and {len(self.missing) - MAX_LISTED} more")
         return "\n".join(lines)
 
 

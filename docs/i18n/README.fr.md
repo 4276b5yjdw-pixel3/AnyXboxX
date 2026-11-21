@@ -85,8 +85,8 @@ Les deux jeux de test tournent sans synchronisation verticale : environ 11 700 i
 
 <table>
 <tr>
-<td><img src="docs/images/demo-virage.png" alt="La voiture tourne vers la droite" width="380"></td>
-<td><img src="docs/images/rapport-compatibilite.png" alt="Rapport de compatibilité de la démo" width="380"></td>
+<td><img src="../images/demo-virage.png" alt="La voiture tourne vers la droite" width="380"></td>
+<td><img src="../images/rapport-compatibilite.png" alt="Rapport de compatibilité de la démo" width="380"></td>
 </tr>
 <tr>
 <td align="center">La démo répond aux flèches du clavier.</td>
@@ -149,7 +149,7 @@ Le banc d'essai charge tous les modules PE d'un dossier et lance leur initialisa
 
 Résultats détaillés : [docs/avancee.md](../avancee.md). Jeu de test libre comparé à son exécution native : [docs/jeu-de-test.md](../jeu-de-test.md). Un dossier de DLL supplémentaire (par exemple les DLL Visual C++) peut suivre la cible : `--rapport <cible> <dossier>`.
 
-Le rapport liste les fonctions importées, le pourcentage déjà émulé et les fonctions manquantes. Dans l'interface, le bouton **Ouvrir un dossier Xbox…** lit `MicrosoftGame.Config`, affiche ce rapport puis lance le programme ; chaque appel non émulé apparaît dans le journal.
+Le rapport liste les fonctions importées, le pourcentage déjà émulé et les fonctions manquantes. Dans l'interface, le bouton **Open an Xbox folder…** (ouvrir un dossier Xbox) lit `MicrosoftGame.Config`, affiche ce rapport puis lance le programme ; chaque appel non émulé apparaît dans le journal.
 
 ## Architecture
 
@@ -190,7 +190,3 @@ def XSystemGetDeviceType(c):
 ## Contribuer
 
 La branche `main` est protégée : toute contribution passe par une pull request relue, et les tests doivent passer. Les bogues et les fonctions à émuler se signalent dans les issues. Les règles complètes sont dans [CONTRIBUTING.md](../../CONTRIBUTING.md).
-
-## Limites
-
-AnyXboxX est un prototype. Il n'exécute pas de jeux commerciaux : ils exigent le GPU de la console (D3D12.X), de nombreux services système, et sont livrés dans des conteneurs chiffrés dont les clés restent dans la console. Le projet ne contient et n'accepte aucun contenu protégé.

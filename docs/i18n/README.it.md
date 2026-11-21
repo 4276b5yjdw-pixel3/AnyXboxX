@@ -147,7 +147,7 @@ Il banco di prova carica tutti i moduli PE di una cartella e avvia la loro inizi
 
 Risultati dettagliati: [docs/avancee.md](../avancee.md) (in francese). Gioco di test libero confrontato con la sua esecuzione nativa: [docs/jeu-de-test.md](../jeu-de-test.md) (in francese). Una cartella di DLL aggiuntiva (per esempio le DLL di Visual C++) può seguire il bersaglio: `--rapport <cible> <dossier>`.
 
-Il rapporto elenca le funzioni importate, la percentuale già emulata e le funzioni mancanti. Nell'interfaccia, il pulsante **Ouvrir un dossier Xbox…** (Apri una cartella Xbox) legge `MicrosoftGame.Config`, mostra questo rapporto e poi avvia il programma; ogni chiamata non emulata compare nel registro.
+Il rapporto elenca le funzioni importate, la percentuale già emulata e le funzioni mancanti. Nell'interfaccia, il pulsante **Open an Xbox folder…** (Apri una cartella Xbox) legge `MicrosoftGame.Config`, mostra questo rapporto e poi avvia il programma; ogni chiamata non emulata compare nel registro.
 
 ## Architettura
 
@@ -188,7 +188,3 @@ def XSystemGetDeviceType(c):
 ## Contribuire
 
 Il ramo `main` è protetto: ogni contributo passa da una pull request revisionata e i test devono passare. I bug e le funzioni da emulare si segnalano nelle issue. Le regole complete sono in [CONTRIBUTING.md](../../CONTRIBUTING.md) (in francese).
-
-## Limiti
-
-AnyXboxX è un prototipo. Non esegue giochi commerciali: richiedono la GPU della console (D3D12.X) e numerosi servizi di sistema, e sono distribuiti in contenitori cifrati le cui chiavi restano nella console. Il progetto non contiene e non accetta alcun contenuto protetto.

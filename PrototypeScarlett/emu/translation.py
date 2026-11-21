@@ -12,7 +12,7 @@ from .modules import dll_name
 CONSOLE_DLLS = ("xmem.dll", "d3d12_xs.dll", "kernelx.dll", "xg_xs.dll", "xgameruntime.dll")
 DIRECTORY_IMPORT = pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"]
 DIRECTORY_EXPORT = pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]
-COMPLETE = "complet"
+COMPLETE = "complete"
 MAX_LISTED = 4
 WIDTH, MARGIN, LABEL_W, BAR_X, BAR_W = 760, 24, 270, 300, 220
 HEADER_H, ROW_H = 76, 46
@@ -36,18 +36,18 @@ class Area:
 
 # Exportées par le runtime mais seulement amorcées : elles signalent un échec propre.
 PARTIAL = {
-    "XMemGetWorkingSetStatistics": "structure non publique",
+    "XMemGetWorkingSetStatistics": "non-public structure",
 }
 
-CPU_AREA = Area("Instructions processeur (x86-64, Zen 2)", 1, 1,
-                "même jeu d'instructions que le PC : exécutées telles quelles en mode natif",
+CPU_AREA = Area("CPU instructions (x86-64, Zen 2)", 1, 1,
+                "same instruction set as the PC: run as-is in native mode",
                 counted=False)
-GPU_AREA = Area("Instructions GPU (RDNA 2, shaders console)", 0, 1,
-                "recompilateur RDNA 2 → DXIL pas commencé", counted=False)
+GPU_AREA = Area("GPU instructions (RDNA 2, console shaders)", 0, 1,
+                "RDNA 2 to DXIL recompiler not started", counted=False)
 
 STATIC_AREAS = (
-    Area("D3D12.X : périphérique et interfaces ID3D12*", 0, 1,
-         "pas commencé : tables de méthodes console différentes du PC", counted=False),
+    Area("D3D12.X: device and ID3D12* interfaces", 0, 1,
+         "not started: console method tables differ from the PC", counted=False),
 )
 
 
@@ -63,17 +63,17 @@ def gdk_runtime_area(table=RUNTIME_SOURCES / "gdk_api_table.inc",
     served_keys = set((p.upper(), i.upper()) for p, i in SERVED_LINE.findall(Path(served).read_text(encoding="utf-8")))
     interfaces = {(provider, iid) for _, provider, iid, _ in apis}
     done = sum((provider, iid) in served_keys for _, provider, iid, _ in apis)
-    return Area("Fonctions du runtime GDK servies par AnyXboxX", done, len(apis),
-                f"{len(served_keys & interfaces)}/{len(interfaces)} interfaces, actives quand AnyXboxX "
-                "gère seul le runtime (sinon le runtime GDK de Windows sert tout)")
+    return Area("GDK runtime functions served by AnyXboxX", done, len(apis),
+                f"{len(served_keys & interfaces)}/{len(interfaces)} interfaces (used when the Windows "
+                "GDK runtime is off)")
 
 
 def functions_area(rows):
     """Fonctions système importées par le paquet et résolues en mode isolé (banc d'essai)."""
     total = sum(r.imports for r in rows)
     done = sum(round(r.imports * r.coverage / 100) for r in rows)
-    return Area("Fonctions système importées par le paquet", done, total,
-                "mode isolé : émulées ou fournies par une DLL du paquet")
+    return Area("System functions imported by the package", done, total,
+                "isolated mode: emulated or provided by a package DLL")
 
 
 def _modules(folder):
@@ -152,7 +152,7 @@ def measure(package_dir, runtime_dir, extra=()):
         exported = exports.get(dll, frozenset())
         missing = sorted(imports[dll] - exported)
         partial = sorted(n for n in imports[dll] & exported if n in PARTIAL)
-        remaining = missing + [f"{n} (partiel : {PARTIAL[n]})" for n in partial]
+        remaining = missing + [f"{n} (partial: {PARTIAL[n]})" for n in partial]
         listed = ", ".join(remaining[:MAX_LISTED]) + (", …" if len(remaining) > MAX_LISTED else "")
         areas.append(Area(dll, len(imports[dll]) - len(remaining), len(imports[dll]),
                           listed if remaining else COMPLETE))
@@ -174,7 +174,7 @@ def _color(area):
 
 
 def _amount(area):
-    share = f"{area.share * 100:.0f} %"
+    share = f"{area.share * 100:.0f}%"
     return f"{area.done}/{area.total} ({share})" if area.counted else share
 
 
@@ -200,8 +200,8 @@ def svg(areas, title):
             f'<rect width="{WIDTH}" height="{height}" fill="#f7f8fa"/>',
             f'<text x="{MARGIN}" y="34" font-size="18" font-weight="600" fill="#1d2230">'
             f'{escape(title)}</text>',
-            f'<text x="{MARGIN}" y="56" fill="#4b5263">Part traduite pour la Xbox Series X · '
-            f'vert complet, orange partiel, rouge pas commencé</text>']
+            f'<text x="{MARGIN}" y="56" fill="#4b5263">Share translated for the Xbox Series X · '
+            f'green complete, orange partial, red not started</text>']
     for index, area in enumerate(areas):
         body += _row(area, HEADER_H + ROW_H * index)
     return "\n".join([*body, "</svg>"])

@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="811" viewBox="0 0 960 811" font-family="Segoe UI, Arial, sans-serif" font-size="13">
 <style>.ok{fill:#2ea043}.no{fill:#484f58}</style>
 <rect width="960" height="811" fill="#0d1117"/>
-<g><title>CPU x86-64 : 100 %</title><rect x="24.0" y="24" width="127.0" height="22" rx="4" fill="#161b22"/><rect x="104.0" y="24" width="47.0" height="22" rx="4" fill="#2ea043"/><text x="64.0" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">CPU x86-64</text><text x="127.5" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">100 %</text></g>
-<g><title>Runtime GDK : 152/396</title><rect x="159.0" y="24" width="146.8" height="22" rx="4" fill="#161b22"/><rect x="245.6" y="24" width="60.2" height="22" rx="4" fill="#d29922"/><text x="202.3" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Runtime GDK</text><text x="275.7" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">152/396</text></g>
-<g><title>Imports du paquet : 876/1337</title><rect x="313.8" y="24" width="193.0" height="22" rx="4" fill="#161b22"/><rect x="440.0" y="24" width="66.8" height="22" rx="4" fill="#d29922"/><text x="376.9" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Imports du paquet</text><text x="473.4" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">876/1337</text></g>
-<g><title>DLL console : 5/6</title><rect x="514.8" y="24" width="120.4" height="22" rx="4" fill="#161b22"/><rect x="601.4" y="24" width="33.8" height="22" rx="4" fill="#d29922"/><text x="558.1" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">DLL console</text><text x="618.3" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">5/6</text></g>
-<g><title>GPU RDNA 2 : 0 %</title><rect x="643.2" y="24" width="113.8" height="22" rx="4" fill="#161b22"/><rect x="723.2" y="24" width="33.8" height="22" rx="4" fill="#484f58"/><text x="683.2" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">GPU RDNA 2</text><text x="740.1" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">0 %</text></g>
-<text x="24" y="84" font-size="15" font-weight="600" fill="#e6edf3">Runtime GDK : 38.4 % (152/396)</text>
-<g><title>XStore : 0/70</title>
+<g><title>CPU x86-64: 100%</title><rect x="24.0" y="24" width="120.4" height="22" rx="4" fill="#161b22"/><rect x="104.0" y="24" width="40.4" height="22" rx="4" fill="#2ea043"/><text x="64.0" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">CPU x86-64</text><text x="124.2" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">100%</text></g>
+<g><title>GDK runtime: 152/396</title><rect x="152.4" y="24" width="146.8" height="22" rx="4" fill="#161b22"/><rect x="239.0" y="24" width="60.2" height="22" rx="4" fill="#d29922"/><text x="195.7" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">GDK runtime</text><text x="269.1" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">152/396</text></g>
+<g><title>Package imports: 876/1337</title><rect x="307.2" y="24" width="179.8" height="22" rx="4" fill="#161b22"/><rect x="420.2" y="24" width="66.8" height="22" rx="4" fill="#d29922"/><text x="363.7" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Package imports</text><text x="453.6" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">876/1337</text></g>
+<g><title>Console DLLs: 5/6</title><rect x="495.0" y="24" width="127.0" height="22" rx="4" fill="#161b22"/><rect x="588.2" y="24" width="33.8" height="22" rx="4" fill="#d29922"/><text x="541.6" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Console DLLs</text><text x="605.1" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">5/6</text></g>
+<g><title>GPU RDNA 2: 0%</title><rect x="630.0" y="24" width="107.2" height="22" rx="4" fill="#161b22"/><rect x="710.0" y="24" width="27.2" height="22" rx="4" fill="#484f58"/><text x="670.0" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">GPU RDNA 2</text><text x="723.6" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">0%</text></g>
+<text x="24" y="84" font-size="15" font-weight="600" fill="#e6edf3">GDK runtime: 38.4% (152/396)</text>
+<g><title>XStore: 0/70</title>
 <rect x="24.0" y="98.0" width="161.2" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="28.0" y="110.0" font-size="11" fill="#e6edf3">XStore</text>
 <rect class="no" x="27.0" y="114.0" width="10" height="10"/>
@@ -81,7 +81,7 @@
 <rect class="no" x="159.0" y="158.0" width="10" height="10"/>
 <rect class="no" x="170.0" y="158.0" width="10" height="10"/>
 </g>
-<g><title>XGameUi : 0/42</title>
+<g><title>XGameUi: 0/42</title>
 <rect x="185.2" y="98.0" width="96.7" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="189.2" y="110.0" font-size="11" fill="#e6edf3">XGameUi</text>
 <rect class="no" x="188.2" y="114.0" width="10" height="10"/>
@@ -127,14 +127,14 @@
 <rect class="no" x="188.2" y="169.0" width="10" height="10"/>
 <rect class="no" x="199.2" y="169.0" width="10" height="10"/>
 </g>
-<g><title>XUser : 3/3</title>
+<g><title>XUser: 3/3</title>
 <rect x="281.9" y="98.0" width="76.0" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="285.9" y="110.0" font-size="11" fill="#e6edf3">XUser</text>
 <rect class="ok" x="284.9" y="114.0" width="10" height="10"/>
 <rect class="ok" x="295.9" y="114.0" width="10" height="10"/>
 <rect class="ok" x="306.9" y="114.0" width="10" height="10"/>
 </g>
-<g><title>XGameStreaming : 0/32</title>
+<g><title>XGameStreaming: 0/32</title>
 <rect x="357.9" y="98.0" width="73.7" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="361.9" y="110.0" font-size="11" fill="#e6edf3">XGameStre…</text>
 <rect class="no" x="360.9" y="114.0" width="10" height="10"/>
@@ -170,7 +170,7 @@
 <rect class="no" x="360.9" y="169.0" width="10" height="10"/>
 <rect class="no" x="371.9" y="169.0" width="10" height="10"/>
 </g>
-<g><title>XPackage : 31/31</title>
+<g><title>XPackage: 31/31</title>
 <rect x="431.6" y="98.0" width="71.4" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="435.6" y="110.0" font-size="11" fill="#e6edf3">XPackage</text>
 <rect class="ok" x="434.6" y="114.0" width="10" height="10"/>
@@ -205,7 +205,7 @@
 <rect class="ok" x="478.6" y="169.0" width="10" height="10"/>
 <rect class="ok" x="434.6" y="180.0" width="10" height="10"/>
 </g>
-<g><title>XGameSave : 30/30</title>
+<g><title>XGameSave: 30/30</title>
 <rect x="503.0" y="98.0" width="69.1" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="507.0" y="110.0" font-size="11" fill="#e6edf3">XGameSave</text>
 <rect class="ok" x="506.0" y="114.0" width="10" height="10"/>
@@ -239,7 +239,7 @@
 <rect class="ok" x="539.0" y="169.0" width="10" height="10"/>
 <rect class="ok" x="550.0" y="169.0" width="10" height="10"/>
 </g>
-<g><title>XTaskQueue : 27/27</title>
+<g><title>XTaskQueue: 27/27</title>
 <rect x="572.1" y="98.0" width="62.2" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="576.1" y="110.0" font-size="11" fill="#e6edf3">XTaskQu…</text>
 <rect class="ok" x="575.1" y="114.0" width="10" height="10"/>
@@ -270,7 +270,7 @@
 <rect class="ok" x="575.1" y="169.0" width="10" height="10"/>
 <rect class="ok" x="586.1" y="169.0" width="10" height="10"/>
 </g>
-<g><title>XSpeech : 0/19</title>
+<g><title>XSpeech: 0/19</title>
 <rect x="634.3" y="98.0" width="85.2" height="56.5" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="638.3" y="110.0" font-size="11" fill="#e6edf3">XSpeech</text>
 <rect class="no" x="637.3" y="114.0" width="10" height="10"/>
@@ -293,7 +293,7 @@
 <rect class="no" x="670.3" y="136.0" width="10" height="10"/>
 <rect class="no" x="681.3" y="136.0" width="10" height="10"/>
 </g>
-<g><title>XNetworking : 0/18</title>
+<g><title>XNetworking: 0/18</title>
 <rect x="634.3" y="154.5" width="85.2" height="53.5" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="638.3" y="166.5" font-size="11" fill="#e6edf3">XNetworking</text>
 <rect class="no" x="637.3" y="170.5" width="10" height="10"/>
@@ -315,7 +315,7 @@
 <rect class="no" x="659.3" y="192.5" width="10" height="10"/>
 <rect class="no" x="670.3" y="192.5" width="10" height="10"/>
 </g>
-<g><title>XApp : 0/16</title>
+<g><title>XApp: 0/16</title>
 <rect x="719.5" y="98.0" width="71.4" height="56.8" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="723.5" y="110.0" font-size="11" fill="#e6edf3">XApp</text>
 <rect class="no" x="722.5" y="114.0" width="9" height="9"/>
@@ -335,7 +335,7 @@
 <rect class="no" x="742.5" y="134.0" width="9" height="9"/>
 <rect class="no" x="752.5" y="134.0" width="9" height="9"/>
 </g>
-<g><title>XAppCapture : 0/15</title>
+<g><title>XAppCapture: 0/15</title>
 <rect x="719.5" y="154.8" width="71.4" height="53.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="723.5" y="166.8" font-size="11" fill="#e6edf3">XAppCapt…</text>
 <rect class="no" x="722.5" y="170.8" width="10" height="10"/>
@@ -354,14 +354,14 @@
 <rect class="no" x="755.5" y="192.8" width="10" height="10"/>
 <rect class="no" x="766.5" y="192.8" width="10" height="10"/>
 </g>
-<g><title>XUser : 3/3</title>
+<g><title>XUser: 3/3</title>
 <rect x="790.9" y="98.0" width="46.1" height="44.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="794.9" y="110.0" font-size="11" fill="#e6edf3">XUser</text>
 <rect class="ok" x="793.9" y="114.0" width="10" height="10"/>
 <rect class="ok" x="804.9" y="114.0" width="10" height="10"/>
 <rect class="ok" x="815.9" y="114.0" width="10" height="10"/>
 </g>
-<g><title>XPersistentLocalStorage : 6/6</title>
+<g><title>XPersistentLocalStorage: 6/6</title>
 <rect x="790.9" y="142.0" width="46.1" height="33.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="794.9" y="154.0" font-size="11" fill="#e6edf3">XPer…</text>
 <rect class="ok" x="793.9" y="158.0" width="6" height="6"/>
@@ -371,7 +371,7 @@
 <rect class="ok" x="821.9" y="158.0" width="6" height="6"/>
 <rect class="ok" x="793.9" y="165.0" width="6" height="6"/>
 </g>
-<g><title>XSystem : 6/6</title>
+<g><title>XSystem: 6/6</title>
 <rect x="790.9" y="175.0" width="46.1" height="33.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="794.9" y="187.0" font-size="11" fill="#e6edf3">XSys…</text>
 <rect class="ok" x="793.9" y="191.0" width="6" height="6"/>
@@ -381,7 +381,7 @@
 <rect class="ok" x="821.9" y="191.0" width="6" height="6"/>
 <rect class="ok" x="793.9" y="198.0" width="6" height="6"/>
 </g>
-<g><title>XStoreQuery : 0/5</title>
+<g><title>XStoreQuery: 0/5</title>
 <rect x="837.0" y="98.0" width="41.3" height="30.7" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="841.0" y="110.0" font-size="11" fill="#e6edf3">XSto…</text>
 <rect class="no" x="840.0" y="114.0" width="6" height="6"/>
@@ -390,102 +390,102 @@
 <rect class="no" x="861.0" y="114.0" width="6" height="6"/>
 <rect class="no" x="868.0" y="114.0" width="6" height="6"/>
 </g>
-<g><title>XUserPlatform : 4/4</title>
+<g><title>XUserPlatform: 4/4</title>
 <rect x="878.2" y="98.0" width="33.0" height="30.7" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="881.2" y="101.0" width="10" height="10"/>
 <rect class="ok" x="892.2" y="101.0" width="10" height="10"/>
 <rect class="ok" x="881.2" y="112.0" width="10" height="10"/>
 <rect class="ok" x="892.2" y="112.0" width="10" height="10"/>
 </g>
-<g><title>XDisplay : 3/3</title>
+<g><title>XDisplay: 3/3</title>
 <rect x="911.2" y="98.0" width="24.8" height="30.7" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="914.2" y="101.0" width="8" height="8"/>
 <rect class="ok" x="923.2" y="101.0" width="8" height="8"/>
 <rect class="ok" x="914.2" y="110.0" width="8" height="8"/>
 </g>
-<g><title>XError : 0/3</title>
+<g><title>XError: 0/3</title>
 <rect x="837.0" y="128.7" width="28.8" height="26.4" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="840.0" y="131.7" width="9" height="9"/>
 <rect class="no" x="850.0" y="131.7" width="9" height="9"/>
 <rect class="no" x="840.0" y="141.7" width="9" height="9"/>
 </g>
-<g><title>XGameActivation : 0/3</title>
+<g><title>XGameActivation: 0/3</title>
 <rect x="837.0" y="155.1" width="28.8" height="26.4" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="840.0" y="158.1" width="9" height="9"/>
 <rect class="no" x="850.0" y="158.1" width="9" height="9"/>
 <rect class="no" x="840.0" y="168.1" width="9" height="9"/>
 </g>
-<g><title>XGameInvite : 0/2</title>
+<g><title>XGameInvite: 0/2</title>
 <rect x="837.0" y="181.6" width="28.8" height="26.4" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="840.0" y="184.6" width="10" height="10"/>
 <rect class="no" x="851.0" y="184.6" width="10" height="10"/>
 </g>
-<g><title>XLaunch : 3/3</title>
+<g><title>XLaunch: 3/3</title>
 <rect x="865.7" y="128.7" width="35.1" height="21.6" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="868.7" y="131.7" width="8" height="8"/>
 <rect class="ok" x="877.7" y="131.7" width="8" height="8"/>
 <rect class="ok" x="886.7" y="131.7" width="8" height="8"/>
 </g>
-<g><title>XUser : 3/3</title>
+<g><title>XUser: 3/3</title>
 <rect x="900.9" y="128.7" width="35.1" height="21.6" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="903.9" y="131.7" width="8" height="8"/>
 <rect class="ok" x="912.9" y="131.7" width="8" height="8"/>
 <rect class="ok" x="921.9" y="131.7" width="8" height="8"/>
 </g>
-<g><title>XGameInvite : 0/2</title>
+<g><title>XGameInvite: 0/2</title>
 <rect x="865.7" y="150.3" width="26.4" height="19.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="868.7" y="153.3" width="9" height="9"/>
 <rect class="no" x="878.7" y="153.3" width="9" height="9"/>
 </g>
-<g><title>XGameProtocol : 0/2</title>
+<g><title>XGameProtocol: 0/2</title>
 <rect x="865.7" y="169.6" width="26.4" height="19.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="868.7" y="172.6" width="9" height="9"/>
 <rect class="no" x="878.7" y="172.6" width="9" height="9"/>
 </g>
-<g><title>XStoreAcquireLicenseForDurables : 0/2</title>
+<g><title>XStoreAcquireLicenseForDurables: 0/2</title>
 <rect x="865.7" y="188.8" width="26.4" height="19.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="868.7" y="191.8" width="9" height="9"/>
 <rect class="no" x="878.7" y="191.8" width="9" height="9"/>
 </g>
-<g><title>XUserAddByIdWithUi : 2/2</title>
+<g><title>XUserAddByIdWithUi: 2/2</title>
 <rect x="892.1" y="150.3" width="29.3" height="17.3" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="895.1" y="153.3" width="10" height="10"/>
 <rect class="ok" x="906.1" y="153.3" width="10" height="10"/>
 </g>
-<g><title>XDisplayTryEnableHdrMode : 0/1</title>
+<g><title>XDisplayTryEnableHdrMode: 0/1</title>
 <rect x="921.4" y="150.3" width="14.6" height="17.3" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="924.4" y="153.3" width="7" height="7"/>
 </g>
-<g><title>XGameEventWrite : 0/1</title>
+<g><title>XGameEventWrite: 0/1</title>
 <rect x="892.1" y="167.6" width="18.8" height="13.5" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="895.1" y="170.6" width="6" height="6"/>
 </g>
-<g><title>XGameRuntimeIsFeatureAvailable : 1/1</title>
+<g><title>XGameRuntimeIsFeatureAvailable: 1/1</title>
 <rect x="892.1" y="181.1" width="18.8" height="13.5" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="895.1" y="184.1" width="6" height="6"/>
 </g>
-<g><title>XGameStreamingSendDebugMessageToClient : 0/1</title>
+<g><title>XGameStreamingSendDebugMessageToClient: 0/1</title>
 <rect x="892.1" y="194.5" width="18.8" height="13.5" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="895.1" y="197.5" width="6" height="6"/>
 </g>
-<g><title>XStoreIsAvailabilityPurchasable : 0/1</title>
+<g><title>XStoreIsAvailabilityPurchasable: 0/1</title>
 <rect x="910.9" y="167.6" width="12.5" height="20.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="no" x="913.9" y="170.6" width="5" height="5"/>
 </g>
-<g><title>XSystemGetAnalyticsInfo : 1/1</title>
+<g><title>XSystemGetAnalyticsInfo: 1/1</title>
 <rect x="923.5" y="167.6" width="12.5" height="20.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="926.5" y="170.6" width="5" height="5"/>
 </g>
-<g><title>XUserGetGamertag : 1/1</title>
+<g><title>XUserGetGamertag: 1/1</title>
 <rect x="910.9" y="187.8" width="12.5" height="20.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="913.9" y="190.8" width="5" height="5"/>
 </g>
-<g><title>XUserIsStoreUser : 1/1</title>
+<g><title>XUserIsStoreUser: 1/1</title>
 <rect x="923.5" y="187.8" width="12.5" height="20.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="926.5" y="190.8" width="5" height="5"/>
 </g>
-<text x="24" y="250" font-size="15" font-weight="600" fill="#e6edf3">Imports du paquet : 65.5 % (876/1337)</text>
-<g><title>libHttpClient.GDK.dll : 115/198</title>
+<text x="24" y="250" font-size="15" font-weight="600" fill="#e6edf3">Package imports: 65.5% (876/1337)</text>
+<g><title>libHttpClient.GDK.dll: 115/198</title>
 <rect x="24.0" y="264.0" width="135.1" height="179.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="28.0" y="276.0" font-size="11" fill="#e6edf3">libHttpClient.GDK.…</text>
 <rect class="ok" x="27.0" y="280.0" width="8" height="8"/>
@@ -687,7 +687,7 @@
 <rect class="no" x="27.0" y="406.0" width="8" height="8"/>
 <rect class="no" x="36.0" y="406.0" width="8" height="8"/>
 </g>
-<g><title>msvcp140.dll : 94/187</title>
+<g><title>msvcp140.dll: 94/187</title>
 <rect x="159.1" y="264.0" width="127.6" height="179.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="163.1" y="276.0" font-size="11" fill="#e6edf3">msvcp140.dll</text>
 <rect class="ok" x="162.1" y="280.0" width="9" height="9"/>
@@ -878,7 +878,7 @@
 <rect class="no" x="212.1" y="430.0" width="9" height="9"/>
 <rect class="no" x="222.1" y="430.0" width="9" height="9"/>
 </g>
-<g><title>XCurl.dll : 67/140</title>
+<g><title>XCurl.dll: 67/140</title>
 <rect x="286.6" y="264.0" width="95.5" height="179.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="290.6" y="276.0" font-size="11" fill="#e6edf3">XCurl.dll</text>
 <rect class="ok" x="289.6" y="280.0" width="8" height="8"/>
@@ -1022,7 +1022,7 @@
 <rect class="no" x="316.6" y="415.0" width="8" height="8"/>
 <rect class="no" x="325.6" y="415.0" width="8" height="8"/>
 </g>
-<g><title>vccorlib140.dll : 70/114</title>
+<g><title>vccorlib140.dll: 70/114</title>
 <rect x="382.1" y="264.0" width="148.0" height="94.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="386.1" y="276.0" font-size="11" fill="#e6edf3">vccorlib140.dll</text>
 <rect class="ok" x="385.1" y="280.0" width="8" height="8"/>
@@ -1140,7 +1140,7 @@
 <rect class="no" x="448.1" y="343.0" width="8" height="8"/>
 <rect class="no" x="457.1" y="343.0" width="8" height="8"/>
 </g>
-<g><title>concrt140.dll : 80/103</title>
+<g><title>concrt140.dll: 80/103</title>
 <rect x="382.1" y="358.0" width="148.0" height="85.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="386.1" y="370.0" font-size="11" fill="#e6edf3">concrt140.dll</text>
 <rect class="ok" x="385.1" y="374.0" width="8" height="8"/>
@@ -1247,7 +1247,7 @@
 <rect class="no" x="484.1" y="428.0" width="8" height="8"/>
 <rect class="no" x="493.1" y="428.0" width="8" height="8"/>
 </g>
-<g><title>msvcp140_2.dll : 81/96</title>
+<g><title>msvcp140_2.dll: 81/96</title>
 <rect x="530.1" y="264.0" width="124.1" height="94.4" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="534.1" y="276.0" font-size="11" fill="#e6edf3">msvcp140_2.dll</text>
 <rect class="ok" x="533.1" y="280.0" width="8" height="8"/>
@@ -1347,7 +1347,7 @@
 <rect class="no" x="560.1" y="343.0" width="8" height="8"/>
 <rect class="no" x="569.1" y="343.0" width="8" height="8"/>
 </g>
-<g><title>amd_fidelityfx_upscaler_xbox.dll : 70/86</title>
+<g><title>amd_fidelityfx_upscaler_xbox.dll: 70/86</title>
 <rect x="530.1" y="358.4" width="124.1" height="84.6" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="534.1" y="370.4" font-size="11" fill="#e6edf3">amd_fidelityfx_up…</text>
 <rect class="ok" x="533.1" y="374.4" width="8" height="8"/>
@@ -1437,7 +1437,7 @@
 <rect class="no" x="587.1" y="428.4" width="8" height="8"/>
 <rect class="no" x="596.1" y="428.4" width="8" height="8"/>
 </g>
-<g><title>vcomp140.dll : 46/78</title>
+<g><title>vcomp140.dll: 46/78</title>
 <rect x="654.3" y="264.0" width="96.9" height="98.3" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="658.3" y="276.0" font-size="11" fill="#e6edf3">vcomp140.dll</text>
 <rect class="ok" x="657.3" y="280.0" width="8" height="8"/>
@@ -1519,7 +1519,7 @@
 <rect class="no" x="711.3" y="343.0" width="8" height="8"/>
 <rect class="no" x="720.3" y="343.0" width="8" height="8"/>
 </g>
-<g><title>msvcp140_atomic_wait.dll : 47/64</title>
+<g><title>msvcp140_atomic_wait.dll: 47/64</title>
 <rect x="654.3" y="362.3" width="96.9" height="80.7" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="658.3" y="374.3" font-size="11" fill="#e6edf3">msvcp140_ato…</text>
 <rect class="ok" x="657.3" y="378.3" width="7" height="7"/>
@@ -1587,7 +1587,7 @@
 <rect class="no" x="713.3" y="418.3" width="7" height="7"/>
 <rect class="no" x="721.3" y="418.3" width="7" height="7"/>
 </g>
-<g><title>Bink2Scarlett.dll : 38/60</title>
+<g><title>Bink2Scarlett.dll: 38/60</title>
 <rect x="751.1" y="264.0" width="79.8" height="91.8" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="755.1" y="276.0" font-size="11" fill="#e6edf3">Bink2Scarl…</text>
 <rect class="ok" x="754.1" y="280.0" width="8" height="8"/>
@@ -1651,7 +1651,7 @@
 <rect class="no" x="772.1" y="343.0" width="8" height="8"/>
 <rect class="no" x="781.1" y="343.0" width="8" height="8"/>
 </g>
-<g><title>XboxBvhBuilder.dll : 43/57</title>
+<g><title>XboxBvhBuilder.dll: 43/57</title>
 <rect x="751.1" y="355.8" width="79.8" height="87.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="755.1" y="367.8" font-size="11" fill="#e6edf3">XboxBvhBui…</text>
 <rect class="ok" x="754.1" y="371.8" width="7" height="7"/>
@@ -1712,7 +1712,7 @@
 <rect class="no" x="762.1" y="419.8" width="7" height="7"/>
 <rect class="no" x="770.1" y="419.8" width="7" height="7"/>
 </g>
-<g><title>vcruntime140.dll : 29/41</title>
+<g><title>vcruntime140.dll: 29/41</title>
 <rect x="831.0" y="264.0" width="57.4" height="87.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="835.0" y="276.0" font-size="11" fill="#e6edf3">vcrunt…</text>
 <rect class="ok" x="834.0" y="280.0" width="7" height="7"/>
@@ -1757,7 +1757,7 @@
 <rect class="no" x="858.0" y="328.0" width="7" height="7"/>
 <rect class="no" x="866.0" y="328.0" width="7" height="7"/>
 </g>
-<g><title>vcruntime140_1.dll : 28/34</title>
+<g><title>vcruntime140_1.dll: 28/34</title>
 <rect x="888.4" y="264.0" width="47.6" height="87.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="892.4" y="276.0" font-size="11" fill="#e6edf3">vcrun…</text>
 <rect class="ok" x="891.4" y="280.0" width="7" height="7"/>
@@ -1795,7 +1795,7 @@
 <rect class="no" x="907.4" y="328.0" width="7" height="7"/>
 <rect class="no" x="915.4" y="328.0" width="7" height="7"/>
 </g>
-<g><title>msvcp140_1.dll : 28/33</title>
+<g><title>msvcp140_1.dll: 28/33</title>
 <rect x="831.0" y="351.2" width="75.8" height="53.2" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="835.0" y="363.2" font-size="11" fill="#e6edf3">msvcp140_…</text>
 <rect class="ok" x="834.0" y="367.2" width="6" height="6"/>
@@ -1832,7 +1832,7 @@
 <rect class="no" x="862.0" y="388.2" width="6" height="6"/>
 <rect class="no" x="869.0" y="388.2" width="6" height="6"/>
 </g>
-<g><title>msvcp140_codecvt_ids.dll : 19/24</title>
+<g><title>msvcp140_codecvt_ids.dll: 19/24</title>
 <rect x="831.0" y="404.3" width="75.8" height="38.7" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="835.0" y="416.3" font-size="11" fill="#e6edf3">msvcp140_…</text>
 <rect class="ok" x="834.0" y="420.3" width="5" height="5"/>
@@ -1860,7 +1860,7 @@
 <rect class="no" x="834.0" y="432.3" width="5" height="5"/>
 <rect class="no" x="840.0" y="432.3" width="5" height="5"/>
 </g>
-<g><title>amd_fidelityfx_loader_xbox.dll : 21/22</title>
+<g><title>amd_fidelityfx_loader_xbox.dll: 21/22</title>
 <rect x="906.7" y="351.2" width="29.3" height="91.8" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <rect class="ok" x="909.7" y="354.2" width="6" height="6"/>
 <rect class="ok" x="916.7" y="354.2" width="6" height="6"/>
@@ -1885,8 +1885,8 @@
 <rect class="ok" x="923.7" y="396.2" width="6" height="6"/>
 <rect class="no" x="909.7" y="403.2" width="6" height="6"/>
 </g>
-<text x="24" y="485" font-size="15" font-weight="600" fill="#e6edf3">DLL console : 83.3 % (5/6)</text>
-<g><title>xmem.dll : 3/4</title>
+<text x="24" y="485" font-size="15" font-weight="600" fill="#e6edf3">Console DLLs: 83.3% (5/6)</text>
+<g><title>xmem.dll: 3/4</title>
 <rect x="24.0" y="499.0" width="608.0" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="28.0" y="511.0" font-size="11" fill="#e6edf3">xmem.dll</text>
 <rect class="ok" x="27.0" y="515.0" width="10" height="10"/>
@@ -1894,13 +1894,13 @@
 <rect class="ok" x="49.0" y="515.0" width="10" height="10"/>
 <rect class="no" x="60.0" y="515.0" width="10" height="10"/>
 </g>
-<g><title>d3d12_xs.dll : 2/2</title>
+<g><title>d3d12_xs.dll: 2/2</title>
 <rect x="632.0" y="499.0" width="304.0" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="636.0" y="511.0" font-size="11" fill="#e6edf3">d3d12_xs.dll</text>
 <rect class="ok" x="635.0" y="515.0" width="10" height="10"/>
 <rect class="ok" x="646.0" y="515.0" width="10" height="10"/>
 </g>
-<text x="24" y="651" font-size="15" font-weight="600" fill="#e6edf3">Instructions GPU RDNA 2 : 0 % (recompilateur pas commencé)</text>
+<text x="24" y="651" font-size="15" font-weight="600" fill="#e6edf3">RDNA 2 GPU instructions: 0% (recompiler not started)</text>
 <g><title>SOP1</title>
 <rect x="24.0" y="665.0" width="91.2" height="55.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="28.0" y="677.0" font-size="11" fill="#e6edf3">SOP1</text>

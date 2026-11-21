@@ -51,13 +51,13 @@ def test_treemap_does_not_mutate_input():
 def _status():
     return Status(
         sections=(
-            Section("Runtime GDK", (Block("XTaskQueue", 3, 5), Block("XUser", 0, 4))),
+            Section("GDK runtime", (Block("XTaskQueue", 3, 5), Block("XUser", 0, 4))),
             Section("DLL <console>", (Block("xmem.dll", 1, 2),)),
             Section("GPU", (Block("SOP1", 0, 0), Block("VOP3", 0, 0)), counted=False,
-                    note="recompilateur pas commencé"),
+                    note="recompiler not started"),
         ),
         badges=(("CPU x86-64", "100 %", 1.0), ("GPU RDNA 2", "0 %", 0.0),
-                ("Imports du paquet", "1/4", 0.25)))
+                ("Package imports", "1/4", 0.25)))
 
 
 def test_render_is_valid_xml_with_one_green_cell_per_translated_function():
@@ -74,10 +74,10 @@ def test_render_is_valid_xml_with_one_green_cell_per_translated_function():
 def test_render_tooltips_and_titles():
     root = ET.fromstring(status_map.render(_status()))
     tips = [t.text for t in root.iter() if t.tag.endswith("title")]
-    assert "XTaskQueue : 3/5" in tips
+    assert "XTaskQueue: 3/5" in tips
     text = "".join(root.itertext())
-    assert "Runtime GDK : 33.3 % (3/9)" in text
-    assert "GPU : 0 % (recompilateur pas commencé)" in text
+    assert "GDK runtime: 33.3% (3/9)" in text
+    assert "GPU: 0% (recompiler not started)" in text
 
 
 def test_badge_colors():
@@ -101,20 +101,20 @@ def folders(tmp_path):
 def test_collect_small_package(folders):
     status = status_map.collect(*folders)
     titles = [s.title for s in status.sections]
-    assert titles[0].startswith("Runtime GDK")
-    assert any(t.startswith("Imports du paquet") for t in titles)
-    console = next(s for s in status.sections if s.title.startswith("DLL console"))
+    assert titles[0].startswith("GDK runtime")
+    assert any(t.startswith("Package imports") for t in titles)
+    console = next(s for s in status.sections if s.title.startswith("Console DLLs"))
     assert [(b.name, b.done, b.total) for b in console.blocks] == [("xmem.dll", 1, 2)]
-    imports = next(s for s in status.sections if s.title.startswith("Imports du paquet"))
+    imports = next(s for s in status.sections if s.title.startswith("Package imports"))
     assert [b.name for b in imports.blocks] == ["game.exe"]
     assert imports.blocks[0].total == 3
     gpu = status.sections[-1]
     assert not gpu.counted and len(gpu.blocks) == 20 and gpu.done == 0
-    assert dict((n, v) for n, v, _ in status.badges)["GPU RDNA 2"] == "0 %"
+    assert dict((n, v) for n, v, _ in status.badges)["GPU RDNA 2"] == "0%"
     ET.fromstring(status_map.render(status))
 
 
 def test_collect_without_runtime_dir_leaves_console_cells_grey(folders):
     status = status_map.collect(folders[0], None)
-    console = next(s for s in status.sections if s.title.startswith("DLL console"))
+    console = next(s for s in status.sections if s.title.startswith("Console DLLs"))
     assert console.done == 0 and console.total == 2

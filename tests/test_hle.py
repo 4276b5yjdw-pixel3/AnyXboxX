@@ -96,7 +96,7 @@ def test_missing_function_returns_e_notimpl(m):
 def test_report_text_lists_missing():
     report = Report("jeu.exe", 2, ("a!b",), ("c!d",), True, False)
     text = report.text()
-    assert "50.0 %" in text and "c!d" in text and "TLS : oui" in text
+    assert "50.0 %" in text and "c!d" in text and "TLS: yes" in text
 
 
 def test_heap_limit_returns_null(m):

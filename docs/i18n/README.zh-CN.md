@@ -147,7 +147,7 @@ AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器�
 
 详细结果：[docs/avancee.md](../avancee.md)（法语）。与原生运行结果对比的免费测试游戏：[docs/jeu-de-test.md](../jeu-de-test.md)（法语）。目标之后可以再跟一个额外的 DLL 文件夹（例如 Visual C++ 的 DLL）：`--rapport <cible> <dossier>`。
 
-报告会列出导入的函数、已模拟的百分比以及缺失的函数。在界面中，**Ouvrir un dossier Xbox…**（打开 Xbox 文件夹）按钮会读取 `MicrosoftGame.Config`，显示该报告，然后启动程序；每个未模拟的调用都会出现在日志中。
+报告会列出导入的函数、已模拟的百分比以及缺失的函数。在界面中，**Open an Xbox folder…**（打开 Xbox 文件夹）按钮会读取 `MicrosoftGame.Config`，显示该报告，然后启动程序；每个未模拟的调用都会出现在日志中。
 
 ## 架构
 
@@ -188,7 +188,3 @@ def XSystemGetDeviceType(c):
 ## 参与贡献
 
 `main` 分支受到保护：所有贡献都必须经过审阅的 pull request，并且测试必须通过。缺陷和需要模拟的函数请在 issue 中提交。完整规则见 [CONTRIBUTING.md](../../CONTRIBUTING.md)（法语）。
-
-## 局限
-
-AnyXboxX 只是一个原型。它不能运行商业游戏：这些游戏需要主机的 GPU（D3D12.X）和大量系统服务，并且以加密容器的形式发行，密钥保留在主机内部。本项目不包含也不接受任何受保护的内容。

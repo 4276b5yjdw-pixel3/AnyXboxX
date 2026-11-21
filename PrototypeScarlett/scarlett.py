@@ -21,7 +21,7 @@ FRAME_MS = 33
 DEMO = HERE / "demo.pe"
 XBOX_SERIES_X = 7
 ERRORS = (ValueError, OSError, ET.ParseError, pefile.PEFormatError, UcError)
-TITLE = "AnyXboxX — émulateur Xbox Series X (prototype)"
+TITLE = "AnyXboxX — Xbox Series X emulator (prototype)"
 
 
 def resolve_target(path):
@@ -58,13 +58,13 @@ class Window:
         self.screen.pack()
         self.picture = self.screen.create_image(0, 0, anchor="nw")
         self.caption = self.screen.create_text(WIDTH * ZOOM / 2, HEIGHT * ZOOM / 2,
-                                               text="Écran Xbox Series X émulé", fill="white")
+                                               text="Emulated Xbox Series X screen", fill="white")
         self.message = tk.StringVar()
         ttk.Label(panel, textvariable=self.message, wraplength=465).pack(fill="x", pady=8)
         buttons = ttk.Frame(panel)
         buttons.pack(anchor="w")
-        ttk.Button(buttons, text="Lancer la démo", command=self.demo).pack(side="left")
-        ttk.Button(buttons, text="Ouvrir un dossier Xbox…", command=self.choose).pack(
+        ttk.Button(buttons, text="Run the demo", command=self.demo).pack(side="left")
+        ttk.Button(buttons, text="Open an Xbox folder…", command=self.choose).pack(
             side="left", padx=6)
         self.journal = tk.Text(panel, height=10, width=60, state="disabled",
                                bg="#14161f", fg="#d7dae6", font=("Consolas", 9))
@@ -107,7 +107,7 @@ class Window:
             self.write(analyse(exe).text())
             machine = Machine(exe, title_id=title_id, log=self.write)
             code = machine.start()
-            self.message.set(f"{exe.name} a terminé. Valeur de retour : {code:#x}.")
+            self.message.set(f"{exe.name} finished. Return value: {code:#x}.")
         except ERRORS as error:
             self.message.set(str(error))
 
@@ -117,13 +117,13 @@ class Window:
             self.machine = Machine(DEMO, log=self.write)
             draw = self.machine.image.exports.get("DrawFrame")
             if self.machine.start() != XBOX_SERIES_X or draw is None:
-                raise ValueError("La démo ne reconnaît pas la Xbox Series X émulée.")
+                raise ValueError("The demo does not recognize the emulated Xbox Series X.")
             self.draw = draw
             self.pixels = self.machine.heap.alloc(WIDTH * HEIGHT * 3)
             self.tick = 0
             self.screen.itemconfigure(self.caption, state="hidden")
-            self.message.set("Démo de conduite · Utilise les flèches gauche et droite.")
-            self.write("Démo lancée : XSystemGetDeviceType → XboxScarlettAnaconda (7).")
+            self.message.set("Driving demo · Use the left and right arrow keys.")
+            self.write("Demo started: XSystemGetDeviceType → XboxScarlettAnaconda (7).")
             self.screen.focus_set()
             self.update_frame()
         except ERRORS as error:
@@ -175,7 +175,7 @@ def print_translation(package, svg_path=None):
         areas = (*overview, *areas)
         print(translation.table(areas))
         if svg_path is not None:
-            svg_path.write_text(translation.svg(areas, "AnyXboxX : avancée de la traduction Xbox Series X"),
+            svg_path.write_text(translation.svg(areas, "AnyXboxX: Xbox Series X translation progress"),
                                 encoding="utf-8")
         return 0
     except (OSError, ValueError) as error:

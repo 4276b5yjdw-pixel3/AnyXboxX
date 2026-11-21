@@ -83,10 +83,10 @@ def svg(rows, title):
         f'viewBox="0 0 {WIDTH} {HEIGHT}" font-family="Segoe UI, Arial, sans-serif" font-size="12">',
         f'<rect width="{WIDTH}" height="{HEIGHT}" fill="#f7f8fa"/>',
         f'<text x="{MARGIN}" y="28" font-size="16" font-weight="600" fill="{TEXT}">'
-        f'{escape(title)} : images par seconde</text>',
+        f'{escape(title)}: frames per second</text>',
         f'<line x1="{MARGIN}" y1="{y(TARGET_FPS):.1f}" x2="{WIDTH - MARGIN}" y2="{y(TARGET_FPS):.1f}" '
         f'stroke="{GRID}" stroke-width="2" stroke-dasharray="6 4"/>',
-        f'<text x="{WIDTH - MARGIN}" y="{y(TARGET_FPS) - 6:.1f}" text-anchor="end" fill="{TEXT}">objectif 60 i/s</text>',
+        f'<text x="{WIDTH - MARGIN}" y="{y(TARGET_FPS) - 6:.1f}" text-anchor="end" fill="{TEXT}">60 fps target</text>',
         f'<line x1="{MARGIN}" y1="{HEIGHT - MARGIN}" x2="{WIDTH - MARGIN}" y2="{HEIGHT - MARGIN}" stroke="{TEXT}"/>',
         f'<text x="{MARGIN}" y="{HEIGHT - MARGIN + 18}" fill="{TEXT}">0 s</text>',
         f'<text x="{WIDTH - MARGIN}" y="{HEIGHT - MARGIN + 18}" text-anchor="end" fill="{TEXT}">{span:.0f} s</text>',
