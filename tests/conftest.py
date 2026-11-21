@@ -19,7 +19,7 @@ RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "
 
 
 def runtime_built():
-    return all((RUNTIME_DIR / name).is_file() for name in RUNTIME_DLLS)
+    return all((RUNTIME_DIR / name).is_file() for name in (*RUNTIME_DLLS, "anyxboxx.exe"))
 
 
 @pytest.fixture
