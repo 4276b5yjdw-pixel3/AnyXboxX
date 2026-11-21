@@ -57,3 +57,9 @@ target_compile_definitions(anyxboxx PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE
 target_compile_options(anyxboxx PRIVATE /W4 /WX /permissive- /utf-8)
 # Base haute : la base préférée des jeux (0x140000000) reste libre pour eux.
 target_link_options(anyxboxx PRIVATE /BASE:0x7FF700000000 /DYNAMICBASE)
+
+# Exécution sur le GPU du PC d'un shader traduit RDNA 2 → HLSL → DXIL (emu/rdna2_hlsl.py).
+add_executable(anyxboxx_gpu_run gpu_runner/gpu_run.cpp)
+target_compile_definitions(anyxboxx_gpu_run PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+target_compile_options(anyxboxx_gpu_run PRIVATE /W4 /WX /permissive- /utf-8)
+target_link_libraries(anyxboxx_gpu_run PRIVATE d3d12 dxgi)

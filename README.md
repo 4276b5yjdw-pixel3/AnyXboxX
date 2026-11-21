@@ -60,7 +60,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 208 automated tests | ✅ done |
+| 214 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice` and the console's `ID3D12*` interfaces | ⏳ to do |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
 | Xbox Series X identity: console type (simulated `ConsoleMode` registry value, including inside the game's DLLs), `XSystem`, Title ID read from `MicrosoftGame.config`, "Xbox Series X" analytics | ✅ done |
@@ -75,7 +75,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Native C++ launcher without Python (`runtime/build/bin/anyxboxx.exe <game.exe \| folder> [--fps]`): SimpleTriangle and testgdk at ~12,000 fps | ✅ done |
 | RDNA 2 GPU disassembler: 1,444 mnemonics and LLVM-syntax operands (scalar, VOP1/VOP2/VOPC/VOP3 with modifiers), checked against 34,948 public LLVM encodings: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in progress |
 | Other GDK interfaces written by AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ to do |
-| RDNA 2 → DXIL shader recompiler: first step done, a wave32 reference interpreter running 519 of 1,444 encodings (scalar, VOP1/VOP2/VOPC/VOP3, memory: SMEM, LDS, GLOBAL, MUBUF with V# bounds, atomics, branches, `exec` divergence): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in progress |
+| RDNA 2 → DXIL shader recompiler: first programs translated to HLSL, compiled to DXIL and run on the PC's GPU with D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP without a GPU), memory identical to a wave32 reference interpreter running 519 of 1,444 encodings (scalar, VOP1/VOP2/VOPC/VOP3, memory: SMEM, LDS, GLOBAL, MUBUF with V# bounds, atomics, branches, `exec` divergence): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in progress |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
 | Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |

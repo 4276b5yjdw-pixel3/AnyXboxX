@@ -259,7 +259,7 @@ def main(argv):
             os.environ["ANYXBOXX_FPS"] = "1"
         return run_native(Path(argv[1]), tuple(Path(d) for d in options))
     if len(argv) >= 2 and argv[0] == "--rdna2":
-        # --rdna2 <shader.bin> [--liste | --executer] : familles, listing ou exécution (wave32)
+        # --rdna2 <shader.bin> [--liste | --executer | --hlsl] : familles, listing, exécution ou traduction HLSL
         from emu import rdna2
 
         try:
@@ -272,6 +272,15 @@ def main(argv):
             return 0
         if "--executer" in argv[2:]:
             return run_rdna2(data)
+        if "--hlsl" in argv[2:]:
+            from emu import rdna2_hlsl
+
+            try:
+                print(rdna2_hlsl.translate(data))
+            except rdna2_hlsl.Untranslatable as error:
+                print(f"Arrêt : {error}", file=sys.stderr)
+                return 1
+            return 0
         instructions = rdna2.decode(data)
         for family, count in rdna2.histogram(instructions).items():
             print(f"{family:10} {count}")
