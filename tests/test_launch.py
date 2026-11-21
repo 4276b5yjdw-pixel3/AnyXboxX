@@ -55,6 +55,21 @@ def test_accepts_an_executable_directly(tmp_path):
     assert code == 0 and "retour 0x3" in out
 
 
+def test_markdown_report_groups_missing_imports_by_dll(tmp_path):
+    imports = [("d3d12_xs.dll", "D3D12XboxCreateDevice"), ("d3d12_xs.dll", "D3D12XboxSetProcessDebugFlags"),
+               ("kernelx.dll", "XMemAllocPhysical")]
+    folder = package(tmp_path, lambda iat: Asm().frame().call_iat(iat[imports[0]]).unframe().ret().build(),
+                     imports=imports)
+    report = tmp_path / "rapport.md"
+    lines = []
+    assert launch.run(folder, (), log=lines.append, markdown=report) == 0
+    text = report.read_text(encoding="utf-8")
+    assert text.startswith("# Rapport AnyXboxX : game.exe")
+    assert "| d3d12_xs.dll | 2 | D3D12XboxCreateDevice, D3D12XboxSetProcessDebugFlags |" in text
+    assert "| kernelx.dll | 1 | XMemAllocPhysical |" in text
+    assert "| d3d12_xs.dll!D3D12XboxCreateDevice | 1 |" in text      # appel non émulé et sa fréquence
+
+
 def test_bench_skips_files_that_are_not_pe32_plus(tmp_path):
     (tmp_path / "launcher.exe").write_bytes(b"MZ" + b"\0" * 200)   # ex. lanceur .NET 32 bits
     build_pe(tmp_path / "helper.dll", lambda iat: Asm().mov_eax(1).ret().build())

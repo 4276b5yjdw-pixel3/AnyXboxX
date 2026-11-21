@@ -39,12 +39,33 @@ def _missing_calls(machine, log):
         log(f"  … et {len(calls) - MAX_LISTED} autres")
 
 
-def run(target, extra_dirs=(), log=print):
-    """Lance `target` dans la machine isolée. Renvoie 0 si l'exécution s'est déroulée."""
+def markdown_report(exe, report, missing_calls, outcome):
+    """Rapport Markdown : imports non résolus groupés par DLL, puis appels non émulés par fréquence."""
+    by_dll = {}
+    for name in report.missing:
+        dll, _, function = name.partition("!")
+        by_dll.setdefault(dll, []).append(function)
+    lines = [f"# Rapport AnyXboxX : {exe.name}", "",
+             f"Imports : {report.total} · résolus : {report.coverage:.1f} % · {outcome}", "",
+             "## Imports non résolus, par DLL", "", "| DLL | Nombre | Fonctions |", "|---|---|---|"]
+    for dll, functions in sorted(by_dll.items(), key=lambda item: (-len(item[1]), item[0].lower())):
+        lines.append(f"| {dll} | {len(functions)} | {', '.join(sorted(functions))} |")
+    lines += ["", "## Appels non émulés pendant l'exécution", "", "| Fonction | Appels |", "|---|---|"]
+    for name, count in sorted(missing_calls.items(), key=lambda item: (-item[1], item[0])):
+        lines.append(f"| {name} | {count} |")
+    return "\n".join(lines) + "\n"
+
+
+def run(target, extra_dirs=(), log=print, markdown=None):
+    """Lance `target` dans la machine isolée. Renvoie 0 si l'exécution s'est déroulée.
+
+    `markdown` : chemin d'un rapport à écrire (liste de travail pour compléter l'émulateur).
+    """
     try:
         exe, title_id = resolve(target)
         dirs = (exe.parent, *(Path(d) for d in extra_dirs))
-        log(analyse(exe, dirs[1:]).text())
+        report = analyse(exe, dirs[1:])
+        log(report.text())
         log(f"[lancer] {exe.name} · Title ID {title_id:#010x} · machine isolée")
         machine = Machine(exe, title_id=title_id, log=log, search_dirs=dirs)
     except ERRORS as error:
@@ -52,10 +73,14 @@ def run(target, extra_dirs=(), log=print):
         return 1
     try:
         code = machine.start() & 0xFFFF_FFFF
-        log(f"[lancer] {exe.name} a terminé : retour {code:#x}")
+        outcome = f"terminé, retour {code:#x}"
         status = 0
     except ERRORS as error:
-        log(f"[lancer] arrêt : {error}")
+        outcome = f"arrêt : {error}"
         status = 1
+    log(f"[lancer] {exe.name} : {outcome}")
     _missing_calls(machine, log)
+    if markdown is not None:
+        Path(markdown).write_text(markdown_report(exe, report, machine.missing_calls, outcome), encoding="utf-8")
+        log(f"[lancer] rapport écrit : {markdown}")
     return status
