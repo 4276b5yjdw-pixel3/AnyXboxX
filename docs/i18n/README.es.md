@@ -4,8 +4,6 @@
 
 AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su código con Unicorn. Las funciones de sistema de la consola se sustituyen por un runtime C++ en modo nativo, y por código Python en la máquina aislada (emulación de alto nivel, como WinDurango o Wine). El programa se presenta como una Xbox Series X: `XSystemGetDeviceType` devuelve `XboxScarlettAnaconda`.
 
-![Demo de conducción ejecutándose en AnyXboxX](../images/demo-conduite.png)
-
 ## Avance de la traducción
 
 ![Mapa del avance: una casilla por función, verde si está traducida](../images/carte-avancee.svg)

@@ -4,8 +4,6 @@
 
 AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unicorn 执行其代码。主机的系统函数在原生模式下由 C++ 运行时替代，在隔离的虚拟机中由 Python 代码替代（高级别模拟，与 WinDurango 或 Wine 类似）。该程序会表现为一台 Xbox Series X：`XSystemGetDeviceType` 返回 `XboxScarlettAnaconda`。
 
-![在 AnyXboxX 中运行的驾驶演示](../images/demo-conduite.png)
-
 ## 翻译进展
 
 ![进展地图：每个函数一格，已翻译则为绿色](../images/carte-avancee.svg)

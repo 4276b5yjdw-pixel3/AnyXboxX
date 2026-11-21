@@ -4,8 +4,6 @@
 
 AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込み、そのコードを Unicorn で実行します。コンソールのシステム関数は、ネイティブモードでは C++ ランタイムに、隔離されたマシンでは Python のコードに置き換えられます（WinDurango や Wine と同じ高レベルエミュレーション）。このプログラムは Xbox Series X として振る舞い、`XSystemGetDeviceType` は `XboxScarlettAnaconda` を返します。
 
-![AnyXboxX で実行された運転デモ](../images/demo-conduite.png)
-
 ## 変換の進捗
 
 ![進捗マップ：関数ごとに 1 マス、変換済みなら緑](../images/carte-avancee.svg)

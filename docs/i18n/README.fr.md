@@ -6,8 +6,6 @@ AnyXboxX charge des exécutables Xbox GDK (format PE32+ x86-64) et exécute leur
 
 Pour poursuivre l'analyse du paquet Scarlett étudié, voir le [plan de compatibilité et ses limites](../recherche/plan-compatibilite-paquet.md).
 
-![Démo de conduite exécutée dans AnyXboxX](../images/demo-conduite.png)
-
 ## Avancée de la traduction
 
 ![Carte de l'avancée : une case par fonction, verte si traduite](../images/carte-avancee.svg)
