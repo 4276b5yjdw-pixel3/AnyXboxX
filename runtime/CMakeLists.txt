@@ -50,3 +50,10 @@ anyxboxx_dll(xmem xmem/xmem.cpp xmem/xmem.def)
 anyxboxx_dll(d3d12_xs d3d12_xs/d3d12_xs.cpp d3d12_xs/d3d12_xs.def)
 anyxboxx_dll(kernelx kernelx/kernelx.cpp)
 anyxboxx_dll(anyxboxx_tls tls/anyxboxx_tls.cpp)
+
+# Lanceur natif sans Python : anyxboxx.exe <jeu.exe | dossier du paquet> [--fps]
+add_executable(anyxboxx launcher/launcher.cpp)
+target_compile_definitions(anyxboxx PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+target_compile_options(anyxboxx PRIVATE /W4 /WX /permissive- /utf-8)
+# Base haute : la base préférée des jeux (0x140000000) reste libre pour eux.
+target_link_options(anyxboxx PRIVATE /BASE:0x7FF700000000 /DYNAMICBASE)

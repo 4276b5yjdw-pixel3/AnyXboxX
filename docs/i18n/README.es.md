@@ -62,7 +62,7 @@ Los dos juegos de prueba funcionan sin sincronización vertical: unos 11 700 f/s
 | Tabla de las 396 funciones GDK: interfaz y número de método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ hecho |
 | `XTaskQueue`, `XAsync`, `XThread` servidas por AnyXboxX: testgdk funciona sin el runtime de Windows | ✅ hecho |
 | Otras interfaces GDK: delegadas al runtime GDK de Windows, nombradas por la traza | 🟡 en curso |
-| 169 pruebas automatizadas | ✅ hecho |
+| 174 pruebas automatizadas | ✅ hecho |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` de la consola | ⏳ pendiente |
 | `XUser` sin conexión: perfil local siempre conectado, gamertag configurable (`ANYXBOXX_GAMERTAG`), inicio de sesión de testgdk correcto | ✅ hecho |
 | Identidad de la Xbox Series X: tipo de consola (valor de registro `ConsoleMode` simulado, también dentro de las DLL del juego), `XSystem`, Title ID leído de `MicrosoftGame.config`, analítica «Xbox Series X» | ✅ hecho |
@@ -74,6 +74,7 @@ Los dos juegos de prueba funcionan sin sincronización vertical: unos 11 700 f/s
 | `XPackage`: paquete instalado en local (identificador, idioma, fragmentos listos, montaje sobre la carpeta del juego) | ✅ hecho |
 | `kernelx.dll` (núcleo de la consola): 2 661 funciones redirigidas a `kernel32`/`kernelbase` de Windows | ✅ hecho |
 | TLS implícito (`thread_local`) de los juegos en modo nativo: DLL portadora `anyxboxx_tls.dll`, cada hilo recibe su copia (hasta 256 KiB) | ✅ hecho |
+| Lanzador nativo en C++ sin Python (`runtime/build/bin/anyxboxx.exe <juego.exe \| carpeta> [--fps]`): SimpleTriangle y testgdk a ~12 000 i/s | ✅ hecho |
 | Otras interfaces GDK escritas por AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ pendiente |
 | Recompilador de shaders RDNA 2 → DXIL | ⏳ pendiente |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
