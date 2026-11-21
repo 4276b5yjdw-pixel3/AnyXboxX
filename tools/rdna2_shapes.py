@@ -55,6 +55,10 @@ def read_lines(folder):
             tokens[-1] = tokens[-1].split(" ")[0]
         if family == "SMEM" and tokens:               # « s0 offset:0x64 glc dlc » : garder l'offset
             tokens[-1] = " ".join(w for w in tokens[-1].split() if w not in SMEM_FLAG_WORDS)
+        if family == "DS" and tokens:                 # « v1 offset:65535 gds » : suffixes à part
+            tokens[-1] = " ".join(w for w in tokens[-1].split()
+                                  if w != "gds" and not w.startswith("offset"))
+            tokens = [t for t in tokens if t]
         expected = " ".join(f"{mnemonic.removesuffix('_e32')} {operands}".split())
         yield expected, tokens, data
 

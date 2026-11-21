@@ -1,12 +1,13 @@
 """Opérandes des instructions RDNA 2 : champs, registres et constantes, au format de LLVM.
 
 Couvre les encodages scalaires (SOP1, SOP2, SOPC, SOPK, SOPP), vectoriels (VOP1, VOP2, VOPC,
-VOP3) et les lectures mémoire scalaires (SMEM). La forme de chaque opcode (quels champs, dans quel ordre, quelle
+VOP3), les accès mémoire scalaires (SMEM) et la mémoire partagée (DS). La forme de chaque opcode (quels champs, dans quel ordre, quelle
 largeur de registre) vient de rdna2_ops.SHAPES, apprise sur les tests de LLVM.
 """
+import re
 import struct
 
-from emu import rdna2
+from emu import rdna2, rdna2_swizzle
 
 LITERAL = 255
 INLINE_FLOATS = {240: "0.5", 241: "-0.5", 242: "1.0", 243: "-1.0", 244: "2.0", 245: "-2.0",
@@ -41,9 +42,16 @@ FIELDS = {
     # comme un entier (« sdata_imm »).
     "SMEM": {"sdata": (6, 0x7F, "src"), "sbase": (0, 0x3F, "sbase"), "offset": (32, 0x1FFFFF, "smem_offset"),
              "sdata_imm": (6, 0x7F, "imm")},
+    # DS (LDS/GDS, deux mots) : adresse, deux données et destination, toutes vectorielles.
+    # offset (bits 15-0) ou offset0/offset1 (bits 7-0 et 15-8), puis gds (bit 17) : suffixes.
+    "DS": {"addr": (32, 0xFF, "vgpr"), "data0": (40, 0xFF, "vgpr"), "data1": (48, 0xFF, "vgpr"),
+           "vdst": (56, 0xFF, "vgpr")},
 }
 FAMILIES = frozenset(FIELDS) - {"VOP3B"}
-TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM"})
+TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM", "DS"})
+DS_TWO_OFFSETS = re.compile(r"^ds_(?:read|write|wrxchg)2(?:st64)?_")
+DS_SWIZZLE = "ds_swizzle_b32"
+DS_GDS_BIT, BYTE, U16 = 17, 0xFF, 0xFFFF
 SMEM_SOFFSET_SHIFT, SMEM_OFFSET_BITS = 57, 21
 SMEM_FLAGS = ((16, "glc"), (14, "dlc"))                  # ordre d'écriture de LLVM
 NULL_REGISTER = 125
@@ -182,6 +190,24 @@ def smem_suffix(word):
     return " ".join(name for bit, name in SMEM_FLAGS if word >> bit & 1)
 
 
+def _ds_offsets(name, word):
+    if DS_TWO_OFFSETS.match(name):
+        pairs = (("offset0", word & BYTE), ("offset1", (word >> 8) & BYTE))
+        return [f"{label}:{value}" for label, value in pairs if value]
+    offset = word & U16
+    if name == DS_SWIZZLE:
+        offset = rdna2_swizzle.text(offset)
+    return [f"offset:{offset}"] if offset else []
+
+
+def ds_suffix(name, word):
+    """offset:N, offset0:N offset1:N ou offset:swizzle(...), puis gds ; rien pour les valeurs nulles."""
+    parts = _ds_offsets(name, word)
+    if word >> DS_GDS_BIT & 1:
+        parts.append("gds")
+    return " ".join(parts)
+
+
 ALIASES = frozenset({("VOP1", "sdst"), ("VOP3", "sdst8"), ("SMEM", "sdata_imm")})
 
 
@@ -226,4 +252,6 @@ def text(data, offset=0):
         operands = f"{operands} {vop3_suffix(family, word, shape)}".strip()
     if family == "SMEM":
         operands = f"{operands} {smem_suffix(word)}".strip()
+    if family == "DS":
+        operands = f"{operands} {ds_suffix(name, word)}".strip()
     return f"{name} {operands}".rstrip()
