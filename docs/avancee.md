@@ -70,6 +70,12 @@ Sur PC, chaque fonction `X*` de la bibliothèque statique du GDK (`xgameruntime.
 | `XGameSave` | 30 | Windows |
 | `XTaskQueue` / `XAsync` / `XThread` | 27 | **AnyXboxX** |
 
+## Identité Xbox Series X
+
+`XSystemGetDeviceType` n'est pas une interface : `xgameruntime.lib`, lié dans le jeu, lit `HKLM\Software\Microsoft\Windows NT\CurrentVersion\OEM`, valeur `ConsoleMode`. La valeur 0x64 donne `XboxScarlettAnaconda`, et l'absence de valeur donne `Pc`. En mode natif, AnyXboxX redirige les fonctions de registre du jeu **et des DLL de son dossier** vers un registre simulé (`runtime/xgameruntime/registry.cpp`) : seule cette clé est simulée, le reste va au vrai registre.
+
+`XGameGetXboxTitleId` renvoie le `<TitleId>` du `MicrosoftGame.config` du jeu. `XSystemGetAnalyticsInfo` annonce la famille « Windows.Xbox » et le modèle « Xbox Series X », et le bac à sable Xbox Live est `RETAIL`.
+
 `runtime/xgameruntime/served_interfaces.inc` liste les interfaces servies par AnyXboxX. Ce fichier est lu à la fois par le C++ et par la mesure `--traduction`.
 
 ## Exécution native

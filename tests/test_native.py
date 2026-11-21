@@ -159,3 +159,50 @@ def test_runtime_is_shared_and_found_by_absolute_path(runtime_dir, monkeypatch):
     assert runtime.shared() is runtime.shared()
     monkeypatch.setenv("ANYXBOXX_RUNTIME", "dossier/relatif")
     assert runtime.runtime_dir().is_absolute()
+
+
+def _iat_slot(module_path, handle, dll, function):
+    """Adresse mémoire de l'entrée d'IAT `dll!function` d'un module chargé à `handle`."""
+    import pefile
+
+    with pefile.PE(str(module_path)) as pe:
+        for entry in pe.DIRECTORY_ENTRY_IMPORT:
+            if entry.dll.decode().lower() == dll.lower():
+                for item in entry.imports:
+                    if item.name and item.name.decode() == function:
+                        return handle + item.address - pe.OPTIONAL_HEADER.ImageBase
+    raise AssertionError(f"{dll}!{function} absent")
+
+
+def test_game_registry_reads_go_to_the_simulated_console(tmp_path, runtime_dir):
+    from emu.native import NativeImage, runtime
+
+    exe = build_pe(tmp_path / "reg.exe", lambda iat: Asm().mov_eax(1).ret().build(),
+                   imports=[("ADVAPI32.dll", "RegQueryValueExW")], dll=False)
+    image = NativeImage(exe)
+    try:
+        assert image.bound["ADVAPI32.dll!RegQueryValueExW"] == runtime.shared().export("AnyXboxX_RegQueryValueExW")
+    finally:
+        image.close()
+
+
+def test_registry_imports_of_game_dlls_are_patched_too(tmp_path, runtime_dir):
+    """Une DLL du jeu chargée par Windows (ex. SDL3.dll) doit aussi voir une Xbox Series X."""
+    import ctypes
+
+    from emu.native import NativeImage, runtime
+
+    helper = build_pe(tmp_path / "regdll.dll", lambda iat: Asm().mov_eax(1).ret().at(DLL_MAIN).mov_eax(1).ret().build(),
+                      imports=[("api-ms-win-core-registry-l1-1-0.dll", "RegOpenKeyExW")],
+                      exports=[("Nothing", 0)], entry=DLL_MAIN)
+    exe = build_pe(tmp_path / "usesdll.exe", lambda iat: Asm().mov_eax(1).ret().build(),
+                   imports=[("regdll.dll", "Nothing")], dll=False)
+    image = NativeImage(exe)
+    try:
+        kernel32 = ctypes.WinDLL("kernel32")
+        kernel32.GetModuleHandleW.restype = ctypes.c_void_p
+        handle = kernel32.GetModuleHandleW(str(helper))
+        slot = _iat_slot(helper, handle, "api-ms-win-core-registry-l1-1-0.dll", "RegOpenKeyExW")
+        assert ctypes.c_uint64.from_address(slot).value == runtime.shared().export("AnyXboxX_RegOpenKeyExW")
+    finally:
+        image.close()

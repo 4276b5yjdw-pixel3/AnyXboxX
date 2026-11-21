@@ -14,6 +14,14 @@ void* UserInterface();
 // XUserGetGamertag : interface {CEF4FAC0…} du même fournisseur.
 void* GamertagInterface();
 
+// Identité Xbox Series X (system_interface.cpp) : XSystem, analytique, Title ID et
+// lancement, fonctionnalités du runtime, report d'extinction de l'écran et XLaunchUri.
+void* SystemInterface();
+void* AnalyticsInterface();
+void* GameInterface();
+void* FeatureInterface();
+void* DisplayInterface();
+
 // Renvoie l'objet qui sert (fournisseur, interface), ou nullptr.
 void* ServedInterface(const GUID& provider, const GUID& iid);
 

@@ -8,13 +8,17 @@ O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o cód
 
 ## Andamento da tradução
 
+![Mapa do andamento: uma célula por função, verde se traduzida](../images/carte-avancee.svg)
+
+Regenerar: `scarlett.py --carte <pasta do pacote> docs/images/carte-avancee.svg`.
+
 ![Andamento da tradução do Xbox Series X](../images/traduction.svg)
 
 - **Instruções do processador: 100%.** O Series X usa um AMD Zen 2 em x86-64, o mesmo conjunto de instruções de um PC: no modo nativo, o código do jogo é executado como está, sem tradução.
 - **Instruções da GPU: 0%.** Os shaders de um jogo de console são compilados para a GPU RDNA 2 do Series X. É preciso um recompilador RDNA 2 → DXIL, ainda não iniciado.
 - **Funções de sistema: 66%** das 1 337 funções importadas pelas DLLs do pacote de teste são resolvidas no modo isolado.
 - **DLLs próprias do console**: `xmem.dll` (3/4) e `d3d12_xs.dll` (2/2) estão traduzidas para as funções que o pacote usa. A criação do dispositivo D3D12.X ainda precisa ser escrita.
-- **Runtime GDK: 71 das 396 funções** estão escritas no AnyXboxX, em C++: a fila de tarefas (`XTaskQueue`, `XAsync`, `XThread`) e o usuário (`XUser`, um perfil local offline). Elas são usadas quando o AnyXboxX gerencia o runtime sozinho: sem o Gaming Services, ou com `ANYXBOXX_SYSTEM_RUNTIME=0`. Se o runtime GDK do Windows estiver presente, ele fornece todas as interfaces, inclusive a fila de tarefas, pois suas APIs só aceitam as próprias filas. O rastreamento (`ANYXBOXX_TRACE=1`) nomeia cada interface solicitada.
+- **Runtime GDK: 85 das 396 funções** estão escritas no AnyXboxX, em C++: a fila de tarefas (`XTaskQueue`, `XAsync`, `XThread`), o usuário (`XUser`, um perfil local offline) e a identidade do Xbox Series X (`XSystem`, Title ID, análise de uso, recursos do runtime). Elas são usadas quando o AnyXboxX gerencia o runtime sozinho: sem o Gaming Services, ou com `ANYXBOXX_SYSTEM_RUNTIME=0`. Se o runtime GDK do Windows estiver presente, ele fornece todas as interfaces, inclusive a fila de tarefas, pois suas APIs só aceitam as próprias filas. O rastreamento (`ANYXBOXX_TRACE=1`) nomeia cada interface solicitada.
 
 O gráfico é regenerado por `scarlett.py --traduction <pasta do pacote> docs/images/traduction.svg`.
 
@@ -43,10 +47,12 @@ O gráfico é regenerado por `scarlett.py --traduction <pasta do pacote> docs/im
 | Tabela das 396 funções do GDK: interface e número do método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ feito |
 | `XTaskQueue`, `XAsync`, `XThread` fornecidas pelo AnyXboxX: o testgdk roda sem o runtime do Windows | ✅ feito |
 | Outras interfaces do GDK: delegadas ao runtime GDK do Windows, nomeadas pelo rastreamento | 🟡 em andamento |
-| 129 testes automatizados | ✅ feito |
+| 143 testes automatizados | ✅ feito |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` do console | ⏳ a fazer |
 | `XUser` offline: perfil local sempre conectado, gamertag configurável (`ANYXBOXX_GAMERTAG`), login do testgdk bem-sucedido | ✅ feito |
-| Outras interfaces do GDK escritas pelo AnyXboxX (`XGameSave`, `XSystem`, `XStore`…) | ⏳ a fazer |
+| Identidade do Xbox Series X: tipo de console (valor de registro `ConsoleMode` simulado, inclusive nas DLLs do jogo), `XSystem`, Title ID lido de `MicrosoftGame.config`, análise de uso «Xbox Series X» | ✅ feito |
+| Mapa do andamento: uma célula por função (`--carte`) | ✅ feito |
+| Outras interfaces do GDK escritas pelo AnyXboxX (`XPackage`, `XGameSave`, `XStore`…) | ⏳ a fazer |
 | Recompilador de shaders RDNA 2 → DXIL | ⏳ a fazer |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |
 | Carregamento dinâmico de uma DLL durante a execução (`LoadLibrary` + `DllMain`) | ⏳ a fazer |

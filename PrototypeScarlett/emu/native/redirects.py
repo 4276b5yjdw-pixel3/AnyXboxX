@@ -1,0 +1,62 @@
+"""Fonctions système du jeu redirigées vers le runtime C++ d'AnyXboxX.
+
+xgameruntime.lib, lié dans le jeu et ses DLL, décide du type de console en lisant
+le registre (HKLM\\...\\CurrentVersion\\OEM, valeur ConsoleMode). Ces lectures sont
+servies par le registre simulé du runtime C++ (runtime/xgameruntime/registry.cpp),
+qui annonce une Xbox Series X et laisse passer tout le reste.
+
+Les imports de l'exécutable sont liés directement ; ceux des DLL du dossier du jeu,
+chargées par Windows, sont corrigés dans leur table d'imports (IAT) après chargement.
+"""
+import ctypes
+
+import pefile
+
+from ..modules import dll_name
+from . import win32
+
+REGISTRY_FUNCTIONS = frozenset({"RegOpenKeyW", "RegOpenKeyExW", "RegQueryValueExW", "RegCloseKey"})
+REGISTRY_PREFIX = "api-ms-win-core-registry-"
+EXPORT_PREFIX = "AnyXboxX_"
+DIR_IMPORT = 1
+POINTER_SIZE = 8
+
+
+def _is_registry_dll(dll):
+    name = dll_name(dll)
+    return name == "advapi32.dll" or name.startswith(REGISTRY_PREFIX)
+
+
+def redirect(runtime, dll, function):
+    """Adresse de remplacement de `dll!function` dans le runtime C++, ou 0."""
+    if function in REGISTRY_FUNCTIONS and _is_registry_dll(dll):
+        return runtime.export(EXPORT_PREFIX + function)
+    return 0
+
+
+def _write_pointer(address, value):
+    old = ctypes.c_ulong()
+    if not win32.VirtualProtect(address, POINTER_SIZE, win32.PAGE_READWRITE, ctypes.byref(old)):
+        raise ValueError(f"IAT non modifiable à {address:#x} (erreur {ctypes.get_last_error()}).")
+    try:
+        win32.write_u64(address, value)
+    finally:
+        win32.VirtualProtect(address, POINTER_SIZE, old.value, ctypes.byref(old))
+
+
+def patch_module(runtime, handle, path):
+    """Corrige l'IAT d'une DLL du jeu déjà chargée par Windows. Renvoie le nombre d'entrées."""
+    with pefile.PE(str(path), fast_load=True) as pe:
+        pe.parse_data_directories(directories=[DIR_IMPORT])
+        image_base = pe.OPTIONAL_HEADER.ImageBase
+        patched = 0
+        for entry in getattr(pe, "DIRECTORY_ENTRY_IMPORT", ()):
+            dll = entry.dll.decode(errors="replace")
+            for item in entry.imports:
+                if item.name is None:
+                    continue
+                target = redirect(runtime, dll, item.name.decode(errors="replace"))
+                if target:
+                    _write_pointer(handle + item.address - image_base, target)
+                    patched += 1
+    return patched
