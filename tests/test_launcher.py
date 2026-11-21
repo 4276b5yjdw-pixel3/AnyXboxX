@@ -73,3 +73,23 @@ def test_tombox_d3d12_serves_console_device_creation(tmp_path, runtime_dir):
     result = subprocess.run([str(runtime_dir / "anyxboxx.exe"), str(exe)], capture_output=True, text=True,
                             timeout=60, env=environment)
     assert result.returncode == 7, result.stderr
+
+
+TOMBOX_DIR = TOMBOX_D3D12.parent
+
+
+@pytest.mark.skipif(not (TOMBOX_DIR / "xg_xs.dll").is_file() or not (TOMBOX_DIR / "xmem.dll").is_file(),
+                    reason="DLL de TomBox non compilées (tools/build_tombox.py xg_xs xmem)")
+def test_tombox_dir_serves_missing_console_libraries(tmp_path, runtime_dir):
+    def code(iat):
+        return Asm().frame().mov_ecx(64).zero_rdx().call_iat(iat[("xmem.dll", "XMemAlloc")]).unframe().ret().build()
+
+    imports = [("xmem.dll", "XMemAlloc"), ("xmem.dll", "XMemGetAllocationStatistics"),
+               ("xg_xs.dll", "XGComputeTexture2DLayout")]
+    exe = build_pe(tmp_path / "xg.exe", code, imports=imports, dll=False)
+    assert launch(runtime_dir, exe).returncode == 1                  # xg_xs absent d'AnyXboxX
+    environment = {**os.environ, "ANYXBOXX_TOMBOX_DIR": str(TOMBOX_DIR)}
+    result = subprocess.run([str(runtime_dir / "anyxboxx.exe"), str(exe)], capture_output=True, text=True,
+                            timeout=60, env=environment)
+    pointer = result.returncode & 0xFFFF_FFFF                        # XMemAlloc de TomBox : alignement par défaut 16
+    assert pointer not in (0, 1) and pointer % 16 == 0, result.stderr
