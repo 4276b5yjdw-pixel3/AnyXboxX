@@ -41,11 +41,11 @@ def test_xmem_alloc_is_aligned_and_queryable(runtime_dir):
                         ("region_size", ctypes.c_size_t), ("state", ctypes.c_uint32),
                         ("protect", ctypes.c_uint32), ("type", ctypes.c_uint32)]
 
-        info = MemoryInfo()
-        xmem.XMemVirtualQuery.restype = ctypes.c_size_t
-        xmem.XMemVirtualQuery.argtypes = (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t)
-        assert xmem.XMemVirtualQuery(large, ctypes.byref(info), ctypes.sizeof(info)) == ctypes.sizeof(info)
-        assert info.state == MEM_COMMIT
+        buffer = (ctypes.c_ubyte * 64)()     # appelants BVH : processus, adresse, tampon de 64 octets
+        xmem.XMemVirtualQuery.restype = ctypes.c_int32
+        xmem.XMemVirtualQuery.argtypes = (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
+        assert xmem.XMemVirtualQuery(ctypes.c_void_p(-1), large, buffer) == 1
+        assert MemoryInfo.from_buffer(buffer).state == MEM_COMMIT
     finally:
         xmem.XMemFree(small, 0)
         xmem.XMemFree(large, 0)

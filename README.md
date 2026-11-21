@@ -55,12 +55,12 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Second free test game, SDL3's `testgdk`: **runs in native mode** (window, sprites, sound) | ✅ done |
 | Isolated launch of a package or an exe (`--lancer`) with the list of calls to emulate | ✅ done |
 | C++ runtime (`runtime/`): `xgameruntime.dll`, `xmem.dll`, `d3d12_xs.dll` preloaded in native mode, served to all of the game's DLLs | ✅ done |
-| `xmem.dll`: `XMemAlloc`, `XMemFree`, hooks, `XMemVirtualQuery` | ✅ done |
+| `xmem.dll`: `XMemAlloc`, `XMemFree` with `XALLOC_ATTRIBUTES` decoded (ERA layout: heap and graphics memory, alignment), hooks, `XMemVirtualQuery` (graphics memory flag) | ✅ done |
 | `d3d12_xs.dll`: root signature serialization, redirected to the PC's D3D12 | ✅ done |
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 299 automated tests | ✅ done |
+| 317 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice`, console `ID3D12*` interfaces and `DXGIXPresentArray`, served by TomBox's Rust `d3d12_xs.dll` (MIT, 48 implemented exports, built by `tools/build_tombox.py d3d12_xs`, loaded with `ANYXBOXX_D3D12_XS=<path>`); untestable here without a console executable | 🟡 in progress |
 | Console libraries from TomBox (Rust, MIT) for what AnyXboxX lacks: `xg_xs` (texture layouts, 23 exports) and full `xmem` (38 exports), with `ANYXBOXX_TOMBOX_DIR=<folder>`; built by `tools/build_tombox.py xg_xs xmem` | 🟡 in progress |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |

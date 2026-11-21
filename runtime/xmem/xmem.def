@@ -8,3 +8,4 @@ EXPORTS
   XMemGetAllocationHooks
   XMemVirtualQuery
   XMemGetWorkingSetStatistics
+  AnyXboxX_DecodeAllocAttributes

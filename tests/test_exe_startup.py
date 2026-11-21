@@ -153,3 +153,13 @@ def test_xmem_allocates_aligned_blocks_in_isolated_mode(m):
     assert small % 64 == 0 and large % 4096 == 0 and small != large
     call(m, "xmem.dll", "XMemFree", small, 0)
     assert call(m, "xmem.dll", "XMemGetWorkingSetStatistics", 0, m.heap.alloc(64)) == 0
+
+
+def test_xmem_decodes_era_attributes_in_isolated_mode(m):
+    """Mêmes règles que runtime/xmem/era_heap.cpp : alignement demandé, physique refusé."""
+    heap_64k = 16 << 24                                   # tas, alignement 2^16
+    amd_word = 0xA800_4000                                # type graphique 5, pages de 64 Kio
+    assert call(m, "xmem.dll", "XMemAlloc", 257, heap_64k) % 0x10000 == 0
+    assert call(m, "xmem.dll", "XMemAlloc", 512, amd_word) % 0x10000 == 0
+    assert call(m, "xmem.dll", "XMemAlloc", 64, 7 << 29) == 0 and m.last_error == 50        # physique
+    assert call(m, "xmem.dll", "XMemAlloc", 64, 0x05E5_0000 | 1 << 40) == 0 and m.last_error == 87
