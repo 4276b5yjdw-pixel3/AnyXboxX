@@ -14,7 +14,7 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 - **GPU-Befehle: 0 %.** Die Shader eines Konsolenspiels sind für die RDNA-2-GPU der Series X kompiliert. Nötig ist ein Rekompilierer RDNA 2 → DXIL, der noch nicht begonnen wurde.
 - **Systemfunktionen: 66 %** der 1 337 Funktionen, die von den DLLs des Testpakets importiert werden, sind im isolierten Modus aufgelöst.
 - **Konsolenspezifische DLLs**: `xmem.dll` (3/4) und `d3d12_xs.dll` (2/2) sind für die vom Paket genutzten Funktionen übersetzt. Die Erstellung des D3D12.X-Geräts muss noch geschrieben werden.
-- **GDK-Runtime: 27 der 396 Funktionen** (Aufgabenwarteschlange `XTaskQueue`, `XAsync`, `XThread`) sind in AnyXboxX in C++ geschrieben. Sie kommen zum Einsatz, wenn AnyXboxX die Runtime allein verwaltet: ohne Gaming Services oder mit `ANYXBOXX_SYSTEM_RUNTIME=0`. Ist die GDK-Runtime von Windows vorhanden, bedient sie alle Schnittstellen, auch die Aufgabenwarteschlange, da ihre APIs nur ihre eigenen Warteschlangen akzeptieren. Die Ablaufverfolgung (`ANYXBOXX_TRACE=1`) nennt jede angeforderte Schnittstelle.
+- **GDK-Runtime: 71 der 396 Funktionen** sind in AnyXboxX in C++ geschrieben: die Aufgabenwarteschlange (`XTaskQueue`, `XAsync`, `XThread`) und der Benutzer (`XUser`, ein lokales Offline-Profil). Sie kommen zum Einsatz, wenn AnyXboxX die Runtime allein verwaltet: ohne Gaming Services oder mit `ANYXBOXX_SYSTEM_RUNTIME=0`. Ist die GDK-Runtime von Windows vorhanden, bedient sie alle Schnittstellen, auch die Aufgabenwarteschlange, da ihre APIs nur ihre eigenen Warteschlangen akzeptieren. Die Ablaufverfolgung (`ANYXBOXX_TRACE=1`) nennt jede angeforderte Schnittstelle.
 
 Die Grafik wird mit `scarlett.py --traduction <Paketordner> docs/images/traduction.svg` neu erzeugt.
 
@@ -43,9 +43,10 @@ Die Grafik wird mit `scarlett.py --traduction <Paketordner> docs/images/traducti
 | Tabelle der 396 GDK-Funktionen: Schnittstelle und Methodennummer, aus `xgameruntime.lib` extrahiert (`tools/gdk_interfaces.py`) | ✅ erledigt |
 | `XTaskQueue`, `XAsync`, `XThread` von AnyXboxX bereitgestellt: testgdk läuft ohne die Runtime von Windows | ✅ erledigt |
 | Übrige GDK-Schnittstellen: an die GDK-Runtime von Windows delegiert, von der Ablaufverfolgung benannt | 🟡 in Arbeit |
-| 123 automatisierte Tests | ✅ erledigt |
+| 129 automatisierte Tests | ✅ erledigt |
 | D3D12.X: `D3D12XboxCreateDevice` und die `ID3D12*`-Schnittstellen der Konsole | ⏳ offen |
-| Übrige von AnyXboxX geschriebene GDK-Schnittstellen (`XUser`, `XGameSave`, `XSystem`…) | ⏳ offen |
+| `XUser` offline: immer angemeldetes lokales Profil, einstellbarer Gamertag (`ANYXBOXX_GAMERTAG`), Anmeldung von testgdk erfolgreich | ✅ erledigt |
+| Übrige von AnyXboxX geschriebene GDK-Schnittstellen (`XGameSave`, `XSystem`, `XStore`…) | ⏳ offen |
 | Shader-Rekompilierer RDNA 2 → DXIL | ⏳ offen |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
 | Dynamisches Laden einer DLL zur Laufzeit (`LoadLibrary` + `DllMain`) | ⏳ offen |

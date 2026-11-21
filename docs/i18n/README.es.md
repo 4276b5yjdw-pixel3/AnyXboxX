@@ -14,7 +14,7 @@ AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su códi
 - **Instrucciones de la GPU: 0 %.** Los shaders de un juego de consola se compilan para la GPU RDNA 2 de la Series X. Hace falta un recompilador RDNA 2 → DXIL, aún sin empezar.
 - **Funciones de sistema: 66 %** de las 1 337 funciones importadas por las DLL del paquete de prueba se resuelven en modo aislado.
 - **DLL propias de la consola**: `xmem.dll` (3/4) y `d3d12_xs.dll` (2/2) están traducidas para las funciones que usa el paquete. La creación del dispositivo D3D12.X queda por escribir.
-- **Runtime GDK: 27 de las 396 funciones** (cola de tareas `XTaskQueue`, `XAsync`, `XThread`) están escritas en AnyXboxX, en C++. Se usan cuando AnyXboxX gestiona el runtime por sí solo: sin Gaming Services, o con `ANYXBOXX_SYSTEM_RUNTIME=0`. Si el runtime GDK de Windows está presente, sirve todas las interfaces, incluida la cola de tareas, porque sus API solo aceptan sus propias colas. La traza (`ANYXBOXX_TRACE=1`) nombra cada interfaz solicitada.
+- **Runtime GDK: 71 de las 396 funciones** están escritas en AnyXboxX, en C++: la cola de tareas (`XTaskQueue`, `XAsync`, `XThread`) y el usuario (`XUser`, un perfil local sin conexión). Se usan cuando AnyXboxX gestiona el runtime por sí solo: sin Gaming Services, o con `ANYXBOXX_SYSTEM_RUNTIME=0`. Si el runtime GDK de Windows está presente, sirve todas las interfaces, incluida la cola de tareas, porque sus API solo aceptan sus propias colas. La traza (`ANYXBOXX_TRACE=1`) nombra cada interfaz solicitada.
 
 El gráfico se regenera con `scarlett.py --traduction <carpeta del paquete> docs/images/traduction.svg`.
 
@@ -43,9 +43,10 @@ El gráfico se regenera con `scarlett.py --traduction <carpeta del paquete> docs
 | Tabla de las 396 funciones GDK: interfaz y número de método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ hecho |
 | `XTaskQueue`, `XAsync`, `XThread` servidas por AnyXboxX: testgdk funciona sin el runtime de Windows | ✅ hecho |
 | Otras interfaces GDK: delegadas al runtime GDK de Windows, nombradas por la traza | 🟡 en curso |
-| 123 pruebas automatizadas | ✅ hecho |
+| 129 pruebas automatizadas | ✅ hecho |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` de la consola | ⏳ pendiente |
-| Otras interfaces GDK escritas por AnyXboxX (`XUser`, `XGameSave`, `XSystem`…) | ⏳ pendiente |
+| `XUser` sin conexión: perfil local siempre conectado, gamertag configurable (`ANYXBOXX_GAMERTAG`), inicio de sesión de testgdk correcto | ✅ hecho |
+| Otras interfaces GDK escritas por AnyXboxX (`XGameSave`, `XSystem`, `XStore`…) | ⏳ pendiente |
 | Recompilador de shaders RDNA 2 → DXIL | ⏳ pendiente |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
 | Carga dinámica de una DLL durante la ejecución (`LoadLibrary` + `DllMain`) | ⏳ pendiente |

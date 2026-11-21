@@ -8,6 +8,12 @@ namespace anyxboxx {
 // XTaskQueue, XAsync et XThread : interface {073B7DCB-1FCF-4030-94BE-E3C9EB623428}.
 void* TaskQueueInterface();
 
+// XUser : profil local hors ligne, fournisseur {01ACD177…} (5 versions d'interface).
+void* UserInterface();
+
+// XUserGetGamertag : interface {CEF4FAC0…} du même fournisseur.
+void* GamertagInterface();
+
 // Renvoie l'objet qui sert (fournisseur, interface), ou nullptr.
 void* ServedInterface(const GUID& provider, const GUID& iid);
 

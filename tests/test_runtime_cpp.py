@@ -125,6 +125,13 @@ def test_unknown_interface_delegated_to_windows_fails_cleanly(runtime_dir):
     assert code & 0x8000_0000 and pointer == "None"
 
 
+# Ces tests vérifient l'implémentation d'AnyXboxX : si le runtime GDK de Windows est
+# présent et autorisé (ANYXBOXX_SYSTEM_RUNTIME=1), c'est lui qui sert toutes les interfaces.
+anyxboxx_only = pytest.mark.skipif(
+    __import__("os").environ.get("ANYXBOXX_SYSTEM_RUNTIME") != "0" and SYSTEM_RUNTIME.is_file(),
+    reason="le runtime GDK de Windows sert les interfaces dans ce mode")
+
+
 TASK_QUEUE_GUID = bytes.fromhex("cb7d3b07cf1f304094bee3c9eb623428")   # {073B7DCB-…} en mémoire
 MANUAL, THREAD_POOL = 0, 1
 WORK_PORT = 0
@@ -154,6 +161,7 @@ class TaskQueueApi:
         return lambda *args: function(self.object, *args)
 
 
+@anyxboxx_only
 def test_task_queue_is_served_by_anyxboxx_and_dispatches_callbacks(runtime_dir):
     api = TaskQueueApi(runtime_dir)
     create = api.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p))
@@ -171,6 +179,7 @@ def test_task_queue_is_served_by_anyxboxx_and_dispatches_callbacks(runtime_dir):
     close(queue)
 
 
+@anyxboxx_only
 def test_async_run_completes_on_thread_pool_queue(runtime_dir):
     api = TaskQueueApi(runtime_dir)
     create = api.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p))
@@ -186,9 +195,93 @@ def test_async_run_completes_on_thread_pool_queue(runtime_dir):
     close(queue)
 
 
+@anyxboxx_only
 def test_thread_time_sensitivity_is_per_thread(runtime_dir):
     api = TaskQueueApi(runtime_dir)
     set_sensitive = api.method(27, ctypes.c_uint32, ctypes.c_bool)
     is_sensitive = api.method(30, ctypes.c_bool)
     assert set_sensitive(True) == S_OK and is_sensitive()
     assert set_sensitive(False) == S_OK and not is_sensitive()
+
+
+def guid_bytes(text):
+    import uuid
+    return uuid.UUID(text).bytes_le
+
+
+USER_PROVIDER = "01ACD177-91F9-4763-A38E-CCBB55CE32E0"
+GAMERTAG_IID = "CEF4FAC0-7676-4A94-A119-4C43F9EB5B74"
+SIGN_OUT_IID = "5131D685-4394-4EE6-8C18-BFB5D4AEF1FF"
+LOCAL_XUID = 0x0009000000A11B0B
+E_GAMEUSER_USER_NOT_FOUND = 0x89245104
+
+
+class GdkInterface(TaskQueueApi):
+    """N'importe quelle interface (fournisseur, interface) servie par le runtime."""
+
+    def __init__(self, runtime_dir, provider, iid):
+        runtime = load(runtime_dir, "xgameruntime.dll")
+        runtime.QueryApiImpl.restype = ctypes.c_uint32
+        provider_guid = (ctypes.c_ubyte * 16).from_buffer_copy(guid_bytes(provider))
+        iid_guid = (ctypes.c_ubyte * 16).from_buffer_copy(guid_bytes(iid))
+        self.object = ctypes.c_void_p()
+        assert runtime.QueryApiImpl(provider_guid, iid_guid, ctypes.byref(self.object), None) == S_OK
+        self.vtable = ctypes.cast(ctypes.cast(self.object, ctypes.POINTER(ctypes.c_void_p))[0],
+                                  ctypes.POINTER(ctypes.c_void_p))
+
+
+def add_local_user(runtime_dir, method=7, result_method=8, argument=0):
+    """XUserAddAsync (ou AddByIdWithUi) sur une file du pool de threads, attendue jusqu'au bout."""
+    tasks, users = TaskQueueApi(runtime_dir), GdkInterface(runtime_dir, USER_PROVIDER, USER_PROVIDER)
+    queue = ctypes.c_void_p()
+    create = tasks.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p))
+    assert create(THREAD_POOL, THREAD_POOL, ctypes.byref(queue)) == S_OK
+    block = AsyncBlock(queue=queue)
+    begin = users.method(method, ctypes.c_uint32, ctypes.c_uint64, ctypes.POINTER(AsyncBlock))
+    assert begin(argument, ctypes.byref(block)) == S_OK
+    status = tasks.method(3, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.c_bool)(ctypes.byref(block), True)
+    user = ctypes.c_void_p()
+    result = users.method(result_method, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.POINTER(ctypes.c_void_p))
+    outcome = result(ctypes.byref(block), ctypes.byref(user))
+    tasks.method(17, None, ctypes.c_void_p)(queue)
+    return users, status, outcome, user
+
+
+@anyxboxx_only
+def test_offline_user_signs_in_without_xbox_live(runtime_dir):
+    users, status, outcome, user = add_local_user(runtime_dir)
+    assert status == S_OK and outcome == S_OK and user.value
+    xuid, state, local = ctypes.c_uint64(), ctypes.c_uint32(9), ctypes.c_uint64()
+    assert users.method(11, ctypes.c_uint32, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64))(user, ctypes.byref(xuid)) == S_OK
+    assert users.method(14, ctypes.c_uint32, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32))(user, ctypes.byref(state)) == S_OK
+    assert users.method(9, ctypes.c_uint32, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64))(user, ctypes.byref(local)) == S_OK
+    assert (xuid.value, state.value, local.value) == (LOCAL_XUID, 0, 1)   # 0 = XUserState::SignedIn
+    allowed, reason = ctypes.c_bool(), ctypes.c_uint32(7)
+    check = users.method(20, ctypes.c_uint32, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32,
+                         ctypes.POINTER(ctypes.c_bool), ctypes.POINTER(ctypes.c_uint32))
+    assert check(user, 0, 254, ctypes.byref(allowed), ctypes.byref(reason)) == S_OK and allowed.value and reason.value == 0
+    users.method(4, None, ctypes.c_void_p)(user)
+
+
+@anyxboxx_only
+def test_gamertag_has_its_own_interface(runtime_dir):
+    _, _, _, user = add_local_user(runtime_dir)
+    gamertag = GdkInterface(runtime_dir, USER_PROVIDER, GAMERTAG_IID)
+    get = gamertag.method(3, ctypes.c_uint32, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_size_t,
+                          ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t))
+    buffer, used = ctypes.create_string_buffer(16), ctypes.c_size_t()
+    assert get(user, 0, 16, buffer, ctypes.byref(used)) == S_OK
+    assert buffer.value == b"AnyXboxX" and used.value == 9
+    assert get(user, 0, 4, ctypes.create_string_buffer(4), ctypes.byref(used)) == 0x8007007A   # tampon trop petit
+
+
+@anyxboxx_only
+def test_sign_out_interface_shares_the_user_table(runtime_dir):
+    sign_out = GdkInterface(runtime_dir, USER_PROVIDER, SIGN_OUT_IID)
+    assert not sign_out.method(47, ctypes.c_bool)()          # XUserIsSignOutPresent
+
+
+@anyxboxx_only
+def test_unknown_user_id_is_not_found(runtime_dir):
+    _, status, outcome, user = add_local_user(runtime_dir, method=37, result_method=38, argument=1234)
+    assert status == E_GAMEUSER_USER_NOT_FOUND and outcome == E_GAMEUSER_USER_NOT_FOUND and not user.value
