@@ -19,7 +19,7 @@ MIN_CELL, MAX_CELL, PITCH_AREA = 3, 10, 81      # taille d'une case, aire visée
 MIN_SECTION_H = 110
 GPU_FAMILIES = ("SOP1", "SOP2", "SOPK", "SOPC", "SOPP", "SMEM", "VOP1", "VOP2", "VOP3", "VOP3P",
                 "VOPC", "DS", "MUBUF", "MTBUF", "MIMG", "FLAT", "GLOBAL", "SCRATCH", "EXP", "VINTRP")
-GPU_NOTE = "recompilateur pas commencé"
+GPU_NOTE = "recompiler not started"
 
 
 @dataclass(frozen=True)
@@ -57,11 +57,11 @@ class Section:
 
     @property
     def heading(self):
-        """Titre affiché : « Runtime GDK : 17.9 % (71/396) »."""
+        """Titre affiché : "GDK runtime: 17.9% (71/396)"."""
         if not self.counted:
-            return f"{self.title} : 0 % ({self.note})"
+            return f"{self.title}: 0% ({self.note})"
         share = 100 * self.done / self.total if self.total else 0.0
-        return f"{self.title} : {share:.1f} % ({self.done}/{self.total})"
+        return f"{self.title}: {share:.1f}% ({self.done}/{self.total})"
 
 
 @dataclass(frozen=True)
@@ -172,16 +172,16 @@ def _badge(label, done, total):
 
 def collect(package_dir, runtime_dir):
     """Mesure tout : sections de la carte et badges d'en-tête."""
-    gdk = Section("Runtime GDK", gdk_blocks())
-    imports = Section("Imports du paquet", package_blocks(package_dir))
-    console = Section("DLL console", console_blocks(package_dir, runtime_dir))
-    gpu = Section("Instructions GPU RDNA 2",
+    gdk = Section("GDK runtime", gdk_blocks())
+    imports = Section("Package imports", package_blocks(package_dir))
+    console = Section("Console DLLs", console_blocks(package_dir, runtime_dir))
+    gpu = Section("RDNA 2 GPU instructions",
                   tuple(Block(name, 0, 0) for name in GPU_FAMILIES), counted=False, note=GPU_NOTE)
-    badges = (("CPU x86-64", "100 %", 1.0),
-              _badge("Runtime GDK", gdk.done, gdk.total),
-              _badge("Imports du paquet", imports.done, imports.total),
-              _badge("DLL console", console.done, console.total),
-              ("GPU RDNA 2", "0 %", 0.0))
+    badges = (("CPU x86-64", "100%", 1.0),
+              _badge("GDK runtime", gdk.done, gdk.total),
+              _badge("Package imports", imports.done, imports.total),
+              _badge("Console DLLs", console.done, console.total),
+              ("GPU RDNA 2", "0%", 0.0))
     return Status((gdk, imports, console, gpu), badges)
 
 
@@ -199,7 +199,7 @@ def _badges(badges, top):
     for label, value, share in badges:
         left, right = 14 + 6.6 * len(label), 14 + 6.6 * len(value)
         parts.append(
-            f'<g><title>{escape(label)} : {escape(value)}</title>'
+            f'<g><title>{escape(label)}: {escape(value)}</title>'
             f'<rect x="{x:.1f}" y="{top}" width="{left + right:.1f}" height="{BADGE_H}" rx="4" fill="{PANEL}"/>'
             f'<rect x="{x + left:.1f}" y="{top}" width="{right:.1f}" height="{BADGE_H}" rx="4" '
             f'fill="{badge_color(share)}"/>'
@@ -246,7 +246,7 @@ def _cells(block, rect, top):
 
 def _block_svg(block, rect, counted):
     """Groupe SVG d'un bloc : panneau, titre tronqué, cases, infobulle."""
-    tip = f"{block.name} : {block.done}/{block.total}" if counted else block.name
+    tip = f"{block.name}: {block.done}/{block.total}" if counted else block.name
     header = 16 if rect.w >= 40 and rect.h >= 30 else 0
     parts = [f'<g><title>{escape(tip)}</title>',
              f'<rect x="{rect.x:.1f}" y="{rect.y:.1f}" width="{rect.w:.1f}" height="{rect.h:.1f}" '

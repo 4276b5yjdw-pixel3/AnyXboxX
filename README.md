@@ -83,8 +83,8 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 
 <table>
 <tr>
-<td><img src="../images/demo-virage.png" alt="The car turns to the right" width="380"></td>
-<td><img src="../images/rapport-compatibilite.png" alt="Compatibility report of the demo" width="380"></td>
+<td><img src="docs/images/demo-virage.png" alt="The car turns to the right" width="380"></td>
+<td><img src="docs/images/rapport-compatibilite.png" alt="Compatibility report of the demo" width="380"></td>
 </tr>
 <tr>
 <td align="center">The demo responds to the keyboard arrow keys.</td>
@@ -147,7 +147,7 @@ The test bench loads every PE module in a folder and runs their initialization:
 
 Detailed results: [docs/avancee.md](docs/avancee.md) (in French). Free test game compared with its native execution: [docs/jeu-de-test.md](docs/jeu-de-test.md) (in French). An additional DLL folder (for example the Visual C++ DLLs) can follow the target: `--rapport <cible> <dossier>`.
 
-The report lists the imported functions, the percentage already emulated and the missing functions. In the interface, the **Ouvrir un dossier Xbox…** (Open an Xbox folder) button reads `MicrosoftGame.Config`, displays this report, then launches the program; every non-emulated call appears in the log.
+The report lists the imported functions, the percentage already emulated and the missing functions. In the interface, the **Open an Xbox folder…** button reads `MicrosoftGame.Config`, displays this report, then launches the program; every non-emulated call appears in the log.
 
 ## Architecture
 
@@ -188,7 +188,3 @@ def XSystemGetDeviceType(c):
 ## Contributing
 
 The `main` branch is protected: every contribution goes through a reviewed pull request, and the tests must pass. Bugs and functions to emulate are reported in the issues. The full rules are in [CONTRIBUTING.md](CONTRIBUTING.md) (in French).
-
-## Limitations
-
-AnyXboxX is a prototype. It does not run commercial games: they require the console's GPU (D3D12.X) and many system services, and they ship in encrypted containers whose keys stay inside the console. The project contains and accepts no protected content.

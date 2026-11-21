@@ -147,7 +147,7 @@ Der Prüfstand lädt alle PE-Module eines Ordners und führt deren Initialisieru
 
 Detaillierte Ergebnisse: [docs/avancee.md](../avancee.md) (auf Französisch). Freies Testspiel im Vergleich zu seiner nativen Ausführung: [docs/jeu-de-test.md](../jeu-de-test.md) (auf Französisch). Ein zusätzlicher DLL-Ordner (zum Beispiel die Visual-C++-DLLs) kann auf das Ziel folgen: `--rapport <cible> <dossier>`.
 
-Der Bericht listet die importierten Funktionen, den bereits emulierten Anteil in Prozent und die fehlenden Funktionen auf. In der Oberfläche liest die Schaltfläche **Ouvrir un dossier Xbox…** (Xbox-Ordner öffnen) die Datei `MicrosoftGame.Config`, zeigt diesen Bericht an und startet dann das Programm; jeder nicht emulierte Aufruf erscheint im Protokoll.
+Der Bericht listet die importierten Funktionen, den bereits emulierten Anteil in Prozent und die fehlenden Funktionen auf. In der Oberfläche liest die Schaltfläche **Open an Xbox folder…** (Xbox-Ordner öffnen) die Datei `MicrosoftGame.Config`, zeigt diesen Bericht an und startet dann das Programm; jeder nicht emulierte Aufruf erscheint im Protokoll.
 
 ## Architektur
 
@@ -188,7 +188,3 @@ def XSystemGetDeviceType(c):
 ## Mitwirken
 
 Der Branch `main` ist geschützt: Jeder Beitrag läuft über einen geprüften Pull Request, und die Tests müssen bestehen. Fehler und zu emulierende Funktionen werden in den Issues gemeldet. Die vollständigen Regeln stehen in [CONTRIBUTING.md](../../CONTRIBUTING.md) (auf Französisch).
-
-## Einschränkungen
-
-AnyXboxX ist ein Prototyp. Er führt keine kommerziellen Spiele aus: Diese benötigen die GPU der Konsole (D3D12.X) und zahlreiche Systemdienste und werden in verschlüsselten Containern ausgeliefert, deren Schlüssel in der Konsole verbleiben. Das Projekt enthält und akzeptiert keine geschützten Inhalte.

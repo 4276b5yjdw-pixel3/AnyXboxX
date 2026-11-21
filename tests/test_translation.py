@@ -100,7 +100,7 @@ def test_partial_functions_are_not_counted_as_translated(tmp_path):
              exports=[("XMemAlloc", 0), ("XMemGetWorkingSetStatistics", 0)])
     (area,) = translation.measure(package, runtime)
     assert (area.done, area.total) == (1, 2)
-    assert "XMemGetWorkingSetStatistics (partiel" in area.note
+    assert "XMemGetWorkingSetStatistics (partial" in area.note
 
 
 def test_functions_area_sums_bench_rows():
@@ -113,7 +113,7 @@ def test_functions_area_sums_bench_rows():
 
 def test_instruction_areas_show_a_share_only():
     image = translation.svg((translation.CPU_AREA, translation.GPU_AREA), "Avancée")
-    assert "100 %" in image and "0 %" in image
+    assert "100%" in image and "0%" in image
     assert "1/1" not in image and "0/1" not in image
     assert translation.CPU_AREA.share == 1.0 and translation.GPU_AREA.share == 0.0
 
