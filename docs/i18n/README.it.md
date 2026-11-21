@@ -23,7 +23,9 @@ AnyXboxX carica eseguibili Xbox GDK (formato PE32+ x86-64) ed esegue il loro cod
 | 16/16 DLL di un pacchetto Scarlett inizializzate con le loro dipendenze, 0 chiamate non emulate | ✅ fatto |
 | Gioco di test libero `SimpleTriangle` compilato: l'avvio C e l'inizializzazione GDK funzionano in AnyXboxX | ✅ fatto |
 | Esecuzione nativa in stile Wine (`--natif`): **SimpleTriangle viene mostrato**, runtime GDK fornito da AnyXboxX | ✅ fatto |
-| 79 test automatizzati, 83 % di copertura | ✅ fatto |
+| Secondo gioco di prova libero, `testgdk` di SDL3: **funziona in modalità nativa** (finestra, sprite, audio) | ✅ fatto |
+| Avvio isolato di un pacchetto o di un exe (`--lancer`) con l'elenco delle chiamate da emulare | ✅ fatto |
+| 89 test automatizzati | ✅ fatto |
 | Traduzione di D3D12.X (`d3d12_xs.dll`) e `kernelx.dll` per i binari console | ⏳ da fare |
 | Interfacce del runtime GDK dietro `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ da fare |
 | Eccezioni SEH x64 (`.pdata`), thread multipli | ⏳ da fare |
@@ -63,6 +65,14 @@ Il programma dimostrativo compilato è `PrototypeScarlett/demo.pe`; il suo codic
 ![SimpleTriangle avviato da AnyXboxX in modalità nativa](../images/simpletriangle-anyxboxx.png)
 
 AnyXboxX carica l'eseguibile stesso e lo esegue direttamente sul processore, come Wine. Il runtime Xbox (`xgameruntime.dll`) è fornito da AnyXboxX; la finestra e DirectX 12 sono quelli del PC. **Attenzione: in modalità nativa il programma non è isolato.** Riserva questa modalità ai programmi di fiducia; `--rapport` e `--banc` restano isolati in Unicorn. `ANYXBOXX_TRACE=1` mostra le chiamate intercettate. Dettagli: [docs/jeu-de-test.md](../jeu-de-test.md) (in francese).
+
+## Avviare un pacchetto in modalità isolata
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --lancer <dossier du paquet ou fichier .exe> [dossiers de DLL…]
+```
+
+Con una cartella, AnyXboxX legge `MicrosoftGame.Config`, prende l'eseguibile dichiarato per `Scarlett` e lo avvia nella macchina isolata (Unicorn): il programma non tocca il PC. Il resoconto indica prima gli import non risolti, poi le chiamate non emulate, dalla più frequente alla più rara: è l'elenco di lavoro per completare l'emulatore. Se l'eseguibile manca, il messaggio lo nomina.
 
 ## Analizzare un programma
 

@@ -23,7 +23,9 @@ AnyXboxX loads Xbox GDK executables (PE32+ x86-64 format) and runs their code wi
 | 16/16 DLLs of a Scarlett package initialized with their dependencies, 0 non-emulated calls | ✅ done |
 | Free `SimpleTriangle` test game compiled: C startup and GDK initialization run in AnyXboxX | ✅ done |
 | Wine-style native execution (`--natif`): **SimpleTriangle is displayed**, GDK runtime served by AnyXboxX | ✅ done |
-| 79 automated tests, 83% coverage | ✅ done |
+| Second free test game, SDL3's `testgdk`: **runs in native mode** (window, sprites, sound) | ✅ done |
+| Isolated launch of a package or an exe (`--lancer`) with the list of calls to emulate | ✅ done |
+| 89 automated tests | ✅ done |
 | Translation of D3D12.X (`d3d12_xs.dll`) and `kernelx.dll` for console binaries | ⏳ to do |
 | GDK runtime interfaces behind `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ to do |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
@@ -63,6 +65,14 @@ The compiled demo program is `PrototypeScarlett/demo.pe`; its source code is `Pr
 ![SimpleTriangle launched by AnyXboxX in native mode](../images/simpletriangle-anyxboxx.png)
 
 AnyXboxX loads the executable itself and runs it directly on the processor, like Wine. The Xbox runtime (`xgameruntime.dll`) is provided by AnyXboxX; the window and DirectX 12 are the PC's. **Warning: in native mode, the program is not isolated.** Reserve this mode for trusted programs; `--rapport` and `--banc` remain isolated inside Unicorn. `ANYXBOXX_TRACE=1` displays the intercepted calls. Details: [docs/jeu-de-test.md](../jeu-de-test.md) (in French).
+
+## Run a package in isolated mode
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --lancer <dossier du paquet ou fichier .exe> [dossiers de DLL…]
+```
+
+With a folder, AnyXboxX reads `MicrosoftGame.Config`, takes the executable declared for `Scarlett` and runs it in the isolated machine (Unicorn): the program does not touch the PC. The report lists the unresolved imports, then the unemulated calls, from most to least frequent: this is the to-do list for completing the emulator. If the executable is missing, the message names it.
 
 ## Analyze a program
 

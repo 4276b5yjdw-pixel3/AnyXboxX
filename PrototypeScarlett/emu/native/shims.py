@@ -155,3 +155,27 @@ class Shims:
         if address is None:
             self.log(f"[natif] xgameruntime!{name} non fourni par AnyXboxX")
         return address or 0
+
+
+def _overwrite(pointer, data, capacity):
+    if not pointer or len(data) > capacity:
+        return False
+    ctypes.memmove(pointer, data, len(data))
+    return True
+
+
+def adopt_command_line(exe_path):
+    """Le processus prend la ligne de commande du jeu, comme sous Wine.
+
+    GetCommandLineW/A renvoient des tampons propres au processus, que le CRT et
+    toutes les DLL (même chargées par Windows, comme SDL3.dll) relisent. On les
+    réécrit sur place : la ligne du jeu, `"chemin"`, est plus courte que celle de
+    python qui le contient déjà. Renvoie False si un tampon est trop petit.
+    """
+    line = f'"{exe_path}"'
+    wide, narrow = win32.GetCommandLineW(), win32.GetCommandLineA()
+    wide_ok = _overwrite(wide, line.encode("utf-16-le") + b"\0\0",
+                         2 * len(ctypes.wstring_at(wide)) + 2 if wide else 0)
+    narrow_ok = _overwrite(narrow, line.encode("mbcs", errors="replace") + b"\0",
+                           len(ctypes.string_at(narrow)) + 1 if narrow else 0)
+    return wide_ok and narrow_ok

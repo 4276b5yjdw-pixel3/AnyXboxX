@@ -23,7 +23,9 @@ AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su códi
 | 16/16 DLL de un paquete Scarlett inicializadas con sus dependencias, 0 llamadas no emuladas | ✅ hecho |
 | Juego de prueba libre `SimpleTriangle` compilado: el arranque en C y la inicialización de GDK funcionan en AnyXboxX | ✅ hecho |
 | Ejecución nativa al estilo Wine (`--natif`): **SimpleTriangle se muestra**, runtime GDK proporcionado por AnyXboxX | ✅ hecho |
-| 79 pruebas automatizadas, 83 % de cobertura | ✅ hecho |
+| Segundo juego de prueba libre, `testgdk` de SDL3: **funciona en modo nativo** (ventana, sprites, sonido) | ✅ hecho |
+| Lanzamiento aislado de un paquete o de un exe (`--lancer`) con la lista de llamadas por emular | ✅ hecho |
+| 89 pruebas automatizadas | ✅ hecho |
 | Traducción de D3D12.X (`d3d12_xs.dll`) y `kernelx.dll` para los binarios de consola | ⏳ pendiente |
 | Interfaces del runtime GDK detrás de `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ pendiente |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
@@ -63,6 +65,14 @@ El programa de demostración compilado es `PrototypeScarlett/demo.pe`; su códig
 ![SimpleTriangle lanzado por AnyXboxX en modo nativo](../images/simpletriangle-anyxboxx.png)
 
 AnyXboxX carga el propio ejecutable y lo ejecuta directamente en el procesador, como Wine. El runtime de Xbox (`xgameruntime.dll`) lo proporciona AnyXboxX; la ventana y DirectX 12 son los del PC. **Atención: en modo nativo, el programa no está aislado.** Reserva este modo para programas de confianza; `--rapport` y `--banc` siguen aislados dentro de Unicorn. `ANYXBOXX_TRACE=1` muestra las llamadas interceptadas. Detalles: [docs/jeu-de-test.md](../jeu-de-test.md) (en francés).
+
+## Lanzar un paquete en modo aislado
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --lancer <dossier du paquet ou fichier .exe> [dossiers de DLL…]
+```
+
+Con una carpeta, AnyXboxX lee `MicrosoftGame.Config`, toma el ejecutable declarado para `Scarlett` y lo lanza en la máquina aislada (Unicorn): el programa no toca el PC. El informe indica las importaciones sin resolver y después las llamadas no emuladas, de la más frecuente a la más rara: es la lista de trabajo para completar el emulador. Si falta el ejecutable, el mensaje lo nombra.
 
 ## Analizar un programa
 

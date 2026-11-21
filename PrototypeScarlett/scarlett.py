@@ -10,7 +10,8 @@ sys.path.insert(0, str(HERE))
 import pefile  # noqa: E402
 from unicorn import UcError  # noqa: E402
 
-from emu.config import MANIFEST, read_package  # noqa: E402
+from emu import launch  # noqa: E402
+from emu.config import MANIFEST  # noqa: E402
 from emu.machine import Machine  # noqa: E402
 from emu.report import analyse  # noqa: E402
 
@@ -24,11 +25,7 @@ TITLE = "AnyXboxX — émulateur Xbox Series X (prototype)"
 
 def resolve_target(path):
     """Accepte un dossier de paquet GDK ou directement un exécutable."""
-    path = Path(path)
-    if path.is_dir():
-        package = read_package(path)
-        return package.scarlett_entry(), package.title_id
-    return path, 0
+    return launch.resolve(path)
 
 
 def print_report(path, extra_dirs=()):
@@ -182,6 +179,8 @@ def main(argv):
 
         print(bench.table(bench.run(Path(argv[1]), extra_dirs)))
         return 0
+    if len(argv) >= 2 and argv[0] == "--lancer":
+        return launch.run(Path(argv[1]), extra_dirs)
     if len(argv) >= 2 and argv[0] == "--natif":
         return run_native(Path(argv[1]), extra_dirs)
     import tkinter as tk

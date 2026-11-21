@@ -83,3 +83,68 @@ def startup_success(c):
      "_set_purecall_handler", "_set_abort_behavior")
 def startup_ignored(c):
     return 0   # aucun thread secondaire ni gestionnaire d'erreur émulé pour l'instant
+
+
+def _command_line(c, wide):
+    """Ligne de commande Windows : le nom du programme entre guillemets, sans argument."""
+    return _text(c, f"getcmdline-{wide}", f'"{c.machine.main.path.name}"', wide)
+
+
+@hle("kernel")
+def GetCommandLineW(c):
+    return _command_line(c, wide=True)
+
+
+@hle("kernel")
+def GetCommandLineA(c):
+    return _command_line(c, wide=False)
+
+
+def split_command_line(line):
+    """Découpage simplifié de CommandLineToArgvW : espaces hors guillemets, guillemets retirés."""
+    words, current, quoted, started = [], [], False, False
+    for char in line:
+        if char == '"':
+            quoted, started = not quoted, True
+        elif char in " \t" and not quoted:
+            if started:
+                words.append("".join(current))
+            current, started = [], False
+        else:
+            current.append(char)
+            started = True
+    if started:
+        words.append("".join(current))
+    return words
+
+
+@hle("shell32")
+def CommandLineToArgvW(c):
+    """Un seul bloc (table de pointeurs + chaînes), libérable par LocalFree comme sous Windows."""
+    words = split_command_line(c.wstr(c.arg(0))) if c.arg(0) else [c.machine.main.path.name]
+    strings = [w.encode("utf-16-le") + b"\0\0" for w in words]
+    table_size = POINTER_SIZE * (len(words) + 1)
+    block = c.heap.alloc(table_size + sum(len(s) for s in strings))
+    cursor = block + table_size
+    for index, data in enumerate(strings):
+        c.write_u64(block + POINTER_SIZE * index, cursor)
+        c.write(cursor, data)
+        cursor += len(data)
+    c.write_u64(block + POINTER_SIZE * len(words), 0)
+    if c.arg(1):
+        c.write_u32(c.arg(1), len(words))
+    return block
+
+
+@hle("kernel", "GetEnvironmentStringsW", "GetEnvironmentStrings")
+def get_environment_strings(c):
+    """Bloc d'environnement vide : deux zéros terminaux (quatre octets en UTF-16)."""
+    block = c.heap.alloc(4)
+    c.write(block, bytes(4))
+    return block
+
+
+@hle("kernel", "FreeEnvironmentStringsW", "FreeEnvironmentStringsA")
+def free_environment_strings(c):
+    c.heap.free(c.arg(0))
+    return 1

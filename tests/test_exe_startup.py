@@ -122,3 +122,26 @@ def test_extra_dll_folder_is_searched(tmp_path):
     assert analyse(game_dir / "game.exe", (lib_dir,)).provided == ("helper.dll!Seven",)
     row = bench.run_one(game_dir / "game.exe", (lib_dir,))
     assert row.initialised and "retour 0x7" in row.detail
+
+
+def test_command_line_names_the_program(m):
+    wide = call(m, "KERNEL32.dll", "GetCommandLineW")
+    narrow = call(m, "kernelx.dll", "GetCommandLineA")
+    assert m.cpu.mem_read(wide, 22).decode("utf-16-le") == '"demo.pe"\0\0'[:11]
+    assert bytes(m.cpu.mem_read(narrow, 10)) == b'"demo.pe"\0'
+    assert call(m, "KERNEL32.dll", "GetCommandLineW") == wide   # même tampon à chaque appel
+
+
+def test_command_line_to_argv_splits_quoted_words(m):
+    count = m.heap.alloc(8)
+    argv = call(m, "SHELL32.dll", "CommandLineToArgvW", text(m, r'"C:\a b\jeu.exe" -x  "deux mots"', True), count)
+    assert u64(m, count) & 0xFFFF_FFFF == 3
+    words = [hle.Call(m).wstr(u64(m, argv + 8 * i)) for i in range(3)]
+    assert words == [r"C:\a b\jeu.exe", "-x", "deux mots"]
+    assert u64(m, argv + 24) == 0
+
+
+def test_environment_block_is_empty_and_freeable(m):
+    block = call(m, "KERNEL32.dll", "GetEnvironmentStringsW")
+    assert bytes(m.cpu.mem_read(block, 4)) == b"\0\0\0\0"
+    assert call(m, "kernelx.dll", "FreeEnvironmentStringsW", block) == 1

@@ -23,7 +23,9 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 | 16/16 DLLs eines Scarlett-Pakets samt Abhängigkeiten initialisiert, 0 nicht emulierte Aufrufe | ✅ erledigt |
 | Freies Testspiel `SimpleTriangle` kompiliert: C-Start und GDK-Initialisierung laufen in AnyXboxX | ✅ erledigt |
 | Native Ausführung nach Wine-Art (`--natif`): **SimpleTriangle wird angezeigt**, GDK-Runtime von AnyXboxX bereitgestellt | ✅ erledigt |
-| 79 automatisierte Tests, 83 % Abdeckung | ✅ erledigt |
+| Zweites freies Testspiel, `testgdk` aus SDL3: **läuft im nativen Modus** (Fenster, Sprites, Ton) | ✅ erledigt |
+| Isolierter Start eines Pakets oder einer exe (`--lancer`) mit der Liste der zu emulierenden Aufrufe | ✅ erledigt |
+| 89 automatisierte Tests | ✅ erledigt |
 | Übersetzung von D3D12.X (`d3d12_xs.dll`) und `kernelx.dll` für Konsolen-Binärdateien | ⏳ offen |
 | Schnittstellen der GDK-Runtime hinter `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ offen |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
@@ -63,6 +65,14 @@ Das kompilierte Demoprogramm ist `PrototypeScarlett/demo.pe`; sein Quellcode ist
 ![SimpleTriangle, von AnyXboxX im nativen Modus gestartet](../images/simpletriangle-anyxboxx.png)
 
 AnyXboxX lädt die Programmdatei selbst und führt sie direkt auf dem Prozessor aus, wie Wine. Die Xbox-Runtime (`xgameruntime.dll`) wird von AnyXboxX bereitgestellt; das Fenster und DirectX 12 stammen vom PC. **Achtung: Im nativen Modus ist das Programm nicht isoliert.** Verwende diesen Modus nur für vertrauenswürdige Programme; `--rapport` und `--banc` bleiben in Unicorn isoliert. `ANYXBOXX_TRACE=1` zeigt die abgefangenen Aufrufe an. Details: [docs/jeu-de-test.md](../jeu-de-test.md) (auf Französisch).
+
+## Ein Paket im isolierten Modus starten
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --lancer <dossier du paquet ou fichier .exe> [dossiers de DLL…]
+```
+
+Bei einem Ordner liest AnyXboxX `MicrosoftGame.Config`, nimmt die für `Scarlett` deklarierte ausführbare Datei und startet sie in der isolierten Maschine (Unicorn): Das Programm berührt den PC nicht. Der Bericht nennt zuerst die nicht aufgelösten Importe, dann die nicht emulierten Aufrufe, vom häufigsten zum seltensten: Das ist die Arbeitsliste zur Vervollständigung des Emulators. Fehlt die ausführbare Datei, nennt die Meldung sie beim Namen.
 
 ## Ein Programm analysieren
 

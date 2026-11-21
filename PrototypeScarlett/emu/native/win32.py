@@ -43,3 +43,7 @@ def write_u64(address, value):
 
 def callback_address(callback):
     return ctypes.cast(callback, ctypes.c_void_p).value
+
+
+GetCommandLineW = _bind("GetCommandLineW", ctypes.c_void_p)
+GetCommandLineA = _bind("GetCommandLineA", ctypes.c_void_p)

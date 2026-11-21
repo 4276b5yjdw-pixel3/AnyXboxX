@@ -23,7 +23,9 @@ AnyXboxX charge des exécutables Xbox GDK (format PE32+ x86-64) et exécute leur
 | 16/16 DLL d'un paquet Scarlett initialisées avec leurs dépendances, 0 appel non émulé | ✅ fait |
 | Jeu de test libre `SimpleTriangle` compilé : démarrage C et initialisation GDK passent dans AnyXboxX | ✅ fait |
 | Exécution native façon Wine (`--natif`) : **SimpleTriangle s'affiche**, runtime GDK servi par AnyXboxX | ✅ fait |
-| 79 tests automatisés, 83 % de couverture | ✅ fait |
+| Deuxième jeu de test libre, `testgdk` de SDL3 : **tourne en mode natif** (fenêtre, sprites, son) | ✅ fait |
+| Lancement isolé d'un paquet ou d'un exe (`--lancer`) avec la liste des appels à émuler | ✅ fait |
+| 89 tests automatisés | ✅ fait |
 | Traduction de D3D12.X (`d3d12_xs.dll`) et `kernelx.dll` pour les binaires console | ⏳ à faire |
 | Interfaces du runtime GDK derrière `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ à faire |
 | Exceptions SEH x64 (`.pdata`), threads multiples | ⏳ à faire |
@@ -63,6 +65,14 @@ Le programme de démonstration compilé est `PrototypeScarlett/demo.pe` ; son co
 ![SimpleTriangle lancé par AnyXboxX en mode natif](docs/images/simpletriangle-anyxboxx.png)
 
 AnyXboxX charge l'exécutable lui-même et l'exécute directement sur le processeur, comme Wine. Le runtime Xbox (`xgameruntime.dll`) est fourni par AnyXboxX ; la fenêtre et DirectX 12 sont ceux du PC. **Attention : en mode natif, le programme n'est pas isolé.** Réservez ce mode aux programmes de confiance ; `--rapport` et `--banc` restent isolés dans Unicorn. `ANYXBOXX_TRACE=1` affiche les appels interceptés. Détails : [docs/jeu-de-test.md](docs/jeu-de-test.md).
+
+## Lancer un paquet en mode isolé
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --lancer <dossier du paquet ou fichier .exe> [dossiers de DLL…]
+```
+
+Avec un dossier, AnyXboxX lit `MicrosoftGame.Config`, prend l'exécutable déclaré pour `Scarlett` et le lance dans la machine isolée (Unicorn) : le programme ne touche pas le PC. Le compte rendu donne les imports non résolus puis les appels non émulés, du plus fréquent au plus rare : c'est la liste de travail pour compléter l'émulateur. Si l'exécutable manque, le message le nomme.
 
 ## Analyser un programme
 
