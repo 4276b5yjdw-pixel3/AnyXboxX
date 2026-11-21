@@ -64,7 +64,7 @@ Sur PC, chaque fonction `X*` de la bibliothèque statique du GDK (`xgameruntime.
 |---|---|---|
 | `XStore` | 70 | Windows |
 | `XGameUi` | 42 | Windows |
-| `XUser` | 33 | Windows |
+| `XUser` (+ 4 versions d'interface, `XUserGetGamertag`) | 44 | **AnyXboxX** (profil hors ligne) |
 | `XGameStreaming` | 32 | Windows |
 | `XPackage` | 31 | Windows |
 | `XGameSave` | 30 | Windows |

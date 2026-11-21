@@ -14,7 +14,7 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 - **GPU 命令：0 %。** コンソール向けゲームのシェーダーは、Series X の RDNA 2 GPU 向けにコンパイルされています。RDNA 2 → DXIL の再コンパイラーが必要ですが、まだ着手していません。
 - **システム関数：66 %。** テスト用パッケージの DLL がインポートする 1 337 個の関数のうち、この割合が隔離モードで解決できています。
 - **コンソール固有の DLL**：`xmem.dll`（3/4）と `d3d12_xs.dll`（2/2）は、パッケージが使う関数について変換済みです。D3D12.X のデバイス作成はこれから書く必要があります。
-- **GDK ランタイム：396 個の関数のうち 27 個**（タスクキュー `XTaskQueue`、`XAsync`、`XThread`）は AnyXboxX 内に C++ で書かれています。これらは AnyXboxX がランタイムを単独で管理するとき（Gaming Services がない場合、または `ANYXBOXX_SYSTEM_RUNTIME=0` を指定した場合）に使われます。Windows の GDK ランタイムがある場合は、その API が自前のキューしか受け付けないため、タスクキューを含むすべてのインターフェースをそちらが提供します。トレース（`ANYXBOXX_TRACE=1`）は、要求された各インターフェースの名前を出力します。
+- **GDK ランタイム：396 個の関数のうち 71 個**は AnyXboxX 内に C++ で書かれています。対象はタスクキュー（`XTaskQueue`、`XAsync`、`XThread`）とユーザー（`XUser`、オフラインのローカルプロファイル）です。これらは AnyXboxX がランタイムを単独で管理するとき（Gaming Services がない場合、または `ANYXBOXX_SYSTEM_RUNTIME=0` を指定した場合）に使われます。Windows の GDK ランタイムがある場合は、その API が自前のキューしか受け付けないため、タスクキューを含むすべてのインターフェースをそちらが提供します。トレース（`ANYXBOXX_TRACE=1`）は、要求された各インターフェースの名前を出力します。
 
 グラフは `scarlett.py --traduction <パッケージのフォルダー> docs/images/traduction.svg` で再生成されます。
 
@@ -43,9 +43,10 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 | 396 個の GDK 関数の表：インターフェースとメソッド番号を `xgameruntime.lib` から抽出（`tools/gdk_interfaces.py`） | ✅ 完了 |
 | `XTaskQueue`、`XAsync`、`XThread` を AnyXboxX が提供：testgdk が Windows のランタイムなしで動作 | ✅ 完了 |
 | その他の GDK のインターフェース：Windows の GDK ランタイムに委譲し、トレースで名前を表示 | 🟡 進行中 |
-| 123 件の自動テスト | ✅ 完了 |
+| 129 件の自動テスト | ✅ 完了 |
 | D3D12.X：`D3D12XboxCreateDevice` とコンソールの `ID3D12*` インターフェース | ⏳ 未着手 |
-| AnyXboxX が自前で書くその他の GDK のインターフェース（`XUser`、`XGameSave`、`XSystem`…） | ⏳ 未着手 |
+| オフラインの `XUser`：常にサインイン済みのローカルプロファイル、変更可能なゲーマータグ（`ANYXBOXX_GAMERTAG`）、testgdk のサインイン成功 | ✅ 完了 |
+| AnyXboxX が自前で書くその他の GDK のインターフェース（`XGameSave`、`XSystem`、`XStore`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー | ⏳ 未着手 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
 | 実行中の DLL の動的読み込み（`LoadLibrary` + `DllMain`） | ⏳ 未着手 |

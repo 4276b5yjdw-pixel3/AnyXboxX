@@ -38,7 +38,8 @@ target_include_directories(anyxboxx_task PUBLIC "${TASK_DIR}/include" PRIVATE "$
 target_compile_definitions(anyxboxx_task PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_compile_options(anyxboxx_task PRIVATE /W3 /utf-8 /permissive-)
 
-anyxboxx_dll(xgameruntime xgameruntime/xgameruntime.cpp xgameruntime/task_queue_interface.cpp
+anyxboxx_dll(xgameruntime xgameruntime/xgameruntime.cpp xgameruntime/served_interfaces.cpp
+             xgameruntime/task_queue_interface.cpp xgameruntime/user_interface.cpp
              xgameruntime/xgameruntime.def)
 target_link_libraries(xgameruntime PRIVATE anyxboxx_task)
 anyxboxx_dll(xmem xmem/xmem.cpp xmem/xmem.def)
