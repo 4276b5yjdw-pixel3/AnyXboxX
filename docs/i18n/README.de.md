@@ -60,7 +60,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | Tabelle der 396 GDK-Funktionen: Schnittstelle und Methodennummer, aus `xgameruntime.lib` extrahiert (`tools/gdk_interfaces.py`) | ✅ erledigt |
 | `XTaskQueue`, `XAsync`, `XThread` von AnyXboxX bereitgestellt: testgdk läuft ohne die Runtime von Windows | ✅ erledigt |
 | Übrige GDK-Schnittstellen: an die GDK-Runtime von Windows delegiert, von der Ablaufverfolgung benannt | 🟡 in Arbeit |
-| 272 automatisierte Tests | ✅ erledigt |
+| 279 automatisierte Tests | ✅ erledigt |
 | D3D12.X: `D3D12XboxCreateDevice`, `ID3D12*`-Schnittstellen der Konsole und `DXGIXPresentArray`, bereitgestellt von TomBox' Rust-`d3d12_xs.dll` (MIT, 48 implementierte Exporte, gebaut mit `tools/build_tombox.py d3d12_xs`, geladen mit `ANYXBOXX_D3D12_XS=<Pfad>`); ohne Konsolen-Executable hier nicht testbar | 🟡 in Arbeit |
 | Konsolenbibliotheken von TomBox (Rust, MIT) für das, was AnyXboxX fehlt: `xg_xs` (Texturlayouts, 23 Exporte) und vollständiges `xmem` (38 Exporte), mit `ANYXBOXX_TOMBOX_DIR=<Ordner>`; gebaut mit `tools/build_tombox.py xg_xs xmem` | 🟡 in Arbeit |
 | `XUser` offline: immer angemeldetes lokales Profil, einstellbarer Gamertag (`ANYXBOXX_GAMERTAG`), Anmeldung von testgdk erfolgreich | ✅ erledigt |
@@ -78,7 +78,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | RDNA-2-GPU-Disassembler: 1.444 Mnemonics und Operanden in LLVM-Syntax (skalar, VOP1/VOP2/VOPC/VOP3/SMEM/DS/EXP mit Modifikatoren), geprüft an 34.948 öffentlichen LLVM-Kodierungen: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in Arbeit |
 | Konsolentexturen in Rust: BC7-Dekodierung und GFX10-`SW_4K_S`-Entkachelung aus Xbox2Windows portiert (MIT), Referenz-Prüfsummen reproduziert; `anyxboxx_texture bc7 <blocks.bin> <b> <h> <out.png> [--4k-s]` | 🟡 in Arbeit |
 | Übrige von AnyXboxX geschriebene GDK-Schnittstellen (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ offen |
-| Shader-Rekompilierer RDNA 2 → DXIL: erste Programme nach HLSL übersetzt, zu DXIL kompiliert und mit D3D12 auf der GPU des PCs ausgeführt (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP ohne GPU), Speicher identisch mit einem wave32-Referenzinterpreter, der 519 von 1.444 Kodierungen ausführt (skalar, VOP1/VOP2/VOPC/VOP3, Speicher: SMEM, LDS, GLOBAL, MUBUF mit V#-Grenzen, Atomics, Sprünge, `exec`-Divergenz): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in Arbeit |
+| Shader-Rekompilierer RDNA 2 → DXIL: erste Programme nach HLSL übersetzt, zu DXIL kompiliert und mit D3D12 auf der GPU des PCs ausgeführt (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP ohne GPU), Speicher identisch mit einem wave32-Referenzinterpreter, der 520 von 1.444 Kodierungen ausführt (skalar, VOP1/VOP2/VOPC/VOP3, Speicher: SMEM, LDS, GLOBAL, MUBUF mit V#-Grenzen, Atomics, Sprünge, `exec`-Divergenz); ein erster Vertex- und Pixel-Shader (EXP-Exporte, VINTRP-Interpolation) mit D3D12 gezeichnet, Vertex für Vertex und Pixel für Pixel identisch: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in Arbeit |
 | Shader-Cache: übersetzte Shader einmal zu DXIL kompiliert, danach von der Festplatte (1,4 ms) oder aus dem Speicher (0,8 ms) statt mit dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` oder `ANYXBOXX_SHADER_CACHE`, Größe begrenzt | 🟡 in Arbeit |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
 | Dynamisches Laden einer DLL zur Laufzeit (`LoadLibrary` + `DllMain`) | ⏳ offen |

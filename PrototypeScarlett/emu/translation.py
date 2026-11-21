@@ -48,7 +48,7 @@ def gpu_area():
 
     done, total = coverage()
     return Area("GPU instructions (RDNA 2, console shaders)", done, total,
-                "run by the reference interpreter (wave32); DXIL recompiler not started")
+                "run by the reference interpreter (wave32); recompiled to DXIL: compute, vertex, pixel")
 
 STATIC_AREAS = (
     Area("D3D12.X: device and ID3D12* interfaces", 0, 1,
