@@ -178,6 +178,7 @@ def XSystemGetDeviceType(c):
 - [Xbox Series X のハードウェアアーキテクチャ](../recherche/architecture-xbox-series-x.md)（フランス語）：Zen 2 CPU、RDNA 2 GPU、メモリ、Velocity Architecture、セキュリティ。
 - [既存のエミュレーターと互換レイヤー](../recherche/etat-de-l-art.md)（フランス語）：WinDurango、XWine1、Xenia、XVD ツール。
 - [調査対象の Scarlett パッケージのリバースエンジニアリングノート](../recherche/paquet/README.md)（フランス語、Codex 作成）：RDS5/ETPF テーブル、RPF ヘッダー、パッケージ構成。
+- [TomBox とその後継](../recherche/tombox.md)（フランス語）：Rust 製コンソール DLL、Direct3D 12.x、RDNA 2 シェーダー変換器、AnyXboxX が再利用するもの（MIT、出典明記）。
 
 ## テスト
 
@@ -193,3 +194,5 @@ def XSystemGetDeviceType(c):
 ## ライセンス
 
 AnyXboxX は [GNU LGPL 2.1 以降](../../LICENSE) で配布されています。サードパーティ部分はそれぞれのライセンスに従います：libHttpClient の `Task` モジュール（MIT、`runtime/third_party/libhttpclient-task`）と、LLVM の公開エンコーディングテストから生成した RDNA 2 テーブル（Apache 2.0 with LLVM exception、`PrototypeScarlett/emu/rdna2_ops.py` と `rdna2_shapes.py`）。
+
+サードパーティ製コンポーネントとクレジット：[THIRD_PARTY.md](../../THIRD_PARTY.md)。
