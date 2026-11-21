@@ -4,7 +4,7 @@ Chaque invocation est un wave d'une ligne : `lane` vaut 0, EXEC vaut 1 et les op
 lignes (ballot, readlane) se réduisent à la ligne elle-même. La LDS (DS) n'existe pas dans
 ces étages : une instruction DS lève Untranslatable, comme tout export non pris en charge.
 """
-from emu import rdna2, rdna2_graphics as graphics
+from emu import rdna2, rdna2_graphics as graphics, rdna2_hlsl_image
 from emu.rdna2_hlsl import body
 from emu.rdna2_hlsl_ops import Untranslatable
 
@@ -17,6 +17,7 @@ RWByteAddressBuffer g_memory : register(u0);
 
 uint Ballot(uint lane, bool bit) {{ return bit ? 1u : 0u; }}            // wave d'une ligne
 uint ReadLane(uint lane, uint value, uint other) {{ return value; }}
+{images}
 """
 REGISTERS = """  uint lane = 0u;
   uint s[128];
@@ -99,7 +100,7 @@ def render_targets(data):
 
 def translate_vertex(data, sgprs=None):
     """Vertex shader HLSL (vs_6_0) : v0 = SV_VertexID, exports enregistrés dans VERTEX_RECORDS."""
-    lines = [COMMON.format(stage="vertex shader"),
+    lines = [COMMON.format(stage="vertex shader", images=rdna2_hlsl_image.HELPERS),
              "struct VSOut { float4 position : SV_Position; float2 bary : TEXCOORD0; };",
              "VSOut main(uint vertex : SV_VertexID) {", REGISTERS,
              "  VSOut o_out;", "  o_out.position = float4(0.0f, 0.0f, 0.0f, 1.0f);",
@@ -116,7 +117,7 @@ def translate_pixel(data, width, sgprs=None):
     targets = render_targets(data)
     outputs = " ".join(f"float4 t{t} : SV_Target{t};" for t in targets)
     returned = "PSOut" if targets else "void"
-    lines = [COMMON.format(stage="pixel shader")]
+    lines = [COMMON.format(stage="pixel shader", images=rdna2_hlsl_image.HELPERS)]
     if targets:
         lines.append(f"struct PSOut {{ {outputs} }};")
     lines += [f"{returned} main(float4 position : SV_Position, float2 bary : TEXCOORD0, "

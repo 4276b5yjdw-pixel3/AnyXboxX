@@ -1,4 +1,5 @@
 """Mesure de l'avancée de la traduction des DLL console Xbox."""
+import re
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -114,7 +115,7 @@ def test_functions_area_sums_bench_rows():
 def test_instruction_areas_show_a_share_only():
     gpu = translation.gpu_area()
     image = translation.svg((translation.CPU_AREA, gpu), "Avancée")
-    assert "100%" in image and "1/1" not in image
+    assert "100%" in image and not re.search(r"(?<![0-9])1/1(?![0-9])", image)   # part seule pour le CPU
     assert translation.CPU_AREA.share == 1.0 and 0.0 < gpu.share < 1.0
     assert f"{gpu.done}/{gpu.total}" in image
 

@@ -9,7 +9,7 @@ couverte lève Untranslatable en la nommant.
 """
 import struct
 
-from emu import rdna2
+from emu import rdna2, rdna2_hlsl_image
 from emu.rdna2_exec_ops import signed
 from emu.rdna2_exec_vop3 import Fields
 from emu.rdna2_hlsl_memory import memory_statements
@@ -156,6 +156,9 @@ def statements(data, instruction, finish="return;", special=None):
         return _vop3(name, opcode, Fields(pair), _literal(data, instruction, 2))
     if family in MEMORY_FAMILIES:
         return memory_statements(family, name, pair, ACTIVE)
+    if family == "MIMG":
+        end = instruction.offset + instruction.size * rdna2.DWORD
+        return rdna2_hlsl_image.statements(name, int.from_bytes(data[instruction.offset:end], "little"), ACTIVE)
     raise Untranslatable(f"non traduite en HLSL : {name} ({family})")
 
 
@@ -172,7 +175,8 @@ def _leaders(data, instructions):
 
 def translate(data, sgprs=None):
     """Texte HLSL d'un programme RDNA 2 ; `sgprs` : valeurs initiales {numéro: valeur}."""
-    return "\n".join([PRELUDE.rstrip("\n"), *body(data, sgprs), "}", ""])
+    prelude = PRELUDE.replace("[numthreads", rdna2_hlsl_image.HELPERS + "\n[numthreads", 1)
+    return "\n".join([prelude.rstrip("\n"), *body(data, sgprs), "}", ""])
 
 
 def body(data, sgprs=None, finish="return;", special=None):
