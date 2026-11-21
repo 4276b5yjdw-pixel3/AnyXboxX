@@ -49,7 +49,7 @@ FIELDS = {
 }
 FAMILIES = frozenset(FIELDS) - {"VOP3B"}
 # Familles au texte fixe, sans forme apprise : fonction (data, offset) → texte.
-FIXED_FORMAT = {"EXP": rdna2_exp.text}
+FIXED_FORMAT = {"EXP": rdna2_exp.text, "VINTRP": rdna2_exp.vintrp_text}
 TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM", "DS"})
 DS_TWO_OFFSETS = re.compile(r"^ds_(?:read|write|wrxchg)2(?:st64)?_")
 DS_SWIZZLE = "ds_swizzle_b32"

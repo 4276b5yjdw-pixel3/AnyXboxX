@@ -28,6 +28,23 @@ def _sources(word):
     return [f"v{register}" if word >> index & 1 else "off" for index, register in enumerate(registers)]
 
 
+VINTRP_NAMES = {0: "v_interp_p1_f32", 1: "v_interp_p2_f32", 2: "v_interp_mov_f32"}
+MOV_SOURCES = {0: "p10", 1: "p20", 2: "p0"}
+CHANNEL_NAMES = "xyzw"
+
+
+def vintrp_text(data, offset=0):
+    """Interpolation VINTRP au format de LLVM : « v_interp_p1_f32 v2, v0, attr0.x »."""
+    if len(data) < offset + DWORD:
+        return None
+    word = int.from_bytes(data[offset:offset + DWORD], "little")
+    op, vdst, attr, chan, vsrc = (word >> 16) & 3, (word >> 18) & 0xFF, (word >> 10) & 0x3F, (word >> 8) & 3, word & 0xFF
+    if op not in VINTRP_NAMES:
+        return None
+    source = MOV_SOURCES.get(vsrc, f"p{vsrc}") if op == 2 else f"v{vsrc}"
+    return f"{VINTRP_NAMES[op]} v{vdst}, {source}, attr{attr}.{CHANNEL_NAMES[chan]}"
+
+
 def text(data, offset=0):
     """Instruction EXP désassemblée, ou None si les deux mots ne sont pas disponibles."""
     if len(data) < offset + 2 * DWORD:
