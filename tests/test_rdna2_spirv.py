@@ -36,7 +36,7 @@ def test_leonida_translates_our_shaders(data, stage, entry, interface):
 
 def test_refusals_are_named():
     with pytest.raises(Untranslatable, match="pas de texte LLVM"):
-        rdna2_spirv.disassembly(program(0xF0000000, 0))                  # MIMG sans texte d'opérandes
+        rdna2_spirv.disassembly(program(0xCC000000, 0))                  # VOP3P : pas encore de texte
     with pytest.raises(ValueError, match="étage inconnu"):
         rdna2_spirv.translate(PIXEL_SHADER, "hs")
 

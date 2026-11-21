@@ -24,6 +24,8 @@ RANGE = re.compile(r"^(?:s|v|ttmp)\[(\d+):(\d+)\]$")
 PAIR_NAMES = {"vcc": 2, "exec": 2}
 HWREG_TOKEN = re.compile(r"^hwreg\((HW_REG_[A-Z0-9_]+)")
 SMEM_FLAG_WORDS = frozenset(name for _, name in ops.SMEM_FLAGS)
+VOP3_OR_VMEM = frozenset({"VOP3"}) | ops.vmem.FAMILIES
+SEGMENTS = ("GLOBAL", "SCRATCH", "FLAT")               # ordre de préférence des formes reprises
 
 
 def split_operands(text):
@@ -52,7 +54,7 @@ def read_lines(folder):
         if not covered or size * rdna2.DWORD != len(data):
             continue
         tokens = split_operands(operands)
-        if family == "VOP3" and tokens:               # « v2 clamp mul:2 » : modificateurs à part
+        if family in VOP3_OR_VMEM and tokens:         # « v2 clamp mul:2 », « s3 offen glc » : modificateurs à part
             tokens[-1] = tokens[-1].split(" ")[0]
         if family == "SMEM" and tokens:               # « s0 offset:0x64 glc dlc » : garder l'offset
             tokens[-1] = " ".join(w for w in tokens[-1].split() if w not in SMEM_FLAG_WORDS)
@@ -117,17 +119,30 @@ def learn(folder):
     votes, names = defaultdict(Counter), {}
     for _, tokens, data in read_lines(folder):
         family, opcode, _ = rdna2.classify(data)
-        if family in ops.FIXED_FORMAT:                # texte fixe (EXP) : rien à apprendre
+        if family in ops.FIXED_FORMAT:                # texte fixe (EXP, MIMG) : rien à apprendre
             continue
         word, literal = _word_and_literal(data, family)
         shape = _vop3_shape(word, literal, tokens) if family == "VOP3" else learn_shape(family, word, literal, tokens)
+        if family in ops.vmem.FAMILIES:               # lds, atomiques avec retour : forme de base
+            shape = ops.vmem.base_shape(family, rdna2.mnemonic(family, opcode) or "", word, shape)
         votes[(family, opcode)][shape] += 1
         for token in tokens:
             found = HWREG_TOKEN.match(token)
             if found:
                 names[word & 0x3F] = found.group(1)
-    shapes = {key: counter.most_common(1)[0][0] for key, counter in sorted(votes.items())}
-    return shapes, dict(sorted(names.items()))
+    shapes = {key: counter.most_common(1)[0][0] for key, counter in votes.items()}
+    complete_segments(shapes)
+    return dict(sorted(shapes.items())), dict(sorted(names.items()))
+
+
+def complete_segments(shapes):
+    """FLAT, GLOBAL et SCRATCH partagent leurs opcodes : une forme connue dans un segment donne celle
+    des autres (au saddr près), pour les opcodes absents des tests de LLVM."""
+    known = sorted((key for key in shapes if key[0] in SEGMENTS), key=lambda key: (SEGMENTS.index(key[0]), key[1]))
+    for family, opcode in known:
+        for segment in SEGMENTS:
+            if (segment, opcode) not in shapes and rdna2.mnemonic(segment, opcode) is not None:
+                shapes[(segment, opcode)] = ops.vmem.segment_shape(segment, shapes[(family, opcode)])
 
 
 def conformity(folder):

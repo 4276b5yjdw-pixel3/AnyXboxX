@@ -69,6 +69,13 @@ def test_opm_bit_extends_mimg_and_mubuf_opcodes():
     assert rdna2.classify(d16) == ("MUBUF", 0x80, 2)
 
 
+def test_mtbuf_opcode_has_a_fourth_bit_in_the_second_dword():
+    d16 = llvm(0x00, 0x00, 0xB0, 0xE8, 0x00, 0x00, 0x20, 0x80)          # tbuffer_load_format_d16_x
+    assert rdna2.classify(d16) == ("MTBUF", 8, 2)
+    assert rdna2.mnemonic("MTBUF", 8) == "tbuffer_load_format_d16_x"
+    assert rdna2.mnemonic("MTBUF", 7) == "tbuffer_store_format_xyzw"
+
+
 def test_mnemonics_come_from_the_rdna2_table():
     assert rdna2.mnemonic("SOPP", 1) == "s_endpgm"
     assert rdna2.mnemonic("SOP1", 3) == "s_mov_b32"
@@ -132,6 +139,82 @@ def test_smem_offset_is_signed_21_bits():
 ])
 def test_ds_operands_follow_llvm_syntax(encoding, expected):
     assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+@pytest.mark.parametrize("encoding, expected", [                 # encodages des tests MC de LLVM (gfx10)
+    ((0xFF, 0x0F, 0xC8, 0xE0, 0x00, 0xFF, 0x02, 0x03), "buffer_atomic_add v255, off, s[8:11], s3 offset:4095"),
+    ((0xFF, 0xCF, 0x34, 0xE0, 0x00, 0x05, 0x42, 0x03),
+     "buffer_load_dwordx2 v[5:6], off, s[8:11], s3 offset:4095 glc slc dlc"),
+    ((0xFF, 0x2F, 0x08, 0xE0, 0x00, 0x05, 0x02, 0x03), "buffer_load_format_xyz v[5:7], v0, s[8:11], s3 idxen offset:4095"),
+    ((0xFF, 0x1F, 0xF4, 0xE0, 0x00, 0x05, 0x02, 0x03), "buffer_atomic_dec v5, v0, s[8:11], s3 offen offset:4095"),
+    ((0xFF, 0x0F, 0x30, 0xE0, 0x00, 0x05, 0x02, 0xF0), "buffer_load_dword v5, off, s[8:11], 0.5 offset:4095"),
+    ((0x00, 0x00, 0x1C, 0xE0, 0x00, 0x01, 0x03, 0x04), "buffer_store_format_xyzw v[1:4], off, s[12:15], s4"),
+    ((0x00, 0x00, 0xC4, 0xE1, 0x00, 0x00, 0x00, 0x00), "buffer_gl0_inv"),
+    # tfe (+1 registre de données) et lds (pas de vdata) : getMUBUFAsmOps de LLVM, sans test gfx10.
+    ((0x00, 0x00, 0x30, 0xE0, 0x00, 0x05, 0x82, 0x03), "buffer_load_dword v[5:6], off, s[8:11], s3 tfe"),
+    ((0x00, 0x00, 0x31, 0xE0, 0x00, 0x00, 0x02, 0x03), "buffer_load_dword off, s[8:11], s3 lds"),
+])
+def test_mubuf_operands_follow_llvm_syntax(encoding, expected):
+    assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+@pytest.mark.parametrize("encoding, expected", [                 # mtbuf-gfx10.s de LLVM
+    ((0x00, 0x00, 0xB0, 0xE8, 0x00, 0x00, 0x20, 0x80), "tbuffer_load_format_d16_x v0, off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]"),
+    ((0x00, 0x30, 0x73, 0xEA, 0x00, 0x00, 0x00, 0x80), "tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 format:78 idxen offen"),
+    ((0x00, 0xC0, 0xBB, 0xE8, 0x00, 0x0C, 0x00, 0x80),
+     "tbuffer_load_format_xyzw v[12:15], off, s[0:3], 0 format:[BUF_FMT_16_16_UNORM] glc dlc"),
+    ((0x49, 0x00, 0xF3, 0xE9, 0x00, 0x04, 0x00, 0x04),
+     "tbuffer_load_format_xyzw v[4:7], off, s[0:3], s4 format:[BUF_FMT_32_32_UINT] offset:73"),
+    ((0x00, 0x20, 0x04, 0xE8, 0x01, 0x00, 0x00, 0x00), "tbuffer_store_format_x v0, v1, s[0:3], s0 format:[BUF_FMT_INVALID] idxen"),
+    ((0x00, 0x20, 0x0C, 0xE8, 0x01, 0x00, 0x00, 0x00), "tbuffer_store_format_x v0, v1, s[0:3], s0 idxen"),   # format 1 : défaut
+])
+def test_mtbuf_operands_follow_llvm_syntax(encoding, expected):
+    assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+@pytest.mark.parametrize("encoding, expected", [                 # gfx10_asm_mimg.s et gfx1030_new.s de LLVM
+    ((0x1A, 0x1F, 0x00, 0xF0, 0x04, 0x00, 0x02, 0x00, 0x05, 0x06, 0x00, 0x00),
+     "image_load v[0:3], [v4, v5, v6], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm"),
+    ((0x00, 0x07, 0x80, 0xF0, 0x20, 0x40, 0x21, 0x03),
+     "image_sample v[64:66], v32, s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_1D"),
+    ((0x08, 0x01, 0x03, 0xF0, 0x01, 0x01, 0x04, 0x40), "image_load v[1:2], v1, s[16:23] dmask:0x1 dim:SQ_RSRC_IMG_2D a16 tfe lwe"),
+    ((0x18, 0x02, 0x04, 0xF1, 0x20, 0x40, 0x21, 0x03),
+     "image_gather4_cl v[64:67], v[32:35], s[4:11], s[100:103] dmask:0x2 dim:SQ_RSRC_IMG_CUBE"),
+    ((0x00, 0x06, 0x00, 0xF0, 0xFF, 0x00, 0x00, 0x80), "image_load v0, v255, s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_1D d16"),
+    ((0x08, 0x0F, 0xA0, 0xF1, 0x00, 0x00, 0x40, 0x40),
+     "image_sample_cd v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16"),
+    ((0x12, 0x23, 0x40, 0xF0, 0x20, 0x04, 0x18, 0x00, 0x01, 0x02, 0x00, 0x00),
+     "image_atomic_cmpswap v[4:5], [v32, v1, v2], s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_3D glc"),
+    ((0x01, 0x9F, 0x98, 0xF1, 0x09, 0x04, 0x01, 0x40), "image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] a16"),
+    ((0x00, 0x31, 0x40, 0xF0, 0xC0, 0x04, 0x07, 0x00),            # gfx10_mimg.txt : cmpswap garde 2 registres
+     "image_atomic_cmpswap v[4:5], v192, s[28:35] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm glc"),
+])
+def test_mimg_operands_follow_llvm_syntax(encoding, expected):
+    assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+@pytest.mark.parametrize("encoding, expected", [                 # gfx10_asm_flat.s et tests du désassembleur de LLVM
+    ((0x00, 0x00, 0x38, 0xDC, 0x01, 0x00, 0x7D, 0x05), "flat_load_dwordx4 v[5:8], v[1:2]"),
+    ((0x00, 0x10, 0xC8, 0xDC, 0x01, 0x02, 0x7D, 0x00), "flat_atomic_add v[1:2], v2 dlc"),
+    ((0x64, 0x80, 0xD3, 0xDC, 0x00, 0x02, 0x02, 0x02), "global_atomic_csub v2, v0, v2, s[2:3] offset:100 glc slc"),
+    ((0xFF, 0x8F, 0xF9, 0xDC, 0x01, 0x02, 0x7D, 0x05), "global_atomic_fcmpswap v5, v[1:2], v[2:3], off offset:-1 glc"),
+    ((0x10, 0x80, 0x58, 0xDC, 0x00, 0x00, 0x02, 0x01), "global_load_dword_addtid v1, s[2:3] offset:16"),
+    ((0x10, 0x80, 0x70, 0xDC, 0xFE, 0x01, 0x02, 0x00), "global_store_dword v254, v1, s[2:3] offset:16"),
+    ((0x00, 0x64, 0x30, 0xDC, 0x00, 0x00, 0x04, 0x00), "scratch_load_dword off, s4 offset:1024 lds"),
+    ((0x00, 0x58, 0x33, 0xDC, 0x01, 0x00, 0x7D, 0x00), "scratch_load_dword v0, v1, off offset:-2048 glc slc dlc"),
+    ((0x20, 0x40, 0x30, 0xDC, 0x00, 0x00, 0x01, 0x01), "scratch_load_dword v1, off, s1 offset:32"),
+    # Formes absentes des tests d'assembleur (lds seulement, ou autre segment) : gfx10_flat.txt.
+    ((0x00, 0x80, 0x30, 0xDC, 0x03, 0x00, 0x02, 0x01), "global_load_dword v1, v3, s[2:3]"),
+    ((0x00, 0x80, 0x34, 0xDC, 0x03, 0x00, 0x7D, 0x01), "global_load_dwordx2 v[1:2], v[3:4], off"),
+    ((0x00, 0x40, 0x30, 0xDC, 0x02, 0x00, 0x7D, 0x01), "scratch_load_dword v1, v2, off"),
+])
+def test_flat_operands_follow_llvm_syntax(encoding, expected):
+    assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+def test_listing_writes_image_operands():
+    program = llvm(0x00, 0x07, 0x80, 0xF0, 0x20, 0x40, 0x21, 0x03)
+    assert rdna2.listing(program)[0].endswith("image_sample v[64:66], v32, s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_1D")
 
 
 @pytest.mark.parametrize("offset, expected", [                   # AMDGPUInstPrinter::printSwizzle de LLVM
