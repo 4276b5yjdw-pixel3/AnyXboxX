@@ -8,7 +8,7 @@ qui les nomme, ce qui mesure ce qui reste à traduire.
 """
 import struct
 
-from emu import rdna2, rdna2_exec_vop3
+from emu import rdna2, rdna2_exec_memory, rdna2_exec_vop3
 from emu.rdna2_exec_ops import SCALAR, VECTOR, VECTOR_COMPARE, BRANCHES, float_bits
 
 LANES = 32
@@ -21,6 +21,7 @@ INLINE_FLOATS = {240: 0.5, 241: -0.5, 242: 1.0, 243: -1.0, 244: 2.0, 245: -2.0, 
                  248: 0.15915494309189535}
 MAX_STEPS = 1_000_000
 DECODED_FAMILIES = frozenset({"SOP1", "SOP2", "SOPC", "SOPK", "SOPP", "VOP1", "VOP2", "VOPC"})
+MEMORY_FAMILIES = frozenset({"SMEM", "DS", "MUBUF", "FLAT", "GLOBAL", "SCRATCH"})
 
 
 class Untranslated(NotImplementedError):
@@ -30,7 +31,10 @@ class Untranslated(NotImplementedError):
 class Wave:
     """État d'un wave32. `v[n][ligne]` : VGPR ; `s[n]` : registres scalaires 32 bits."""
 
-    def __init__(self):
+    def __init__(self, memory=None):
+        self.memory = memory if memory is not None else rdna2_exec_memory.Memory()
+        self.lds = bytearray(rdna2_exec_memory.LDS_SIZE)
+        self.steps = 0
         self.s = [0] * SCALAR_REGISTERS
         self.v = [[0] * LANES for _ in range(VGPR_FIRST)]
         self.s[EXEC_LO] = FULL
@@ -95,6 +99,12 @@ def step(wave, data):
         return False
     if not executable(family, name):
         raise Untranslated(f"instruction non traduite : {name} ({family}, opcode 0x{opcode:X})")
+    wave.steps += 1
+    if family in MEMORY_FAMILIES:
+        word = int.from_bytes(data[wave.pc:wave.pc + 2 * rdna2.DWORD], "little")
+        rdna2_exec_memory.execute(wave, family, name, word)
+        wave.pc += size * rdna2.DWORD
+        return True
     if family == "VOP3":
         word = int.from_bytes(data[wave.pc:wave.pc + 2 * rdna2.DWORD], "little")
         literal = struct.unpack_from("<I", data, wave.pc + 2 * rdna2.DWORD)[0] if size > 2 else None
@@ -158,6 +168,8 @@ def executable(family, name):
     """Vrai si l'interpréteur exécute cette instruction dans cet encodage."""
     if family == "VOP3":
         return name in rdna2_exec_vop3.EXECUTABLE
+    if family in MEMORY_FAMILIES:
+        return rdna2_exec_memory.supports(name)
     return family in DECODED_FAMILIES and name in EXECUTABLE
 
 
