@@ -15,6 +15,8 @@ from . import win32
 RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "anyxboxx_tls.dll")
 GAME_RUNTIME = "xgameruntime"
 D3D12_OVERRIDE = "ANYXBOXX_D3D12_XS"
+TOMBOX_DIR = "ANYXBOXX_TOMBOX_DIR"
+TOMBOX_PREFERRED = ("d3d12_xs.dll", "xmem.dll")   # plus complètes chez TomBox
 REPOSITORY = Path(__file__).resolve().parents[3]
 DEFAULT_DIR = REPOSITORY / "runtime" / "build" / "bin"
 BUILD_HINT = ("cmake -S runtime -B runtime/build -A x64 && "
@@ -47,10 +49,20 @@ def _runtime_name(dll):
     return name if name in RUNTIME_DLLS else None
 
 
+def tombox_file(dll):
+    """DLL console de TomBox du dossier ANYXBOXX_TOMBOX_DIR (tools/build_tombox.py), ou None."""
+    folder = os.environ.get(TOMBOX_DIR)
+    path = Path(folder) / dll_name(dll) if folder else None
+    return path.resolve() if path is not None and path.is_file() else None
+
+
 def _dll_path(folder, name):
-    """Chemin d'une DLL du runtime ; ANYXBOXX_D3D12_XS remplace d3d12_xs.dll (celle de TomBox par exemple)."""
+    """Chemin d'une DLL du runtime : ANYXBOXX_D3D12_XS, puis TomBox pour xmem et d3d12_xs, puis AnyXboxX."""
     alternative = os.environ.get(D3D12_OVERRIDE) if name == "d3d12_xs.dll" else None
-    return Path(alternative).resolve() if alternative else folder / name
+    if alternative:
+        return Path(alternative).resolve()
+    tombox = tombox_file(name) if name in TOMBOX_PREFERRED else None
+    return tombox or folder / name
 
 
 class Runtime:

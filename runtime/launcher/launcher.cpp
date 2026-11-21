@@ -193,6 +193,14 @@ void PatchModule(HMODULE module) {
   }
 }
 
+// ANYXBOXX_TOMBOX_DIR : dossier des DLL console de TomBox (tools/build_tombox.py), ou "".
+std::wstring TomBoxFile(const std::wstring& dll) {
+  wchar_t folder[MAX_PATH] = {};
+  if (GetEnvironmentVariableW(L"ANYXBOXX_TOMBOX_DIR", folder, MAX_PATH) == 0) return L"";
+  const std::wstring path = std::wstring(folder) + L"\\" + BaseName(dll);
+  return GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES ? L"" : path;
+}
+
 HMODULE LoadDependency(const std::wstring& dll) {
   if (HMODULE runtime = RuntimeFor(dll)) return runtime;
   const std::wstring local = g_game.folder + L"\\" + dll;
@@ -201,6 +209,9 @@ HMODULE LoadDependency(const std::wstring& dll) {
     if (module != nullptr) PatchModule(module);
     return module;
   }
+  // Bibliothèque console absente d'AnyXboxX : celle de TomBox, si elle est compilée.
+  const std::wstring tombox = TomBoxFile(dll);
+  if (!tombox.empty()) return LoadLibraryExW(tombox.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
   return LoadLibraryW(dll.c_str());
 }
 
@@ -398,8 +409,11 @@ int wmain(int argc, wchar_t** argv) {
   const std::wstring runtime_folder = self_path.substr(0, self_path.find_last_of(L"\\/"));
   for (int i = 0; i < 5; ++i) {
     std::wstring path = runtime_folder + L"\\" + kRuntimeDlls[i];
+    // xmem et d3d12_xs : celles de TomBox (plus complètes) si ANYXBOXX_TOMBOX_DIR les fournit.
+    const std::wstring tombox = (i == 1 || i == 2) ? TomBoxFile(kRuntimeDlls[i]) : L"";
+    if (!tombox.empty()) path = tombox;
     wchar_t alternative[MAX_PATH] = {};
-    // ANYXBOXX_D3D12_XS : autre d3d12_xs.dll, par exemple celle de TomBox (tools/build_tombox.py).
+    // ANYXBOXX_D3D12_XS : une d3d12_xs.dll précise, prioritaire.
     if (i == 2 && GetEnvironmentVariableW(L"ANYXBOXX_D3D12_XS", alternative, MAX_PATH) > 0) path = alternative;
     g_game.runtime[i] = LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (g_game.runtime[i] == nullptr) return Fail((L"runtime introuvable : " + path).c_str());

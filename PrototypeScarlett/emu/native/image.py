@@ -13,6 +13,7 @@ from ..hle.core import family
 from ..modules import dll_name, is_system
 from . import win32
 from . import redirects
+from . import runtime as runtime_dlls
 from .shims import LOADER_FUNCTIONS, Shims
 
 MAX_IMAGE = 512 * 1024 * 1024
@@ -142,6 +143,8 @@ class NativeImage:
             handle = win32.LoadLibraryExW(str(local), None, win32.LOAD_WITH_ALTERED_SEARCH_PATH)
             if handle:
                 redirects.patch_module(self.shims.runtime, handle, local, self.shims.loader)   # registre, DXGI…
+        elif not is_system(dll) and runtime_dlls.tombox_file(dll) is not None:
+            handle = win32.LoadLibraryExW(str(runtime_dlls.tombox_file(dll)), None, runtime_dlls.SAFE_SEARCH)
         else:
             handle = win32.LoadLibraryExW(dll, None, 0)
         if not handle:

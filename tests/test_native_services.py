@@ -67,3 +67,16 @@ def test_d3d12_override_points_to_another_dll(tmp_path, monkeypatch):
     monkeypatch.setenv(runtime.D3D12_OVERRIDE, str(tmp_path / "tombox" / "d3d12_xs.dll"))
     assert runtime._dll_path(tmp_path, "d3d12_xs.dll") == (tmp_path / "tombox" / "d3d12_xs.dll").resolve()
     assert runtime._dll_path(tmp_path, "xmem.dll") == tmp_path / "xmem.dll"
+
+
+def test_tombox_dir_supplies_console_dlls(tmp_path, monkeypatch):
+    from emu.native import runtime
+
+    (tmp_path / "xmem.dll").write_bytes(b"MZ")
+    (tmp_path / "xg_xs.dll").write_bytes(b"MZ")
+    monkeypatch.delenv(runtime.D3D12_OVERRIDE, raising=False)
+    monkeypatch.setenv(runtime.TOMBOX_DIR, str(tmp_path))
+    assert runtime.tombox_file("XG_XS.DLL") == (tmp_path / "xg_xs.dll").resolve()
+    assert runtime._dll_path(tmp_path / "ours", "xmem.dll") == (tmp_path / "xmem.dll").resolve()
+    assert runtime._dll_path(tmp_path / "ours", "xgameruntime.dll") == tmp_path / "ours" / "xgameruntime.dll"
+    assert runtime.tombox_file("absent.dll") is None
