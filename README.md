@@ -177,6 +177,7 @@ def XSystemGetDeviceType(c):
 
 - [Xbox Series X hardware architecture](docs/recherche/architecture-xbox-series-x.md) (in French): Zen 2 CPU, RDNA 2 GPU, memory, Velocity Architecture, security.
 - [Existing emulators and compatibility layers](docs/recherche/etat-de-l-art.md) (in French): WinDurango, XWine1, Xenia, XVD tools.
+- [Reverse-engineering notes on the studied Scarlett package](docs/recherche/paquet/README.md) (in French, written by Codex): RDS5/ETPF tables, RPF headers, package layout.
 
 ## Tests
 

@@ -177,6 +177,7 @@ def XSystemGetDeviceType(c):
 
 - [Xbox Series X 的硬件架构](../recherche/architecture-xbox-series-x.md)（法语）：Zen 2 CPU、RDNA 2 GPU、内存、Velocity Architecture、安全性。
 - [现有的模拟器和兼容层](../recherche/etat-de-l-art.md)（法语）：WinDurango、XWine1、Xenia、XVD 工具。
+- [所研究 Scarlett 游戏包的逆向工程笔记](../recherche/paquet/README.md)（法语，由 Codex 撰写）：RDS5/ETPF 表、RPF 文件头、游戏包结构。
 
 ## 测试
 

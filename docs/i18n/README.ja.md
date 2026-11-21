@@ -177,6 +177,7 @@ def XSystemGetDeviceType(c):
 
 - [Xbox Series X のハードウェアアーキテクチャ](../recherche/architecture-xbox-series-x.md)（フランス語）：Zen 2 CPU、RDNA 2 GPU、メモリ、Velocity Architecture、セキュリティ。
 - [既存のエミュレーターと互換レイヤー](../recherche/etat-de-l-art.md)（フランス語）：WinDurango、XWine1、Xenia、XVD ツール。
+- [調査対象の Scarlett パッケージのリバースエンジニアリングノート](../recherche/paquet/README.md)（フランス語、Codex 作成）：RDS5/ETPF テーブル、RPF ヘッダー、パッケージ構成。
 
 ## テスト
 
