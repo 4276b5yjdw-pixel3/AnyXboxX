@@ -106,8 +106,7 @@ def mnemonic(family, opcode):
     """Nom de l'instruction (table tirée des tests d'encodage de LLVM), ou None."""
     from emu.rdna2_ops import MNEMONICS
 
-    base = "FLAT" if family in FLAT_SEGMENTS.values() else family
-    return MNEMONICS.get((base, opcode))
+    return MNEMONICS.get((family, opcode))      # FLAT, GLOBAL et SCRATCH ont chacun leurs noms
 
 
 def decode(data):

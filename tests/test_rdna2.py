@@ -74,7 +74,8 @@ def test_mnemonics_come_from_the_rdna2_table():
     assert rdna2.mnemonic("MUBUF", 0x80) == "buffer_load_format_d16_x"
     assert rdna2.mnemonic("VOP3", 0x140) == "v_fma_legacy_f32"         # nom RDNA 2, pas v_mad_legacy_f32
     assert rdna2.mnemonic("VOP3", 0x103) == "v_add_f32"                # VOP2 vu en VOP3
-    assert rdna2.mnemonic("GLOBAL", 0x0C) == rdna2.mnemonic("FLAT", 0x0C)
+    assert rdna2.mnemonic("GLOBAL", 0x0C) == "global_load_dword"       # même opcode, segment différent
+    assert rdna2.mnemonic("FLAT", 0x0C) == "flat_load_dword"
     assert rdna2.mnemonic("inconnue", 0) is None
 
 
