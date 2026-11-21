@@ -12,7 +12,7 @@ from pathlib import Path
 from ..modules import dll_name
 from . import win32
 
-RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll")
+RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "anyxboxx_tls.dll")
 GAME_RUNTIME = "xgameruntime"
 REPOSITORY = Path(__file__).resolve().parents[3]
 DEFAULT_DIR = REPOSITORY / "runtime" / "build" / "bin"
@@ -76,9 +76,9 @@ class Runtime:
     def owns(self, module):
         return module in self.handles.values()
 
-    def export(self, function):
-        """Adresse d'un export propre à AnyXboxX dans xgameruntime.dll (0 si absent)."""
-        return win32.GetProcAddress(self.handles["xgameruntime.dll"],
+    def export(self, function, dll="xgameruntime.dll"):
+        """Adresse d'un export propre à AnyXboxX dans une DLL du runtime (0 si absent)."""
+        return win32.GetProcAddress(self.handles[dll],
                                     ctypes.c_char_p(function.encode())) or 0
 
     def address(self, dll, function):

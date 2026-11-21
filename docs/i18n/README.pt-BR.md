@@ -62,7 +62,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Tabela das 396 funções do GDK: interface e número do método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ feito |
 | `XTaskQueue`, `XAsync`, `XThread` fornecidas pelo AnyXboxX: o testgdk roda sem o runtime do Windows | ✅ feito |
 | Outras interfaces do GDK: delegadas ao runtime GDK do Windows, nomeadas pelo rastreamento | 🟡 em andamento |
-| 167 testes automatizados | ✅ feito |
+| 169 testes automatizados | ✅ feito |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` do console | ⏳ a fazer |
 | `XUser` offline: perfil local sempre conectado, gamertag configurável (`ANYXBOXX_GAMERTAG`), login do testgdk bem-sucedido | ✅ feito |
 | Identidade do Xbox Series X: tipo de console (valor de registro `ConsoleMode` simulado, inclusive nas DLLs do jogo), `XSystem`, Title ID lido de `MicrosoftGame.config`, análise de uso «Xbox Series X» | ✅ feito |
@@ -73,6 +73,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Saves `XGameSave` (contêineres, blobs, cota, leitura assíncrona) e armazenamento local persistente, no disco do PC (`%LOCALAPPDATA%\AnyXboxX\<TitleId>`, ou `ANYXBOXX_SAVE_DIR`) | ✅ feito |
 | `XPackage`: pacote instalado localmente (identificador, idioma, blocos prontos, montagem na pasta do jogo) | ✅ feito |
 | `kernelx.dll` (kernel do console): 2 661 funções redirecionadas para `kernel32`/`kernelbase` do Windows | ✅ feito |
+| TLS implícito (`thread_local`) dos jogos no modo nativo: DLL portadora `anyxboxx_tls.dll`, cada thread recebe sua cópia (até 256 KiB) | ✅ feito |
 | Outras interfaces do GDK escritas pelo AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ a fazer |
 | Recompilador de shaders RDNA 2 → DXIL | ⏳ a fazer |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |

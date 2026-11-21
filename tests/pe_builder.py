@@ -116,13 +116,15 @@ def _headers(*, dll, base, entry, size_of_image, raw_size, directories, relocata
 
 
 def build_pe(path, code_fn, *, imports=(), exports=(), pointers=None, dll=True,
-             base=None, entry=0, name=None):
+             base=None, entry=0, name=None, tls=None):
     """Écrit un PE dans `path`.
 
     code_fn(iat) -> octets du code ; iat[(dll, fonction)] = adresse relative de l'entrée IAT.
     exports : [(nom, décalage du code)] ou [(nom, "DLL.Fonction")] pour une redirection.
     pointers : {décalage: décalage cible} — qwords absolus corrigés par relocation.
     entry : décalage du point d'entrée, ou None pour une DLL sans DllMain.
+    tls : décalage d'un IMAGE_TLS_DIRECTORY64 (40 octets) écrit dans le code ; ses
+          adresses absolues se déclarent dans `pointers`.
     """
     pointers = pointers or {}
     base = base if base is not None else (DLL_BASE if dll else EXE_BASE)
@@ -140,6 +142,8 @@ def build_pe(path, code_fn, *, imports=(), exports=(), pointers=None, dll=True,
     section.body += bytes(raw_size - len(section.body))
     directories = [(0, 0)] * 16
     directories[0], directories[1], directories[5] = export_dir, import_dir, reloc_dir
+    if tls is not None:
+        directories[9] = (rva(tls), 40)
     header = _headers(dll=dll, base=base, entry=entry,
                       size_of_image=SECTION_RVA + _align(raw_size, 0x1000), raw_size=raw_size,
                       directories=directories, relocatable=bool(pointers))
