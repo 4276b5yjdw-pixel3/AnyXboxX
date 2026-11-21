@@ -62,7 +62,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 164 automated tests | ✅ done |
+| 167 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice` and the console's `ID3D12*` interfaces | ⏳ to do |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
 | Xbox Series X identity: console type (simulated `ConsoleMode` registry value, including inside the game's DLLs), `XSystem`, Title ID read from `MicrosoftGame.config`, "Xbox Series X" analytics | ✅ done |
@@ -72,6 +72,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Frame counter (`--fps`) and performance bench with a "constant 60 fps" verdict and a curve (`--banc-perf`) | ✅ done |
 | `XGameSave` saves (containers, blobs, quota, asynchronous reads) and persistent local storage, on the PC's disk (`%LOCALAPPDATA%\AnyXboxX\<TitleId>`, or `ANYXBOXX_SAVE_DIR`) | ✅ done |
 | `XPackage`: locally installed package (identifier, language, ready chunks, mounting on the game folder) | ✅ done |
+| `kernelx.dll` (console kernel): 2,661 functions forwarded to Windows `kernel32`/`kernelbase` | ✅ done |
 | Other GDK interfaces written by AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ to do |
 | RDNA 2 → DXIL shader recompiler | ⏳ to do |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
