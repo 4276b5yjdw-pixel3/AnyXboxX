@@ -48,3 +48,12 @@ def test_missing_imports_are_named(tmp_path, runtime_dir):
                    imports=[("d3d12_xs.dll", "D3D12XboxCreateDevice")], dll=False)
     result = launch(runtime_dir, exe)
     assert result.returncode == 1 and "d3d12_xs.dll!D3D12XboxCreateDevice" in result.stderr
+
+
+def test_package_without_its_executable_says_so(tmp_path, runtime_dir):
+    (tmp_path / "MicrosoftGame.config").write_text(
+        '<Game><ExecutableList><Executable Name="game_scarlett_master.exe" /></ExecutableList></Game>',
+        encoding="utf-8")
+    result = subprocess.run([str(runtime_dir / "anyxboxx.exe"), str(tmp_path)], capture_output=True, timeout=30)
+    stderr = result.stderr.decode("utf-8", errors="replace") + result.stderr.decode("mbcs", errors="replace")
+    assert result.returncode == 1 and "game_scarlett_master.exe" in stderr

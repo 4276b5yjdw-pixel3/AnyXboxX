@@ -380,6 +380,13 @@ int wmain(int argc, wchar_t** argv) {
   if (target.empty() || GetFullPathNameW(target.c_str(), MAX_PATH, full, nullptr) == 0) return Fail(L"jeu introuvable", 0);
   g_game.path = full;
   g_game.folder = g_game.path.substr(0, g_game.path.find_last_of(L"\\/"));
+  if (GetFileAttributesW(full) == INVALID_FILE_ATTRIBUTES) {
+    // Paquet incomplet : le code du jeu manque, rien ne peut le remplacer.
+    fwprintf(stderr, L"[anyxboxx] exécutable du jeu absent : %ls\n", full);
+    fwprintf(stderr, L"[anyxboxx] le paquet ne contient que les données et les DLL ; "
+                     L"le code du jeu est dans cet exécutable.\n");
+    return 1;
+  }
   wchar_t value[8] = {};
   g_game.measuring = GetEnvironmentVariableW(L"ANYXBOXX_FPS", value, 8) > 0 ||
                      GetEnvironmentVariableW(L"ANYXBOXX_FPS_CSV", value, 8) > 0;
