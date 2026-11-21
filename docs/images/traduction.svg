@@ -34,7 +34,7 @@
 <text x="300" y="340" font-size="11" fill="#4b5263">pas commencé : tables de méthodes console différentes du PC</text>
 <text x="270" y="366" text-anchor="end" fill="#1d2230">Fonctions du runtime GDK servies par AnyXboxX</text>
 <rect x="300" y="352" width="220" height="18" rx="3" fill="#e3e6ee"/>
-<rect x="300" y="352" width="67" height="18" rx="3" fill="#e8890c"/>
-<text x="532" y="366" fill="#1d2230">121/396 (31 %)</text>
-<text x="300" y="386" font-size="11" fill="#4b5263">14/34 interfaces, actives quand AnyXboxX gère seul le runtime (sinon le runtime GDK de Windows sert tout)</text>
+<rect x="300" y="352" width="84" height="18" rx="3" fill="#e8890c"/>
+<text x="532" y="366" fill="#1d2230">152/396 (38 %)</text>
+<text x="300" y="386" font-size="11" fill="#4b5263">15/34 interfaces, actives quand AnyXboxX gère seul le runtime (sinon le runtime GDK de Windows sert tout)</text>
 </svg>

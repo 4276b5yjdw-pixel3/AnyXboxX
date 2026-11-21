@@ -55,9 +55,37 @@ std::string ElementText(const std::string& text, const char* name) {
   return text.substr(start + open.size(), end - start - open.size());
 }
 
+// Valeur de l'attribut `attribute` du premier élément `<element …>`.
+std::string AttributeText(const std::string& text, const char* element, const char* attribute) {
+  const size_t start = text.find(std::string("<") + element);
+  if (start == std::string::npos) return {};
+  const size_t end = text.find('>', start);
+  const std::string tag = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+  const std::string key = std::string(" ") + attribute + "=\"";
+  const size_t value = tag.find(key);
+  if (value == std::string::npos) return {};
+  const size_t close = tag.find('"', value + key.size());
+  if (close == std::string::npos) return {};
+  return tag.substr(value + key.size(), close - value - key.size());
+}
+
 }  // namespace
 
 namespace anyxboxx {
+
+GameIdentity ReadGameIdentity() {
+  const std::string text = ReadConfigText();
+  GameIdentity identity;
+  identity.name = AttributeText(text, "Identity", "Name");
+  identity.publisher = AttributeText(text, "Identity", "Publisher");
+  identity.version = AttributeText(text, "Identity", "Version");
+  identity.display_name = AttributeText(text, "ShellVisuals", "DefaultDisplayName");
+  identity.store_id = ElementText(text, "StoreId");
+  wchar_t folder[MAX_PATH] = {};
+  const DWORD length = GetEnvironmentVariableW(L"ANYXBOXX_GAME_DIR", folder, MAX_PATH);
+  if (length > 0 && length < MAX_PATH) identity.folder.assign(folder, length);
+  return identity;
+}
 
 uint32_t GameTitleId() {
   const std::string value = ElementText(ReadConfigText(), "TitleId");

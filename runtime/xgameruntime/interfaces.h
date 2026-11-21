@@ -31,6 +31,9 @@ bool LocalUserId(const void* user, uint64_t* xuid);
 void* GameSaveInterface();
 void* LocalStorageInterface();
 
+// XPackage : paquet installé en local (package_interface.cpp).
+void* PackageInterface();
+
 // Renvoie l'objet qui sert (fournisseur, interface), ou nullptr.
 void* ServedInterface(const GUID& provider, const GUID& iid);
 
