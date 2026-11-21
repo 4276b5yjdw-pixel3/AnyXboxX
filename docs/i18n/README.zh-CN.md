@@ -13,7 +13,8 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 - **处理器指令：100%。** Series X 使用 x86-64 的 AMD Zen 2，与 PC 的指令集相同：在原生模式下，游戏代码无需翻译，直接原样运行。
 - **GPU 指令：0%。** 主机游戏的着色器是针对 Series X 的 RDNA 2 GPU 编译的。需要一个 RDNA 2 → DXIL 重编译器，目前尚未开始。
 - **系统函数：66%。** 测试包中各 DLL 导入的 1 337 个函数里，有这个比例在隔离模式下已被解析。
-- **主机专用 DLL**：`xmem.dll`（3/4）和 `d3d12_xs.dll`（2/2）已针对该包用到的函数完成翻译。D3D12.X 设备的创建和 GDK 接口仍待编写。目前，这些接口委托给 Windows 的 GDK 运行时。
+- **主机专用 DLL**：`xmem.dll`（3/4）和 `d3d12_xs.dll`（2/2）已针对该包用到的函数完成翻译。D3D12.X 设备的创建仍待编写。
+- **GDK 运行时：396 个函数中的 27 个**（任务队列 `XTaskQueue`、`XAsync`、`XThread`）是在 AnyXboxX 中用 C++ 编写的。当 AnyXboxX 单独管理运行时（没有 Gaming Services，或使用 `ANYXBOXX_SYSTEM_RUNTIME=0`）时，它们才会生效。如果存在 Windows 的 GDK 运行时，则由它提供所有接口（包括任务队列），因为其 API 只接受它自己的队列。跟踪（`ANYXBOXX_TRACE=1`）会列出每个被请求接口的名称。
 
 该图表由 `scarlett.py --traduction <包文件夹> docs/images/traduction.svg` 重新生成。
 
@@ -39,10 +40,12 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 | C++ 运行时（`runtime/`）：`xgameruntime.dll`、`xmem.dll`、`d3d12_xs.dll` 在原生模式下预先加载，并提供给游戏的所有 DLL | ✅ 已完成 |
 | `xmem.dll`：`XMemAlloc`、`XMemFree`、钩子、`XMemVirtualQuery` | ✅ 已完成 |
 | `d3d12_xs.dll`：根签名序列化，重定向到电脑的 D3D12 | ✅ 已完成 |
-| `QueryApiImpl` 背后的 GDK 接口：委托给 Windows 的 GDK 运行时，由跟踪列出 | 🟡 进行中 |
-| 110 个自动化测试 | ✅ 已完成 |
+| 396 个 GDK 函数的表：接口和方法编号，提取自 `xgameruntime.lib`（`tools/gdk_interfaces.py`） | ✅ 已完成 |
+| `XTaskQueue`、`XAsync`、`XThread` 由 AnyXboxX 提供：testgdk 无需 Windows 的运行时即可运行 | ✅ 已完成 |
+| 其他 GDK 接口：委托给 Windows 的 GDK 运行时，由跟踪列出名称 | 🟡 进行中 |
+| 123 个自动化测试 | ✅ 已完成 |
 | D3D12.X：`D3D12XboxCreateDevice` 和主机的 `ID3D12*` 接口 | ⏳ 待完成 |
-| 由 AnyXboxX 自行编写的 GDK 接口（`XTaskQueue`、`XUser`…） | ⏳ 待完成 |
+| 由 AnyXboxX 自行编写的其他 GDK 接口（`XUser`、`XGameSave`、`XSystem`…） | ⏳ 待完成 |
 | RDNA 2 → DXIL 着色器重编译器 | ⏳ 待完成 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
 | 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
@@ -77,7 +80,7 @@ cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
 ```
 
-DLL 会输出到 `runtime/build/bin`，或 `ANYXBOXX_RUNTIME` 指定的文件夹。`ANYXBOXX_SYSTEM_RUNTIME=0` 会关闭对 Windows GDK 运行时的委托。
+任务队列沿用了 [libHttpClient](https://github.com/microsoft/libHttpClient) 的 `Task` 模块（MIT 许可证，`runtime/third_party/libhttpclient-task`）。DLL 会输出到 `runtime/build/bin`，或 `ANYXBOXX_RUNTIME` 指定的文件夹。`ANYXBOXX_SYSTEM_RUNTIME=0` 会关闭对 Windows GDK 运行时的委托。
 
 编译好的演示程序是 `PrototypeScarlett/demo.pe`，其源代码是 `PrototypeScarlett/demo.c`。
 

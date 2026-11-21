@@ -81,7 +81,7 @@ def test_svg_is_valid_xml(folders):
     root = ET.fromstring(translation.svg(areas, "Titre <test>"))
     content = "".join(root.itertext())
     assert "xmem.dll" in content and "Titre <test>" in content
-    assert "Interfaces GDK" in content
+    assert "D3D12.X" in content
     assert "<script" not in translation.svg(areas, "t")
 
 
@@ -116,3 +116,22 @@ def test_instruction_areas_show_a_share_only():
     assert "100 %" in image and "0 %" in image
     assert "1/1" not in image and "0/1" not in image
     assert translation.CPU_AREA.share == 1.0 and translation.GPU_AREA.share == 0.0
+
+
+def test_gdk_runtime_area_counts_functions_of_served_interfaces(tmp_path):
+    table = tmp_path / "table.inc"
+    table.write_text('// commentaire\n'
+                     'ANYXBOXX_GDK_API(XTaskQueueCreate, "AAAA", "AAAA", 12)\n'
+                     'ANYXBOXX_GDK_API(XTaskQueueDispatch, "AAAA", "AAAA", 16)\n'
+                     'ANYXBOXX_GDK_API(XUserAddAsync, "BBBB", "BBBB", 7)\n', encoding="utf-8")
+    served = tmp_path / "served.inc"
+    served.write_text('ANYXBOXX_SERVED_INTERFACE(TaskQueueInterface, "AAAA", "AAAA")\n', encoding="utf-8")
+    area = translation.gdk_runtime_area(table, served)
+    assert (area.done, area.total) == (2, 3)
+    assert "1/2 interfaces" in area.note
+
+
+def test_repository_tables_are_consistent():
+    """La table générée couvre les 396 API du GDK 2610 et XTaskQueue y est servie."""
+    area = translation.gdk_runtime_area()
+    assert area.total >= 396 and area.done >= 27

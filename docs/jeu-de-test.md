@@ -99,7 +99,7 @@ Depuis le passage du runtime en C++ (`runtime/`), `xgameruntime.dll` est précha
 | `{01ACD177-91F9-4763-A38E-CCBB55CE32E0}` | 4 | Windows |
 | `{973A344E-24BF-4D0F-8457-56C534892B29}` / `{2549F142-6419-4A06-97B5-931AAB7C2F34}` | 1 | Windows |
 
-La file de tâches est demandée des milliers de fois par seconde : ce chemin doit rester en code natif. C'est la première interface à écrire dans AnyXboxX. Sans le runtime de Windows (`ANYXBOXX_SYSTEM_RUNTIME=0`), SDL s'arrête au démarrage avec « initialisation GDK impossible ».
+La file de tâches est demandée des milliers de fois par seconde : ce chemin doit rester en code natif. Elle est maintenant écrite dans AnyXboxX, en C++ : **testgdk tourne sans le runtime de Windows** (`ANYXBOXX_SYSTEM_RUNTIME=0`), et seule la connexion `XUser` échoue alors, proprement. Quand le runtime de Windows est présent, il sert toutes les interfaces, file de tâches comprise : ses API (`XUser`…) ne savent lire que les files qu'elles ont créées.
 
 Compilation : `VisualC-GDK` de SDL3 vise encore `Gaming.Desktop.x64`, absente du GDK 2610. Il faut remplacer cette plateforme par `x64` dans les projets, ajouter `_GAMING_DESKTOP` et les dossiers `include`/`lib` du GDK (`windows\include`, `windows\lib\x64`), puis compiler `tests\testgdk\testgdk.vcxproj` en `Release|x64` avec `-p:PlatformToolset=v145` et `-p:SolutionDir=<…>\VisualC-GDK\`.
 

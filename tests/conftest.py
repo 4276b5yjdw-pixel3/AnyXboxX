@@ -9,6 +9,10 @@ import os  # noqa: E402
 
 import pytest  # noqa: E402
 
+# Tests déterministes : AnyXboxX gère seul le runtime GDK, même si Gaming Services est
+# installé. Les tests de délégation lancent un sous-processus avec la valeur "1".
+os.environ.setdefault("ANYXBOXX_SYSTEM_RUNTIME", "0")
+
 RUNTIME_DIR = Path(os.environ.get("ANYXBOXX_RUNTIME")
                    or Path(__file__).resolve().parents[1] / "runtime" / "build" / "bin")
 RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll")

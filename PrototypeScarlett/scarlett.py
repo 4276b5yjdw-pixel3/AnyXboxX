@@ -170,7 +170,8 @@ def print_translation(package, svg_path=None):
         runtime = os.environ.get("ANYXBOXX_RUNTIME") or HERE.parent / "runtime" / "build" / "bin"
         overview = (translation.CPU_AREA, translation.GPU_AREA,
                     translation.functions_area(bench.run(Path(package))))
-        areas = translation.measure(package, Path(runtime), extra=translation.STATIC_AREAS)
+        areas = translation.measure(package, Path(runtime),
+                                    extra=(*translation.STATIC_AREAS, translation.gdk_runtime_area()))
         areas = (*overview, *areas)
         print(translation.table(areas))
         if svg_path is not None:

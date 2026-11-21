@@ -13,7 +13,8 @@ AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su códi
 - **Instrucciones del procesador: 100 %.** La Series X usa un AMD Zen 2 en x86-64, el mismo conjunto de instrucciones que un PC: en modo nativo, el código del juego se ejecuta tal cual, sin traducción.
 - **Instrucciones de la GPU: 0 %.** Los shaders de un juego de consola se compilan para la GPU RDNA 2 de la Series X. Hace falta un recompilador RDNA 2 → DXIL, aún sin empezar.
 - **Funciones de sistema: 66 %** de las 1 337 funciones importadas por las DLL del paquete de prueba se resuelven en modo aislado.
-- **DLL propias de la consola**: `xmem.dll` (3/4) y `d3d12_xs.dll` (2/2) están traducidas para las funciones que usa el paquete. La creación del dispositivo D3D12.X y las interfaces GDK quedan por escribir. Por ahora, esas interfaces se delegan al runtime GDK de Windows.
+- **DLL propias de la consola**: `xmem.dll` (3/4) y `d3d12_xs.dll` (2/2) están traducidas para las funciones que usa el paquete. La creación del dispositivo D3D12.X queda por escribir.
+- **Runtime GDK: 27 de las 396 funciones** (cola de tareas `XTaskQueue`, `XAsync`, `XThread`) están escritas en AnyXboxX, en C++. Se usan cuando AnyXboxX gestiona el runtime por sí solo: sin Gaming Services, o con `ANYXBOXX_SYSTEM_RUNTIME=0`. Si el runtime GDK de Windows está presente, sirve todas las interfaces, incluida la cola de tareas, porque sus API solo aceptan sus propias colas. La traza (`ANYXBOXX_TRACE=1`) nombra cada interfaz solicitada.
 
 El gráfico se regenera con `scarlett.py --traduction <carpeta del paquete> docs/images/traduction.svg`.
 
@@ -39,10 +40,12 @@ El gráfico se regenera con `scarlett.py --traduction <carpeta del paquete> docs
 | Runtime C++ (`runtime/`): `xgameruntime.dll`, `xmem.dll`, `d3d12_xs.dll` precargadas en modo nativo, servidas a todas las DLL del juego | ✅ hecho |
 | `xmem.dll`: `XMemAlloc`, `XMemFree`, ganchos, `XMemVirtualQuery` | ✅ hecho |
 | `d3d12_xs.dll`: serialización de las firmas raíz, redirigida al D3D12 del PC | ✅ hecho |
-| Interfaces GDK detrás de `QueryApiImpl`: delegadas al runtime GDK de Windows, listadas por la traza | 🟡 en curso |
-| 110 pruebas automatizadas | ✅ hecho |
+| Tabla de las 396 funciones GDK: interfaz y número de método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ hecho |
+| `XTaskQueue`, `XAsync`, `XThread` servidas por AnyXboxX: testgdk funciona sin el runtime de Windows | ✅ hecho |
+| Otras interfaces GDK: delegadas al runtime GDK de Windows, nombradas por la traza | 🟡 en curso |
+| 123 pruebas automatizadas | ✅ hecho |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` de la consola | ⏳ pendiente |
-| Interfaces GDK escritas por AnyXboxX (`XTaskQueue`, `XUser`…) | ⏳ pendiente |
+| Otras interfaces GDK escritas por AnyXboxX (`XUser`, `XGameSave`, `XSystem`…) | ⏳ pendiente |
 | Recompilador de shaders RDNA 2 → DXIL | ⏳ pendiente |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
 | Carga dinámica de una DLL durante la ejecución (`LoadLibrary` + `DllMain`) | ⏳ pendiente |
@@ -77,7 +80,7 @@ cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
 ```
 
-Las DLL acaban en `runtime/build/bin`, o en la carpeta indicada por `ANYXBOXX_RUNTIME`. `ANYXBOXX_SYSTEM_RUNTIME=0` desactiva la delegación al runtime GDK de Windows.
+La cola de tareas reutiliza el módulo `Task` de [libHttpClient](https://github.com/microsoft/libHttpClient) (licencia MIT, `runtime/third_party/libhttpclient-task`). Las DLL acaban en `runtime/build/bin`, o en la carpeta indicada por `ANYXBOXX_RUNTIME`. `ANYXBOXX_SYSTEM_RUNTIME=0` desactiva la delegación al runtime GDK de Windows.
 
 El programa de demostración compilado es `PrototypeScarlett/demo.pe`; su código fuente es `PrototypeScarlett/demo.c`.
 

@@ -1,4 +1,5 @@
 """Avancée de la « traduction » des DLL propres à la console Xbox Series X."""
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -47,9 +48,24 @@ GPU_AREA = Area("Instructions GPU (RDNA 2, shaders console)", 0, 1,
 STATIC_AREAS = (
     Area("D3D12.X : périphérique et interfaces ID3D12*", 0, 1,
          "pas commencé : tables de méthodes console différentes du PC", counted=False),
-    Area("Interfaces GDK servies par AnyXboxX", 0, 1,
-         "aucune : déléguées au runtime GDK de Windows (XTaskQueue, XUser…)", counted=False),
 )
+
+
+RUNTIME_SOURCES = Path(__file__).resolve().parents[2] / "runtime" / "xgameruntime"
+API_LINE = re.compile(r'ANYXBOXX_GDK_API\((\w+), "([^"]+)", "([^"]+)", (\d+)\)')
+SERVED_LINE = re.compile(r'ANYXBOXX_SERVED_INTERFACE\(\w+, "([^"]+)", "([^"]+)"\)')
+
+
+def gdk_runtime_area(table=RUNTIME_SOURCES / "gdk_api_table.inc",
+                     served=RUNTIME_SOURCES / "served_interfaces.inc"):
+    """Fonctions X* du GDK dont l'interface est servie par AnyXboxX (et non par Windows)."""
+    apis = API_LINE.findall(Path(table).read_text(encoding="utf-8"))
+    served_keys = set((p.upper(), i.upper()) for p, i in SERVED_LINE.findall(Path(served).read_text(encoding="utf-8")))
+    interfaces = {(provider, iid) for _, provider, iid, _ in apis}
+    done = sum((provider, iid) in served_keys for _, provider, iid, _ in apis)
+    return Area("Fonctions du runtime GDK servies par AnyXboxX", done, len(apis),
+                f"{len(served_keys & interfaces)}/{len(interfaces)} interfaces, actives quand AnyXboxX "
+                "gère seul le runtime (sinon le runtime GDK de Windows sert tout)")
 
 
 def functions_area(rows):
