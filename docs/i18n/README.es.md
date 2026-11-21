@@ -22,9 +22,10 @@ AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su códi
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ hecho |
 | 16/16 DLL de un paquete Scarlett inicializadas con sus dependencias, 0 llamadas no emuladas | ✅ hecho |
 | Juego de prueba libre `SimpleTriangle` compilado: el arranque en C y la inicialización de GDK funcionan en AnyXboxX | ✅ hecho |
-| 74 pruebas automatizadas, 83 % de cobertura | ✅ hecho |
-| Ventana Win32 (`USER32`) y DirectX 12 (`d3d12`, `dxgi`) para mostrar el triángulo | ⏳ pendiente |
-| Ejecución nativa del código (enfoque Wine) en lugar de Unicorn | ⏳ pendiente |
+| Ejecución nativa al estilo Wine (`--natif`): **SimpleTriangle se muestra**, runtime GDK proporcionado por AnyXboxX | ✅ hecho |
+| 79 pruebas automatizadas, 83 % de cobertura | ✅ hecho |
+| Traducción de D3D12.X (`d3d12_xs.dll`) y `kernelx.dll` para los binarios de consola | ⏳ pendiente |
+| Interfaces del runtime GDK detrás de `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ pendiente |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
 | Carga dinámica de una DLL durante la ejecución (`LoadLibrary` + `DllMain`) | ⏳ pendiente |
 | Gráficos D3D12.X hacia Direct3D 12 / Vulkan | ⏳ pendiente |
@@ -52,6 +53,16 @@ py -3.12 -m venv .venv
 ```
 
 El programa de demostración compilado es `PrototypeScarlett/demo.pe`; su código fuente es `PrototypeScarlett/demo.c`.
+
+## Lanzar un juego en modo nativo
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
+```
+
+![SimpleTriangle lanzado por AnyXboxX en modo nativo](../images/simpletriangle-anyxboxx.png)
+
+AnyXboxX carga el propio ejecutable y lo ejecuta directamente en el procesador, como Wine. El runtime de Xbox (`xgameruntime.dll`) lo proporciona AnyXboxX; la ventana y DirectX 12 son los del PC. **Atención: en modo nativo, el programa no está aislado.** Reserva este modo para programas de confianza; `--rapport` y `--banc` siguen aislados dentro de Unicorn. `ANYXBOXX_TRACE=1` muestra las llamadas interceptadas. Detalles: [docs/jeu-de-test.md](../jeu-de-test.md) (en francés).
 
 ## Analizar un programa
 
@@ -84,6 +95,7 @@ El informe enumera las funciones importadas, el porcentaje ya emulado y las func
 | `emu/report.py` | informe de compatibilidad |
 | `emu/modules.py` | carga las DLL del paquete, enlaza las importaciones, ordena las inicializaciones |
 | `emu/bench.py` | banco de pruebas sobre una carpeta de módulos |
+| `emu/native/` | ejecución nativa al estilo Wine: cargador, importaciones reales, runtime GDK de AnyXboxX |
 | `scarlett.py` | interfaz Tkinter y línea de comandos |
 
 Para añadir una función, decora un manejador en `emu/hle/`:

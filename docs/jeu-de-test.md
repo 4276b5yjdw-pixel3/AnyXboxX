@@ -13,16 +13,33 @@ Un jeu de test légal qui tourne déjà à 100 % sur PC, pour comparer le compor
 
 ![SimpleTriangleDesktop exécuté nativement sur PC](images/simpletriangle-natif.png)
 
-## Résultat dans AnyXboxX
+## Dans AnyXboxX, mode natif : le triangle s'affiche
+
+![SimpleTriangleDesktop chargé et lancé par AnyXboxX en mode natif](images/simpletriangle-anyxboxx.png)
+
+```powershell
+python PrototypeScarlett\scarlett.py --natif <...>\x64\Release\SimpleTriangleDesktop.exe
+```
+
+AnyXboxX mappe lui-même l'exécutable en mémoire, applique les relocations, déclare sa table d'exceptions (`.pdata`), lie ses imports puis l'exécute directement sur le processeur. C'est l'approche de Wine et de WinDurango.
+
+- **Servi par AnyXboxX** : `xgameruntime.dll`. Le jeu le charge par `LoadLibraryExW`, et AnyXboxX intercepte ce chargement pour fournir son propre runtime GDK (`InitializeApiImplEx2`, `QueryApiImpl`…). Il intercepte aussi `GetModuleHandle`, `GetModuleFileName` et `GetProcAddress`, pour que le jeu se voie lui-même et non `python.exe`.
+- **Servi par Windows** : la fenêtre (`USER32`), DirectX 12 (`d3d12`, `dxgi`) et le CRT Visual C++. Pour cette version PC du jeu, ces appels sont déjà ceux du PC. Pour un binaire Series X, il faudra en plus traduire `d3d12_xs.dll` (D3D12.X) et `kernelx.dll`.
+- **Sécurité** : en mode natif, le programme n'est pas isolé et a les droits de l'utilisateur. Ce mode est réservé aux programmes de confiance. `--rapport` et `--banc` restent dans Unicorn, isolés.
+- **Diagnostic** : `ANYXBOXX_TRACE=1` affiche chaque chargement de DLL, `GetProcAddress` et `QueryApiImpl` intercepté.
+
+## Dans AnyXboxX, mode isolé (Unicorn)
 
 | Étape du jeu | État |
 |---|---|
 | Chargement : exécutable + `libHttpClient`, `vcruntime140`, `vcruntime140_1`, `msvcp140` liés | ✅ |
 | Démarrage C (`_initterm`, `argv`, locale, `_errno`…) puis entrée dans `WinMain` | ✅ |
 | Chargement de `xgameruntime.dll` et `InitializeApiImplEx2` (initialisation GDK) | ✅ |
-| Création de la fenêtre (`RegisterClassExW`, `CreateWindowExW`, boucle de messages) | ❌ prochaine étape |
-| Création du périphérique DirectX 12 (`CreateDXGIFactory2`, `D3D12CreateDevice`…) | ❌ |
-| Affichage du triangle | ❌ |
+| Création de la fenêtre (`RegisterClassExW`, `CreateWindowExW`, boucle de messages) | ❌ non émulée en mode isolé |
+| Création du périphérique DirectX 12 (`CreateDXGIFactory2`, `D3D12CreateDevice`…) | ❌ non émulée en mode isolé |
+| Affichage du triangle | ✅ en mode natif, ❌ en mode isolé |
+
+Le mode isolé sert à l'analyse sans risque. Y relier DirectX 12 demanderait de recopier chaque structure entre la mémoire émulée et le PC ; le mode natif évite ce travail.
 
 Fonctions importées : 202, dont **157 résolues (77,7 %)** : 75 émulées en Python et 82 fournies par les DLL Visual C++. Les 45 restantes sont surtout `USER32` (fenêtre, souris, messages), `d3d12`, `dxgi` et les fichiers du CRT.
 

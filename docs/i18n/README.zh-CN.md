@@ -22,9 +22,10 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 | `GetModuleHandle`、`GetProcAddress`、`LoadLibrary`、`RtlPcToFileHeader` | ✅ 已完成 |
 | Scarlett 包中的 16/16 个 DLL 连同依赖项完成初始化，0 个未模拟的调用 | ✅ 已完成 |
 | 已编译免费测试游戏 `SimpleTriangle`：C 启动代码和 GDK 初始化可在 AnyXboxX 中通过 | ✅ 已完成 |
-| 74 个自动化测试，83 % 覆盖率 | ✅ 已完成 |
-| 用于显示三角形的 Win32 窗口（`USER32`）和 DirectX 12（`d3d12`、`dxgi`） | ⏳ 待完成 |
-| 原生执行代码（Wine 方式），取代 Unicorn | ⏳ 待完成 |
+| Wine 式原生执行（`--natif`）：**SimpleTriangle 成功显示**，GDK 运行时由 AnyXboxX 提供 | ✅ 已完成 |
+| 79 个自动化测试，83 % 覆盖率 | ✅ 已完成 |
+| 为主机二进制文件翻译 D3D12.X（`d3d12_xs.dll`）和 `kernelx.dll` | ⏳ 待完成 |
+| `QueryApiImpl` 背后的 GDK 运行时接口（`XUser`、`XTaskQueue`…） | ⏳ 待完成 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
 | 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |
@@ -52,6 +53,16 @@ py -3.12 -m venv .venv
 ```
 
 编译好的演示程序是 `PrototypeScarlett/demo.pe`，其源代码是 `PrototypeScarlett/demo.c`。
+
+## 以原生模式运行游戏
+
+```powershell
+.\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
+```
+
+![由 AnyXboxX 以原生模式启动的 SimpleTriangle](../images/simpletriangle-anyxboxx.png)
+
+AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器上运行它。Xbox 运行时（`xgameruntime.dll`）由 AnyXboxX 提供；窗口和 DirectX 12 则使用电脑自身的。**注意：在原生模式下，程序没有被隔离。** 请仅对可信的程序使用此模式；`--rapport` 和 `--banc` 仍然在 Unicorn 中隔离运行。`ANYXBOXX_TRACE=1` 会显示被拦截的调用。详情：[docs/jeu-de-test.md](../jeu-de-test.md)（法语）。
 
 ## 分析程序
 
@@ -84,6 +95,7 @@ py -3.12 -m venv .venv
 | `emu/report.py` | 兼容性报告 |
 | `emu/modules.py` | 加载包中的 DLL、链接导入、安排初始化顺序 |
 | `emu/bench.py` | 针对模块文件夹的测试台 |
+| `emu/native/` | Wine 式原生执行：加载器、真实导入、AnyXboxX 的 GDK 运行时 |
 | `scarlett.py` | Tkinter 界面和命令行 |
 
 要添加一个函数，请在 `emu/hle/` 中为处理函数加上装饰器：
