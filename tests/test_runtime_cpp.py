@@ -285,3 +285,58 @@ def test_sign_out_interface_shares_the_user_table(runtime_dir):
 def test_unknown_user_id_is_not_found(runtime_dir):
     _, status, outcome, user = add_local_user(runtime_dir, method=37, result_method=38, argument=1234)
     assert status == E_GAMEUSER_USER_NOT_FOUND and outcome == E_GAMEUSER_USER_NOT_FOUND and not user.value
+
+
+def test_registry_presents_a_series_x(runtime_dir):
+    runtime = load(runtime_dir, "xgameruntime.dll")
+    key, value, size = ctypes.c_void_p(), ctypes.c_uint32(), ctypes.c_uint32(4)
+    hklm = ctypes.c_void_p(0xFFFFFFFF80000002)
+    path = r"Software\Microsoft\Windows NT\CurrentVersion\OEM"
+    runtime.AnyXboxX_RegOpenKeyExW.argtypes = (ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_uint32,
+                                               ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p))
+    runtime.AnyXboxX_RegQueryValueExW.argtypes = (ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_void_p,
+                                                  ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32))
+    runtime.AnyXboxX_RegCloseKey.argtypes = (ctypes.c_void_p,)
+    assert runtime.AnyXboxX_RegOpenKeyExW(hklm, path, 0, 0x20019, ctypes.byref(key)) == 0
+    assert runtime.AnyXboxX_RegQueryValueExW(key, "ConsoleMode", None, None, ctypes.byref(value), ctypes.byref(size)) == 0
+    assert value.value == 0x64                       # → XSystemDeviceType::XboxScarlettAnaconda
+    assert runtime.AnyXboxX_RegQueryValueExW(key, "Autre", None, None, None, ctypes.byref(size)) == 2
+    assert runtime.AnyXboxX_RegCloseKey(key) == 0
+    real = ctypes.c_void_p()                         # les autres clés vont au vrai registre
+    assert runtime.AnyXboxX_RegOpenKeyExW(hklm, "Software", 0, 0x20019, ctypes.byref(real)) == 0
+    assert runtime.AnyXboxX_RegCloseKey(real) == 0
+
+
+SYSTEM = ("E349BD1A-FC20-4E40-B99C-4178CC6B409F", "1861CF2E-E18B-4834-A9F5-B4A4E6EFB4CF")
+ANALYTICS = ("B884675D-B738-4A9C-815D-9A9A1E0C6C9B",) * 2
+GAME = ("973A344E-24BF-4D0F-8457-56C534892B29", "2549F142-6419-4A06-97B5-931AAB7C2F34")
+
+
+@anyxboxx_only
+def test_system_identity_is_a_series_x(runtime_dir):
+    system = GdkInterface(runtime_dir, *SYSTEM)
+    buffer, used = ctypes.create_string_buffer(64), ctypes.c_size_t()
+    sandbox = system.method(4, ctypes.c_uint32, ctypes.c_size_t, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t))
+    assert sandbox(16, buffer, ctypes.byref(used)) == S_OK and buffer.value == b"RETAIL"
+    console = system.method(3, ctypes.c_uint32, ctypes.c_size_t, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t))
+    assert console(39, buffer, ctypes.byref(used)) == S_OK and used.value <= 39
+
+    class Analytics(ctypes.Structure):
+        _fields_ = [("os", ctypes.c_uint16 * 4), ("hosting", ctypes.c_uint16 * 4),
+                    ("family", ctypes.c_char * 64), ("form", ctypes.c_char * 64)]
+
+    info = Analytics()
+    analytics = GdkInterface(runtime_dir, *ANALYTICS)
+    returned = analytics.method(3, ctypes.c_void_p, ctypes.POINTER(Analytics))(ctypes.byref(info))
+    assert returned == ctypes.addressof(info)
+    assert (info.family, info.form, info.os[0]) == (b"Windows.Xbox", b"Xbox Series X", 10)
+
+
+@anyxboxx_only
+def test_title_id_comes_from_the_game_config(runtime_dir, tmp_path, monkeypatch):
+    (tmp_path / "MicrosoftGame.config").write_text(
+        '<?xml version="1.0"?><Game><TitleId>7952987A</TitleId></Game>', encoding="utf-8")
+    monkeypatch.setenv("ANYXBOXX_GAME_DIR", str(tmp_path))
+    title = ctypes.c_uint32()
+    get = GdkInterface(runtime_dir, *GAME).method(3, ctypes.c_uint32, ctypes.POINTER(ctypes.c_uint32))
+    assert get(ctypes.byref(title)) == S_OK and title.value == 0x7952987A

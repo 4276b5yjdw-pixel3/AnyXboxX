@@ -183,6 +183,23 @@ def print_translation(package, svg_path=None):
         return 1
 
 
+def print_map(package, svg_path):
+    """Écrit la carte SVG de l'avancée (une case par fonction) et affiche les badges."""
+    try:
+        from emu import status_map
+
+        runtime = os.environ.get("ANYXBOXX_RUNTIME") or HERE.parent / "runtime" / "build" / "bin"
+        status = status_map.collect(Path(package), Path(runtime))
+        svg_path.parent.mkdir(parents=True, exist_ok=True)
+        svg_path.write_text(status_map.render(status), encoding="utf-8")
+        for label, value, _ in status.badges:
+            print(f"{label} : {value}")
+        return 0
+    except (OSError, ValueError) as error:
+        print(f"Erreur : {error}", file=sys.stderr)
+        return 1
+
+
 def find_package_folder():
     start = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve().parent
     return next((c for c in (start, start.parent, start.parent.parent)
@@ -205,6 +222,8 @@ def main(argv):
         return launch.run(Path(argv[1]), extra_dirs)
     if len(argv) >= 2 and argv[0] == "--traduction":
         return print_translation(Path(argv[1]), Path(argv[2]) if len(argv) > 2 else None)
+    if len(argv) >= 3 and argv[0] == "--carte":
+        return print_map(Path(argv[1]), Path(argv[2]))
     if len(argv) >= 2 and argv[0] == "--natif":
         return run_native(Path(argv[1]), extra_dirs)
     import tkinter as tk

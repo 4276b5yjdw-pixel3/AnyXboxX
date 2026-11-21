@@ -14,6 +14,7 @@ def run(path, search_dirs=None, log=print):
     image = NativeImage(path, search_dirs, log)
     log(f"[natif] {image.path.name} chargé à {image.base:#x} : exécution directe sur le processeur.")
     os.chdir(image.path.parent)   # le jeu lit ses fichiers en chemins relatifs
+    os.environ["ANYXBOXX_GAME_DIR"] = str(image.path.parent)   # MicrosoftGame.config pour le runtime C++
     if not adopt_command_line(image.path):
         log("[natif] ligne de commande du jeu non appliquée : il verra celle de python.")
     return image.call_entry()

@@ -12,6 +12,7 @@ import pefile
 from ..hle.core import family
 from ..modules import dll_name, is_system
 from . import win32
+from . import redirects
 from .shims import LOADER_FUNCTIONS, Shims
 
 MAX_IMAGE = 512 * 1024 * 1024
@@ -122,6 +123,9 @@ class NativeImage:
             if not address:
                 raise UntranslatedImport(f"{dll}!{name}")
             return address
+        replacement = redirects.redirect(runtime, dll, name)
+        if replacement:
+            return replacement
         if family(dll) == "kernel" and name in LOADER_FUNCTIONS:
             return self.shims.loader[name]
         module = self._load_module(dll)
@@ -135,6 +139,8 @@ class NativeImage:
         local = None if is_system(dll) else self.search.get(dll_name(dll))
         if local is not None:
             handle = win32.LoadLibraryExW(str(local), None, win32.LOAD_WITH_ALTERED_SEARCH_PATH)
+            if handle:
+                redirects.patch_module(self.shims.runtime, handle, local)   # DLL du jeu : registre simulé
         else:
             handle = win32.LoadLibraryExW(dll, None, 0)
         if not handle:

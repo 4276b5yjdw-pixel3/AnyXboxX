@@ -76,6 +76,11 @@ class Runtime:
     def owns(self, module):
         return module in self.handles.values()
 
+    def export(self, function):
+        """Adresse d'un export propre à AnyXboxX dans xgameruntime.dll (0 si absent)."""
+        return win32.GetProcAddress(self.handles["xgameruntime.dll"],
+                                    ctypes.c_char_p(function.encode())) or 0
+
     def address(self, dll, function):
         """Adresse de `function` dans la DLL du runtime qui sert `dll` (0 si absente)."""
         handle = self.handle_for(dll)
