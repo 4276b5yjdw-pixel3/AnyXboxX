@@ -1,0 +1,5 @@
+/PrototypeScarlett/runtime/
+/Scarlett - prototype.exe
+/.venv/
+__pycache__/
+*.pyc
