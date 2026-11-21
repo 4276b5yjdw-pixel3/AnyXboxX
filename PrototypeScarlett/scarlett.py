@@ -219,7 +219,17 @@ def main(argv):
         print(bench.table(bench.run(Path(argv[1]), extra_dirs)))
         return 0
     if len(argv) >= 2 and argv[0] == "--lancer":
-        return launch.run(Path(argv[1]), extra_dirs)
+        # --lancer <cible> [dossiers de DLL…] [--md rapport.md]
+        options = list(argv[2:])
+        markdown = None
+        if "--md" in options:
+            at = options.index("--md")
+            if at + 1 >= len(options):
+                print("Erreur : --md attend un nom de fichier.", file=sys.stderr)
+                return 1
+            markdown = Path(options[at + 1])
+            del options[at:at + 2]
+        return launch.run(Path(argv[1]), tuple(Path(d) for d in options), markdown=markdown)
     if len(argv) >= 2 and argv[0] == "--traduction":
         return print_translation(Path(argv[1]), Path(argv[2]) if len(argv) > 2 else None)
     if len(argv) >= 3 and argv[0] == "--carte":
