@@ -73,14 +73,21 @@ def memcmp(c):
 
 
 def _length(c, address, unit):
-    """Compte les unités jusqu'au zéro final, sans décoder, par blocs de 4 Kio."""
-    count, terminator = 0, bytes(unit)
-    while count * unit < MAX_COPY:
-        chunk = c.read(address + count * unit, STRING_CHUNK)
-        for i in range(0, STRING_CHUNK, unit):
+    """Compte les unités jusqu'au zéro final, sans décoder.
+
+    Lit page par page : une chaîne proche de la fin d'une zone mappée ne doit
+    pas faire lire la page suivante, qui peut ne pas exister.
+    """
+    offset, terminator = 0, bytes(unit)
+    while offset < MAX_COPY:
+        cursor = address + offset
+        size = STRING_CHUNK - cursor % STRING_CHUNK
+        size -= size % unit or 0
+        chunk = c.read(cursor, max(size, unit))
+        for i in range(0, len(chunk) - unit + 1, unit):
             if chunk[i:i + unit] == terminator:
-                return count + i // unit
-        count += STRING_CHUNK // unit
+                return (offset + i) // unit
+        offset += len(chunk) - len(chunk) % unit
     raise ValueError("Chaîne sans zéro final.")
 
 

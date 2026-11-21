@@ -20,7 +20,8 @@ Cas de test utilisés :
 | Première version (un seul import GDK accepté) | 0/16 | 0/16 | 1 fonction | — |
 | Couche HLE, première passe | 16/16 | 4/16 | non mesuré | — |
 | Ajout de `_initialize_onexit_table`, `IsProcessorFeaturePresent`, locale, maths | 16/16 | 16/16 | 523/1337 (39 %) | 7 |
-| Plusieurs modules liés : chaque DLL charge ses dépendances du paquet | 16/16 | **16/16** | **782/1337 (58 %)** | **0** |
+| Plusieurs modules liés : chaque DLL charge ses dépendances du paquet | 16/16 | 16/16 | 782/1337 (58 %) | 0 |
+| Démarrage d'un `.exe`, texte du CRT, événements, interface GDK PC | 16/16 | **16/16** | **871/1337 (65 %)** | **0** |
 
 Un import est **résolu** quand il pointe vers une fonction émulée en Python ou vers l'export d'une autre DLL du paquet. Depuis le chargement multi-modules, `msvcp140.dll` tourne avec le vrai `vcruntime140.dll` du paquet, et `concrt140.dll` avec le vrai `msvcp140.dll`.
 
@@ -53,10 +54,4 @@ Une fonction absente renvoie `E_NOTIMPL` (`0x80004001`). C'est correct pour une 
 
 ## Jeu libre pour les tests
 
-Recherche faite le 21 novembre 2026 :
-
-- Aucun jeu libre n'est publié sous forme de binaire Xbox Series X|S. Compiler pour `Gaming.Xbox.Scarlett.x64` exige le GDKX, réservé aux studios sous accord de confidentialité.
-- **Candidat retenu** : un échantillon de [microsoft/Xbox-GDK-Samples](https://github.com/microsoft/Xbox-GDK-Samples) (licence MIT), par exemple `SystemInfo` ou `Gamepad`, compilé en `Gaming.Desktop.x64` avec le [GDK public](https://github.com/microsoft/GDK). Il importe `xgameruntime.dll` et utilise `MicrosoftGame.Config`, comme un titre Series X.
-- **Alternative** : les programmes de test de [SDL](https://github.com/libsdl-org/SDL) (licence zlib), qui ont une cible GDK documentée dans [README-gdk.md](https://github.com/libsdl-org/SDL/blob/main/docs/README-gdk.md).
-
-Prochaine étape (~1 h) : installer Visual Studio 2022 avec la charge C++ et le GDK public, compiler `SystemInfo` en x64, puis l'ajouter au banc.
+Le jeu de test retenu est **SimpleTriangle** (`microsoft/Xbox-GDK-Samples`, licence MIT), compilé pour PC et comparé à son exécution native : voir [jeu-de-test.md](jeu-de-test.md). Aucun jeu libre n'existe en binaire Series X : la cible `Gaming.Xbox.Scarlett.x64` exige le GDKX, réservé aux studios sous accord de confidentialité.

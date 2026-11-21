@@ -21,11 +21,12 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 | Mehrere verknüpfte Module in derselben Maschine: DLLs des Pakets, Ordinale, Weiterleitungen, Relokation bei Konflikten | ✅ erledigt |
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ erledigt |
 | 16/16 DLLs eines Scarlett-Pakets samt Abhängigkeiten initialisiert, 0 nicht emulierte Aufrufe | ✅ erledigt |
-| 61 automatisierte Tests, 83 % Abdeckung | ✅ erledigt |
+| Freies Testspiel `SimpleTriangle` kompiliert: C-Start und GDK-Initialisierung laufen in AnyXboxX | ✅ erledigt |
+| 74 automatisierte Tests, 83 % Abdeckung | ✅ erledigt |
+| Win32-Fenster (`USER32`) und DirectX 12 (`d3d12`, `dxgi`) zur Anzeige des Dreiecks | ⏳ offen |
 | Native Ausführung des Codes (Wine-Ansatz) statt Unicorn | ⏳ offen |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
 | Dynamisches Laden einer DLL zur Laufzeit (`LoadLibrary` + `DllMain`) | ⏳ offen |
-| Freies Beispiel `Xbox-GDK-Samples` kompiliert und zum Prüfstand hinzugefügt | ⏳ offen |
 | D3D12.X-Grafik nach Direct3D 12 / Vulkan | ⏳ offen |
 | Audio, Controller, `XGameSave`-Spielstände | ⏳ offen |
 
@@ -66,7 +67,7 @@ Der Prüfstand lädt alle PE-Module eines Ordners und führt deren Initialisieru
 
 ![Prüfstand für die DLLs eines Scarlett-Pakets](../images/banc-dll.svg)
 
-Detaillierte Ergebnisse und die Wahl eines freien Spiels für die Tests: [docs/avancee.md](../avancee.md) (auf Französisch).
+Detaillierte Ergebnisse: [docs/avancee.md](../avancee.md) (auf Französisch). Freies Testspiel im Vergleich zu seiner nativen Ausführung: [docs/jeu-de-test.md](../jeu-de-test.md) (auf Französisch). Ein zusätzlicher DLL-Ordner (zum Beispiel die Visual-C++-DLLs) kann auf das Ziel folgen: `--rapport <cible> <dossier>`.
 
 Der Bericht listet die importierten Funktionen, den bereits emulierten Anteil in Prozent und die fehlenden Funktionen auf. In der Oberfläche liest die Schaltfläche **Ouvrir un dossier Xbox…** (Xbox-Ordner öffnen) die Datei `MicrosoftGame.Config`, zeigt diesen Bericht an und startet dann das Programm; jeder nicht emulierte Aufruf erscheint im Protokoll.
 

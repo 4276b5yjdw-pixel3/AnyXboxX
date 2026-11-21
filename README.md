@@ -21,11 +21,12 @@ AnyXboxX charge des exécutables Xbox GDK (format PE32+ x86-64) et exécute leur
 | Plusieurs modules liés dans une même machine : DLL du paquet, ordinaux, redirections, relocation en cas de conflit | ✅ fait |
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ fait |
 | 16/16 DLL d'un paquet Scarlett initialisées avec leurs dépendances, 0 appel non émulé | ✅ fait |
-| 61 tests automatisés, 83 % de couverture | ✅ fait |
+| Jeu de test libre `SimpleTriangle` compilé : démarrage C et initialisation GDK passent dans AnyXboxX | ✅ fait |
+| 74 tests automatisés, 83 % de couverture | ✅ fait |
+| Fenêtre Win32 (`USER32`) et DirectX 12 (`d3d12`, `dxgi`) pour afficher le triangle | ⏳ à faire |
 | Exécution native du code (approche Wine) au lieu d'Unicorn | ⏳ à faire |
 | Exceptions SEH x64 (`.pdata`), threads multiples | ⏳ à faire |
 | Chargement dynamique d'une DLL pendant l'exécution (`LoadLibrary` + `DllMain`) | ⏳ à faire |
-| Échantillon libre `Xbox-GDK-Samples` compilé et ajouté au banc | ⏳ à faire |
 | Graphismes D3D12.X vers Direct3D 12 / Vulkan | ⏳ à faire |
 | Audio, manette, sauvegardes `XGameSave` | ⏳ à faire |
 
@@ -66,7 +67,7 @@ Le banc d'essai charge tous les modules PE d'un dossier et lance leur initialisa
 
 ![Banc d'essai sur les DLL d'un paquet Scarlett](docs/images/banc-dll.svg)
 
-Résultats détaillés et choix d'un jeu libre pour les tests : [docs/avancee.md](docs/avancee.md).
+Résultats détaillés : [docs/avancee.md](docs/avancee.md). Jeu de test libre comparé à son exécution native : [docs/jeu-de-test.md](docs/jeu-de-test.md). Un dossier de DLL supplémentaire (par exemple les DLL Visual C++) peut suivre la cible : `--rapport <cible> <dossier>`.
 
 Le rapport liste les fonctions importées, le pourcentage déjà émulé et les fonctions manquantes. Dans l'interface, le bouton **Ouvrir un dossier Xbox…** lit `MicrosoftGame.Config`, affiche ce rapport puis lance le programme ; chaque appel non émulé apparaît dans le journal.
 

@@ -21,11 +21,12 @@ AnyXboxX loads Xbox GDK executables (PE32+ x86-64 format) and runs their code wi
 | Several linked modules in a single machine: package DLLs, ordinals, forwarders, relocation on conflict | ✅ done |
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ done |
 | 16/16 DLLs of a Scarlett package initialized with their dependencies, 0 non-emulated calls | ✅ done |
-| 61 automated tests, 83% coverage | ✅ done |
+| Free `SimpleTriangle` test game compiled: C startup and GDK initialization run in AnyXboxX | ✅ done |
+| 74 automated tests, 83% coverage | ✅ done |
+| Win32 window (`USER32`) and DirectX 12 (`d3d12`, `dxgi`) to display the triangle | ⏳ to do |
 | Native code execution (Wine approach) instead of Unicorn | ⏳ to do |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
 | Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
-| Free `Xbox-GDK-Samples` sample compiled and added to the bench | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |
 | Audio, controller, `XGameSave` saves | ⏳ to do |
 
@@ -66,7 +67,7 @@ The test bench loads every PE module in a folder and runs their initialization:
 
 ![Test bench on the DLLs of a Scarlett package](../images/banc-dll.svg)
 
-Detailed results and the choice of a free game for testing: [docs/avancee.md](../avancee.md) (in French).
+Detailed results: [docs/avancee.md](../avancee.md) (in French). Free test game compared with its native execution: [docs/jeu-de-test.md](../jeu-de-test.md) (in French). An additional DLL folder (for example the Visual C++ DLLs) can follow the target: `--rapport <cible> <dossier>`.
 
 The report lists the imported functions, the percentage already emulated and the missing functions. In the interface, the **Ouvrir un dossier Xbox…** (Open an Xbox folder) button reads `MicrosoftGame.Config`, displays this report, then launches the program; every non-emulated call appears in the log.
 

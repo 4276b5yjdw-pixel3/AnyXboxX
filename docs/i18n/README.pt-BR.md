@@ -21,11 +21,12 @@ O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o cód
 | Vários módulos vinculados em uma mesma máquina: DLLs do pacote, ordinais, redirecionamentos, realocação em caso de conflito | ✅ feito |
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ feito |
 | 16/16 DLLs de um pacote Scarlett inicializadas com suas dependências, 0 chamadas não emuladas | ✅ feito |
-| 61 testes automatizados, 83 % de cobertura | ✅ feito |
+| Jogo de teste livre `SimpleTriangle` compilado: a inicialização em C e a inicialização do GDK funcionam no AnyXboxX | ✅ feito |
+| 74 testes automatizados, 83 % de cobertura | ✅ feito |
+| Janela Win32 (`USER32`) e DirectX 12 (`d3d12`, `dxgi`) para exibir o triângulo | ⏳ a fazer |
 | Execução nativa do código (abordagem Wine) em vez do Unicorn | ⏳ a fazer |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |
 | Carregamento dinâmico de uma DLL durante a execução (`LoadLibrary` + `DllMain`) | ⏳ a fazer |
-| Amostra livre `Xbox-GDK-Samples` compilada e adicionada à bancada | ⏳ a fazer |
 | Gráficos D3D12.X para Direct3D 12 / Vulkan | ⏳ a fazer |
 | Áudio, controle, saves `XGameSave` | ⏳ a fazer |
 
@@ -66,7 +67,7 @@ A bancada de testes carrega todos os módulos PE de uma pasta e executa a inicia
 
 ![Bancada de testes nas DLLs de um pacote Scarlett](../images/banc-dll.svg)
 
-Resultados detalhados e escolha de um jogo livre para os testes: [docs/avancee.md](../avancee.md) (em francês).
+Resultados detalhados: [docs/avancee.md](../avancee.md) (em francês). Jogo de teste livre comparado com a execução nativa dele: [docs/jeu-de-test.md](../jeu-de-test.md) (em francês). Uma pasta de DLLs adicional (por exemplo, as DLLs do Visual C++) pode acompanhar o alvo: `--rapport <cible> <dossier>`.
 
 O relatório lista as funções importadas, a porcentagem já emulada e as funções que faltam. Na interface, o botão **Ouvrir un dossier Xbox…** (Abrir uma pasta Xbox) lê `MicrosoftGame.Config`, exibe esse relatório e depois inicia o programa; cada chamada não emulada aparece no log.
 

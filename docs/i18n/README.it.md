@@ -21,11 +21,12 @@ AnyXboxX carica eseguibili Xbox GDK (formato PE32+ x86-64) ed esegue il loro cod
 | Più moduli collegati nella stessa macchina: DLL del pacchetto, ordinali, reindirizzamenti, rilocazione in caso di conflitto | ✅ fatto |
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ fatto |
 | 16/16 DLL di un pacchetto Scarlett inizializzate con le loro dipendenze, 0 chiamate non emulate | ✅ fatto |
-| 61 test automatizzati, 83 % di copertura | ✅ fatto |
+| Gioco di test libero `SimpleTriangle` compilato: l'avvio C e l'inizializzazione GDK funzionano in AnyXboxX | ✅ fatto |
+| 74 test automatizzati, 83 % di copertura | ✅ fatto |
+| Finestra Win32 (`USER32`) e DirectX 12 (`d3d12`, `dxgi`) per mostrare il triangolo | ⏳ da fare |
 | Esecuzione nativa del codice (approccio Wine) al posto di Unicorn | ⏳ da fare |
 | Eccezioni SEH x64 (`.pdata`), thread multipli | ⏳ da fare |
 | Caricamento dinamico di una DLL durante l'esecuzione (`LoadLibrary` + `DllMain`) | ⏳ da fare |
-| Esempio libero `Xbox-GDK-Samples` compilato e aggiunto al banco | ⏳ da fare |
 | Grafica D3D12.X verso Direct3D 12 / Vulkan | ⏳ da fare |
 | Audio, controller, salvataggi `XGameSave` | ⏳ da fare |
 
@@ -66,7 +67,7 @@ Il banco di prova carica tutti i moduli PE di una cartella e avvia la loro inizi
 
 ![Banco di prova sulle DLL di un pacchetto Scarlett](../images/banc-dll.svg)
 
-Risultati dettagliati e scelta di un gioco libero per i test: [docs/avancee.md](../avancee.md) (in francese).
+Risultati dettagliati: [docs/avancee.md](../avancee.md) (in francese). Gioco di test libero confrontato con la sua esecuzione nativa: [docs/jeu-de-test.md](../jeu-de-test.md) (in francese). Una cartella di DLL aggiuntiva (per esempio le DLL di Visual C++) può seguire il bersaglio: `--rapport <cible> <dossier>`.
 
 Il rapporto elenca le funzioni importate, la percentuale già emulata e le funzioni mancanti. Nell'interfaccia, il pulsante **Ouvrir un dossier Xbox…** (Apri una cartella Xbox) legge `MicrosoftGame.Config`, mostra questo rapporto e poi avvia il programma; ogni chiamata non emulata compare nel registro.
 

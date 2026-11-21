@@ -21,11 +21,12 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 | 在同一台机器中运行多个相互链接的模块：包中的 DLL、序号、转发、冲突时重定位 | ✅ 已完成 |
 | `GetModuleHandle`、`GetProcAddress`、`LoadLibrary`、`RtlPcToFileHeader` | ✅ 已完成 |
 | Scarlett 包中的 16/16 个 DLL 连同依赖项完成初始化，0 个未模拟的调用 | ✅ 已完成 |
-| 61 个自动化测试，83 % 覆盖率 | ✅ 已完成 |
+| 已编译免费测试游戏 `SimpleTriangle`：C 启动代码和 GDK 初始化可在 AnyXboxX 中通过 | ✅ 已完成 |
+| 74 个自动化测试，83 % 覆盖率 | ✅ 已完成 |
+| 用于显示三角形的 Win32 窗口（`USER32`）和 DirectX 12（`d3d12`、`dxgi`） | ⏳ 待完成 |
 | 原生执行代码（Wine 方式），取代 Unicorn | ⏳ 待完成 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
 | 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
-| 编译免费示例 `Xbox-GDK-Samples` 并加入测试台 | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |
 | 音频、手柄、`XGameSave` 存档 | ⏳ 待完成 |
 
@@ -66,7 +67,7 @@ py -3.12 -m venv .venv
 
 ![针对 Scarlett 包中 DLL 的测试台](../images/banc-dll.svg)
 
-详细结果以及用于测试的免费游戏的选择：[docs/avancee.md](../avancee.md)（法语）。
+详细结果：[docs/avancee.md](../avancee.md)（法语）。与原生运行结果对比的免费测试游戏：[docs/jeu-de-test.md](../jeu-de-test.md)（法语）。目标之后可以再跟一个额外的 DLL 文件夹（例如 Visual C++ 的 DLL）：`--rapport <cible> <dossier>`。
 
 报告会列出导入的函数、已模拟的百分比以及缺失的函数。在界面中，**Ouvrir un dossier Xbox…**（打开 Xbox 文件夹）按钮会读取 `MicrosoftGame.Config`，显示该报告，然后启动程序；每个未模拟的调用都会出现在日志中。
 

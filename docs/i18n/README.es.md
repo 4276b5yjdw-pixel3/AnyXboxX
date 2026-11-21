@@ -21,11 +21,12 @@ AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su códi
 | Varios módulos enlazados en una misma máquina: DLL del paquete, ordinales, redirecciones, reubicación en caso de conflicto | ✅ hecho |
 | `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ hecho |
 | 16/16 DLL de un paquete Scarlett inicializadas con sus dependencias, 0 llamadas no emuladas | ✅ hecho |
-| 61 pruebas automatizadas, 83 % de cobertura | ✅ hecho |
+| Juego de prueba libre `SimpleTriangle` compilado: el arranque en C y la inicialización de GDK funcionan en AnyXboxX | ✅ hecho |
+| 74 pruebas automatizadas, 83 % de cobertura | ✅ hecho |
+| Ventana Win32 (`USER32`) y DirectX 12 (`d3d12`, `dxgi`) para mostrar el triángulo | ⏳ pendiente |
 | Ejecución nativa del código (enfoque Wine) en lugar de Unicorn | ⏳ pendiente |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
 | Carga dinámica de una DLL durante la ejecución (`LoadLibrary` + `DllMain`) | ⏳ pendiente |
-| Muestra libre `Xbox-GDK-Samples` compilada y añadida al banco | ⏳ pendiente |
 | Gráficos D3D12.X hacia Direct3D 12 / Vulkan | ⏳ pendiente |
 | Audio, mando, partidas guardadas `XGameSave` | ⏳ pendiente |
 
@@ -66,7 +67,7 @@ El banco de pruebas carga todos los módulos PE de una carpeta y ejecuta su inic
 
 ![Banco de pruebas sobre las DLL de un paquete Scarlett](../images/banc-dll.svg)
 
-Resultados detallados y elección de un juego libre para las pruebas: [docs/avancee.md](../avancee.md) (en francés).
+Resultados detallados: [docs/avancee.md](../avancee.md) (en francés). Juego de prueba libre comparado con su ejecución nativa: [docs/jeu-de-test.md](../jeu-de-test.md) (en francés). Una carpeta de DLL adicional (por ejemplo, las DLL de Visual C++) puede seguir al objetivo: `--rapport <cible> <dossier>`.
 
 El informe enumera las funciones importadas, el porcentaje ya emulado y las funciones que faltan. En la interfaz, el botón **Ouvrir un dossier Xbox…** (Abrir una carpeta Xbox) lee `MicrosoftGame.Config`, muestra este informe y luego lanza el programa; cada llamada no emulada aparece en el diario.
 

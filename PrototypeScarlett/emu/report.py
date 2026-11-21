@@ -1,5 +1,6 @@
 """Rapport de compatibilité : quelles fonctions importées sont émulées."""
 from dataclasses import dataclass
+from pathlib import Path
 
 from . import hle
 from .loader import read_pe
@@ -44,10 +45,13 @@ def _package_files(folder):
     return {p.name.lower() for p in folder.iterdir() if p.is_file()} if folder.is_dir() else set()
 
 
-def analyse(path):
-    """Classe chaque import : émulé (HLE), fourni par une DLL du paquet, ou manquant."""
+def analyse(path, extra_dirs=()):
+    """Classe chaque import : émulé (HLE), fourni par une DLL du paquet, ou manquant.
+
+    `extra_dirs` : dossiers de DLL supplémentaires (ex. redistribuables Visual C++).
+    """
     image, _ = read_pe(path)
-    files = _package_files(path.parent)
+    files = set().union(*(_package_files(Path(d)) for d in (path.parent, *extra_dirs)))
     names = sorted({f"{i.dll}!{i.name}" for i in image.imports}, key=str.lower)
     emulated, provided, missing = [], [], []
     for name in names:

@@ -21,11 +21,12 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 | リンクされた複数のモジュールを同一のマシンで実行：パッケージの DLL、序数、フォワーダー、競合時のリロケーション | ✅ 完了 |
 | `GetModuleHandle`、`GetProcAddress`、`LoadLibrary`、`RtlPcToFileHeader` | ✅ 完了 |
 | Scarlett パッケージの 16/16 個の DLL を依存関係ごと初期化、未エミュレートの呼び出しは 0 件 | ✅ 完了 |
-| 61 件の自動テスト、カバレッジ 83 % | ✅ 完了 |
+| フリーのテストゲーム `SimpleTriangle` をコンパイル：C のスタートアップと GDK の初期化が AnyXboxX で通る | ✅ 完了 |
+| 74 件の自動テスト、カバレッジ 83 % | ✅ 完了 |
+| 三角形を表示するための Win32 ウィンドウ（`USER32`）と DirectX 12（`d3d12`、`dxgi`） | ⏳ 未着手 |
 | Unicorn の代わりにコードをネイティブ実行（Wine 方式） | ⏳ 未着手 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
 | 実行中の DLL の動的読み込み（`LoadLibrary` + `DllMain`） | ⏳ 未着手 |
-| フリーのサンプル `Xbox-GDK-Samples` をコンパイルしてベンチに追加 | ⏳ 未着手 |
 | D3D12.X から Direct3D 12 / Vulkan へのグラフィックス変換 | ⏳ 未着手 |
 | オーディオ、コントローラー、`XGameSave` セーブデータ | ⏳ 未着手 |
 
@@ -66,7 +67,7 @@ py -3.12 -m venv .venv
 
 ![Scarlett パッケージの DLL に対するテストベンチ](../images/banc-dll.svg)
 
-詳細な結果とテスト用のフリーゲームの選定：[docs/avancee.md](../avancee.md)（フランス語）。
+詳細な結果：[docs/avancee.md](../avancee.md)（フランス語）。ネイティブ実行と比較したフリーのテストゲーム：[docs/jeu-de-test.md](../jeu-de-test.md)（フランス語）。追加の DLL フォルダー（例：Visual C++ の DLL）をターゲットの後ろに指定できます：`--rapport <cible> <dossier>`。
 
 レポートには、インポートされた関数、すでにエミュレートされている割合、不足している関数が一覧表示されます。インターフェースでは、**Ouvrir un dossier Xbox…**（Xbox フォルダーを開く）ボタンが `MicrosoftGame.Config` を読み取り、このレポートを表示してからプログラムを起動します。エミュレートされていない呼び出しはすべてログに表示されます。
 
