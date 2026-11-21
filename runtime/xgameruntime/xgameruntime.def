@@ -1,0 +1,11 @@
+LIBRARY xgameruntime
+EXPORTS
+  InitializeApiImpl
+  InitializeApiImplEx
+  InitializeApiImplEx2
+  UninitializeApiImpl
+  QueryApiImpl
+  XErrorReport
+  XGameRuntimeInitialize
+  XGameRuntimeUninitialize
+  XSystemGetDeviceType

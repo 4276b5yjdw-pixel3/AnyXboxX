@@ -1,4 +1,5 @@
 """AnyXboxX — prototype d'émulateur Xbox Series X (interface et ligne de commande)."""
+import os
 from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
@@ -161,6 +162,26 @@ def run_native(target, extra_dirs=()):
         return 1
 
 
+def print_translation(package, svg_path=None):
+    """Mesure la traduction des DLL console, affiche le tableau et écrit le SVG si demandé."""
+    try:
+        from emu import bench, translation
+
+        runtime = os.environ.get("ANYXBOXX_RUNTIME") or HERE.parent / "runtime" / "build" / "bin"
+        overview = (translation.CPU_AREA, translation.GPU_AREA,
+                    translation.functions_area(bench.run(Path(package))))
+        areas = translation.measure(package, Path(runtime), extra=translation.STATIC_AREAS)
+        areas = (*overview, *areas)
+        print(translation.table(areas))
+        if svg_path is not None:
+            svg_path.write_text(translation.svg(areas, "AnyXboxX : avancée de la traduction Xbox Series X"),
+                                encoding="utf-8")
+        return 0
+    except (OSError, ValueError) as error:
+        print(f"Erreur : {error}", file=sys.stderr)
+        return 1
+
+
 def find_package_folder():
     start = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve().parent
     return next((c for c in (start, start.parent, start.parent.parent)
@@ -181,6 +202,8 @@ def main(argv):
         return 0
     if len(argv) >= 2 and argv[0] == "--lancer":
         return launch.run(Path(argv[1]), extra_dirs)
+    if len(argv) >= 2 and argv[0] == "--traduction":
+        return print_translation(Path(argv[1]), Path(argv[2]) if len(argv) > 2 else None)
     if len(argv) >= 2 and argv[0] == "--natif":
         return run_native(Path(argv[1]), extra_dirs)
     import tkinter as tk

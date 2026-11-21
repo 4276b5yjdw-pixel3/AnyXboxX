@@ -89,6 +89,18 @@ Deux corrections ont été nécessaires en mode natif :
 
 En mode isolé, `GetCommandLineW/A`, `CommandLineToArgvW` et `GetEnvironmentStringsW` sont maintenant émulées.
 
+### Avec le runtime C++
+
+Depuis le passage du runtime en C++ (`runtime/`), `xgameruntime.dll` est préchargée dans le processus : **toutes** les DLL du jeu passent par AnyXboxX, y compris `SDL3.dll`, que Windows charge lui-même. Les interfaces qu'AnyXboxX n'écrit pas encore sont déléguées au runtime GDK de Windows. Trace (`ANYXBOXX_TRACE=1`) pendant 10 secondes de jeu :
+
+| Interface demandée (`QueryApiImpl`) | Appels | Servie par |
+|---|---|---|
+| `{073B7DCB-1FCF-4030-94BE-E3C9EB623428}` (file de tâches `XTaskQueue`) | 36 057 | Windows |
+| `{01ACD177-91F9-4763-A38E-CCBB55CE32E0}` | 4 | Windows |
+| `{973A344E-24BF-4D0F-8457-56C534892B29}` / `{2549F142-6419-4A06-97B5-931AAB7C2F34}` | 1 | Windows |
+
+La file de tâches est demandée des milliers de fois par seconde : ce chemin doit rester en code natif. C'est la première interface à écrire dans AnyXboxX. Sans le runtime de Windows (`ANYXBOXX_SYSTEM_RUNTIME=0`), SDL s'arrête au démarrage avec « initialisation GDK impossible ».
+
 Compilation : `VisualC-GDK` de SDL3 vise encore `Gaming.Desktop.x64`, absente du GDK 2610. Il faut remplacer cette plateforme par `x64` dans les projets, ajouter `_GAMING_DESKTOP` et les dossiers `include`/`lib` du GDK (`windows\include`, `windows\lib\x64`), puis compiler `tests\testgdk\testgdk.vcxproj` en `Release|x64` avec `-p:PlatformToolset=v145` et `-p:SolutionDir=<…>\VisualC-GDK\`.
 
 ## Instructions processeur et shaders
