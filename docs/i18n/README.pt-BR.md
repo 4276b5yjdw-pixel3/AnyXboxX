@@ -60,7 +60,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Tabela das 396 funções do GDK: interface e número do método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ feito |
 | `XTaskQueue`, `XAsync`, `XThread` fornecidas pelo AnyXboxX: o testgdk roda sem o runtime do Windows | ✅ feito |
 | Outras interfaces do GDK: delegadas ao runtime GDK do Windows, nomeadas pelo rastreamento | 🟡 em andamento |
-| 208 testes automatizados | ✅ feito |
+| 214 testes automatizados | ✅ feito |
 | D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` do console | ⏳ a fazer |
 | `XUser` offline: perfil local sempre conectado, gamertag configurável (`ANYXBOXX_GAMERTAG`), login do testgdk bem-sucedido | ✅ feito |
 | Identidade do Xbox Series X: tipo de console (valor de registro `ConsoleMode` simulado, inclusive nas DLLs do jogo), `XSystem`, Title ID lido de `MicrosoftGame.config`, análise de uso «Xbox Series X» | ✅ feito |
@@ -75,7 +75,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Inicializador nativo em C++ sem Python (`runtime/build/bin/anyxboxx.exe <jogo.exe \| pasta> [--fps]`): SimpleTriangle e testgdk a ~12 000 qps | ✅ feito |
 | Desmontador de GPU RDNA 2: 1.444 mnemônicos e operandos na sintaxe do LLVM (escalares, VOP1/VOP2/VOPC/VOP3 com modificadores), verificado em 34.948 codificações públicas do LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 em andamento |
 | Outras interfaces do GDK escritas pelo AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ a fazer |
-| Recompilador de shaders RDNA 2 → DXIL: primeira etapa feita, um interpretador de referência wave32 que executa 519 de 1.444 codificações (escalares, VOP1/VOP2/VOPC/VOP3, memória: SMEM, LDS, GLOBAL, MUBUF com limites V#, atômicas, desvios, divergência por `exec`): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 em andamento |
+| Recompilador de shaders RDNA 2 → DXIL: primeiros programas traduzidos para HLSL, compilados para DXIL e executados na GPU do PC com D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP sem GPU), memória idêntica a um interpretador de referência wave32 que executa 519 de 1.444 codificações (escalares, VOP1/VOP2/VOPC/VOP3, memória: SMEM, LDS, GLOBAL, MUBUF com limites V#, atômicas, desvios, divergência por `exec`): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 em andamento |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |
 | Carregamento dinâmico de uma DLL durante a execução (`LoadLibrary` + `DllMain`) | ⏳ a fazer |
 | Gráficos D3D12.X para Direct3D 12 / Vulkan | ⏳ a fazer |
