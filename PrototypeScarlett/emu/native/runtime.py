@@ -14,6 +14,7 @@ from . import win32
 
 RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "anyxboxx_tls.dll")
 GAME_RUNTIME = "xgameruntime"
+D3D12_OVERRIDE = "ANYXBOXX_D3D12_XS"
 REPOSITORY = Path(__file__).resolve().parents[3]
 DEFAULT_DIR = REPOSITORY / "runtime" / "build" / "bin"
 BUILD_HINT = ("cmake -S runtime -B runtime/build -A x64 && "
@@ -46,13 +47,19 @@ def _runtime_name(dll):
     return name if name in RUNTIME_DLLS else None
 
 
+def _dll_path(folder, name):
+    """Chemin d'une DLL du runtime ; ANYXBOXX_D3D12_XS remplace d3d12_xs.dll (celle de TomBox par exemple)."""
+    alternative = os.environ.get(D3D12_OVERRIDE) if name == "d3d12_xs.dll" else None
+    return Path(alternative).resolve() if alternative else folder / name
+
+
 class Runtime:
     def __init__(self, folder=None):
         folder = Path(folder).resolve() if folder else runtime_dir()
         handles = {}
         try:
             for name in RUNTIME_DLLS:
-                handles[name] = self._load(folder / name)
+                handles[name] = self._load(_dll_path(folder, name))
         except ValueError:
             for handle in handles.values():   # échec partiel : rien ne reste chargé
                 win32.FreeLibrary(handle)

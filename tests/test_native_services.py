@@ -57,3 +57,13 @@ def test_game_input_is_created_through_windows(tmp_path, runtime_dir):
         assert ctypes.c_uint64.from_address(image.base + 0x1000 + OUT_SLOT).value != 0
     finally:
         image.close()
+
+
+def test_d3d12_override_points_to_another_dll(tmp_path, monkeypatch):
+    from emu.native import runtime
+
+    monkeypatch.delenv(runtime.D3D12_OVERRIDE, raising=False)
+    assert runtime._dll_path(tmp_path, "d3d12_xs.dll") == tmp_path / "d3d12_xs.dll"
+    monkeypatch.setenv(runtime.D3D12_OVERRIDE, str(tmp_path / "tombox" / "d3d12_xs.dll"))
+    assert runtime._dll_path(tmp_path, "d3d12_xs.dll") == (tmp_path / "tombox" / "d3d12_xs.dll").resolve()
+    assert runtime._dll_path(tmp_path, "xmem.dll") == tmp_path / "xmem.dll"
