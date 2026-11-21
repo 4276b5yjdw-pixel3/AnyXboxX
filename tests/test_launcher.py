@@ -1,6 +1,8 @@
 """anyxboxx.exe : le lanceur natif en C++, sans Python dans le processus du jeu."""
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -57,3 +59,17 @@ def test_package_without_its_executable_says_so(tmp_path, runtime_dir):
     result = subprocess.run([str(runtime_dir / "anyxboxx.exe"), str(tmp_path)], capture_output=True, timeout=30)
     stderr = result.stderr.decode("utf-8", errors="replace") + result.stderr.decode("mbcs", errors="replace")
     assert result.returncode == 1 and "game_scarlett_master.exe" in stderr
+
+
+TOMBOX_D3D12 = Path(__file__).resolve().parents[1] / "third_party" / "tombox" / "target" / "release" / "d3d12_xs.dll"
+
+
+@pytest.mark.skipif(not TOMBOX_D3D12.is_file(), reason="d3d12_xs de TomBox non compilée (tools/build_tombox.py d3d12_xs)")
+def test_tombox_d3d12_serves_console_device_creation(tmp_path, runtime_dir):
+    exe = build_pe(tmp_path / "d3d.exe", lambda iat: Asm().mov_eax(7).ret().build(),
+                   imports=[("d3d12_xs.dll", "D3D12XboxCreateDevice"), ("d3d12_xs.dll", "DXGIXPresentArray")], dll=False)
+    assert launch(runtime_dir, exe).returncode == 1                  # absent de notre d3d12_xs
+    environment = {**os.environ, "ANYXBOXX_D3D12_XS": str(TOMBOX_D3D12)}
+    result = subprocess.run([str(runtime_dir / "anyxboxx.exe"), str(exe)], capture_output=True, text=True,
+                            timeout=60, env=environment)
+    assert result.returncode == 7, result.stderr
