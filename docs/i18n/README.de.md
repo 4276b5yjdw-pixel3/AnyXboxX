@@ -14,16 +14,18 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 | PE32+-Laden: Sektionen und Schutzattribute, Relokationen, Importe, Exporte | ✅ erledigt |
 | TLS: Kopie der Vorlage, Index, Callbacks | ✅ erledigt |
 | TEB und PEB über das GS-Register erreichbar | ✅ erledigt |
-| HLE-Seite: 135 emulierte Funktionsnamen aus GDK, Kernel, CRT und Mathematik | ✅ erledigt |
+| HLE-Seite: 158 emulierte Funktionsnamen aus GDK, Kernel, CRT und Mathematik | ✅ erledigt |
 | Unbekannte Funktionen: `E_NOTIMPL` und Protokolleintrag statt Ablehnung | ✅ erledigt |
 | Globale C++-Konstruktoren (`_initterm`) als Gast-Code | ✅ erledigt |
 | Kompatibilitätsbericht (`--rapport`) und Prüfstand (`--banc`) | ✅ erledigt |
-| 16/16 DLLs eines handelsüblichen Scarlett-Pakets initialisiert (`DllMain` → `TRUE`) | ✅ erledigt |
-| 49 automatisierte Tests, 82 % Abdeckung | ✅ erledigt |
-| Laden mehrerer verknüpfter Module in derselben Maschine | ⏳ offen |
-| Freies Beispiel `Xbox-GDK-Samples` kompiliert und zum Prüfstand hinzugefügt | ⏳ offen |
+| Mehrere verknüpfte Module in derselben Maschine: DLLs des Pakets, Ordinale, Weiterleitungen, Relokation bei Konflikten | ✅ erledigt |
+| `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ erledigt |
+| 16/16 DLLs eines Scarlett-Pakets samt Abhängigkeiten initialisiert, 0 nicht emulierte Aufrufe | ✅ erledigt |
+| 61 automatisierte Tests, 83 % Abdeckung | ✅ erledigt |
+| Native Ausführung des Codes (Wine-Ansatz) statt Unicorn | ⏳ offen |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
-| Laden der zusätzlichen DLLs des Pakets | ⏳ offen |
+| Dynamisches Laden einer DLL zur Laufzeit (`LoadLibrary` + `DllMain`) | ⏳ offen |
+| Freies Beispiel `Xbox-GDK-Samples` kompiliert und zum Prüfstand hinzugefügt | ⏳ offen |
 | D3D12.X-Grafik nach Direct3D 12 / Vulkan | ⏳ offen |
 | Audio, Controller, `XGameSave`-Spielstände | ⏳ offen |
 
@@ -79,6 +81,7 @@ Der Bericht listet die importierten Funktionen, den bereits emulierten Anteil in
 | `emu/machine.py` | Unicorn-Prozessor, Stack, Heap, TEB/PEB, Verteilung der Aufrufe |
 | `emu/hle/` | emulierte Funktionen: `gdk.py`, `kernel.py`, `crt.py`, `libm.py`, `guest.py` |
 | `emu/report.py` | Kompatibilitätsbericht |
+| `emu/modules.py` | lädt die DLLs des Pakets, bindet die Importe und ordnet die Initialisierungen |
 | `emu/bench.py` | Prüfstand für einen Ordner mit Modulen |
 | `scarlett.py` | Tkinter-Oberfläche und Kommandozeile |
 

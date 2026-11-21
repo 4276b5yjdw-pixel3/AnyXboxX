@@ -7,7 +7,6 @@ import pefile
 from .machine import Machine
 from .report import analyse
 
-DLL_PROCESS_ATTACH = 1
 PATTERNS = ("*.dll", "*.exe")
 ERRORS = (ValueError, OSError, UcError, pefile.PEFormatError)
 
@@ -22,15 +21,12 @@ class BenchRow:
     detail: str
 
 
-def _initialise(machine):
-    """Lance les callbacks TLS puis DllMain(base, DLL_PROCESS_ATTACH, 0)."""
-    base = machine.image.base
-    for callback in machine.image.tls.callbacks if machine.image.tls else ():
-        machine.call(callback, base, DLL_PROCESS_ATTACH, 0)
-    return machine.call(machine.image.entry, base, DLL_PROCESS_ATTACH, 0) & 0xFFFF_FFFF
-
-
 def run_one(path):
+    """Charge `path` avec ses DLL du même dossier, initialise le tout, puis le module.
+
+    Une DLL réussit si son DllMain renvoie TRUE ; un exécutable, s'il se termine
+    sans erreur.
+    """
     try:
         report = analyse(path)
     except ERRORS as error:
@@ -40,11 +36,14 @@ def run_one(path):
     except ERRORS as error:
         return BenchRow(path.name, report.total, report.coverage, False, False, str(error))
     try:
-        code = _initialise(machine)
+        code = machine.start() & 0xFFFF_FFFF
         detail = f"retour {code:#x}"
-        ok = code == 1
+        ok = code == 1 if machine.image.is_dll else True
     except ERRORS as error:
         detail, ok = str(error), False
+    linked = len(machine.modules.modules) - 1
+    if linked:
+        detail += f" · {linked} DLL liée(s)"
     missing = len(machine.missing_calls)
     if missing:
         detail += f" · {missing} appel(s) non émulé(s)"
@@ -58,7 +57,7 @@ def run(folder):
 
 
 def table(rows):
-    lines = ["| Module | Imports | Émulés | Chargé | Init. | Détail |",
+    lines = ["| Module | Imports | Résolus | Chargé | Init. | Détail |",
              "|---|---|---|---|---|---|"]
     for r in rows:
         lines.append(f"| {r.name} | {r.imports} | {r.coverage:.0f} % | "
@@ -68,6 +67,6 @@ def table(rows):
     emulated = sum(round(r.imports * r.coverage / 100) for r in rows)
     ok = sum(r.initialised for r in rows)
     share = 100 * emulated / total if total else 0
-    lines.append(f"\nInitialisation réussie : {ok}/{len(rows)} · imports émulés : "
+    lines.append(f"\nInitialisation réussie : {ok}/{len(rows)} · imports résolus : "
                  f"{emulated}/{total} ({share:.0f} %)")
     return "\n".join(lines)

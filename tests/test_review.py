@@ -6,8 +6,9 @@ import pytest
 
 from emu import hle
 from emu.config import read_package
-from emu.loader import DEFAULT_BASE, read_pe
+from emu.loader import read_pe
 from emu.machine import Machine
+from emu.modules import MODULE_AREA
 from scarlett import DEMO
 
 
@@ -28,9 +29,10 @@ def rebased_demo(tmp_path, with_relocations=True):
 
 def test_rebased_image_runs(tmp_path):
     machine = Machine(rebased_demo(tmp_path))
-    assert machine.image.base == DEFAULT_BASE and machine.image.relocated
+    base = machine.image.base
+    assert base == MODULE_AREA and machine.image.relocated
     slot = machine.image.imports[0].slot
-    assert DEFAULT_BASE <= slot < DEFAULT_BASE + machine.image.size
+    assert base <= slot < base + machine.image.size
     assert machine.start() == 7
 
 

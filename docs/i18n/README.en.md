@@ -14,16 +14,18 @@ AnyXboxX loads Xbox GDK executables (PE32+ x86-64 format) and runs their code wi
 | PE32+ loading: sections and protections, relocations, imports, exports | ✅ done |
 | TLS: template copy, index, callbacks | ✅ done |
 | TEB and PEB reachable through the GS register | ✅ done |
-| HLE page: 135 emulated GDK, kernel, CRT and math function names | ✅ done |
+| HLE page: 158 emulated GDK, kernel, CRT and math function names | ✅ done |
 | Unknown functions: `E_NOTIMPL` and a log entry instead of a refusal | ✅ done |
 | Global C++ constructors (`_initterm`) run as guest code | ✅ done |
 | Compatibility report (`--rapport`) and test bench (`--banc`) | ✅ done |
-| 16/16 DLLs of a retail Scarlett package initialized (`DllMain` → `TRUE`) | ✅ done |
-| 49 automated tests, 82% coverage | ✅ done |
-| Loading several linked modules into a single machine | ⏳ to do |
-| Free `Xbox-GDK-Samples` sample compiled and added to the bench | ⏳ to do |
+| Several linked modules in a single machine: package DLLs, ordinals, forwarders, relocation on conflict | ✅ done |
+| `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ done |
+| 16/16 DLLs of a Scarlett package initialized with their dependencies, 0 non-emulated calls | ✅ done |
+| 61 automated tests, 83% coverage | ✅ done |
+| Native code execution (Wine approach) instead of Unicorn | ⏳ to do |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
-| Loading the package's companion DLLs | ⏳ to do |
+| Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
+| Free `Xbox-GDK-Samples` sample compiled and added to the bench | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |
 | Audio, controller, `XGameSave` saves | ⏳ to do |
 
@@ -79,6 +81,7 @@ The report lists the imported functions, the percentage already emulated and the
 | `emu/machine.py` | Unicorn processor, stack, heap, TEB/PEB, call dispatch |
 | `emu/hle/` | emulated functions: `gdk.py`, `kernel.py`, `crt.py`, `libm.py`, `guest.py` |
 | `emu/report.py` | compatibility report |
+| `emu/modules.py` | loads the package DLLs, links the imports, orders the initializations |
 | `emu/bench.py` | test bench on a folder of modules |
 | `scarlett.py` | Tkinter interface and command line |
 

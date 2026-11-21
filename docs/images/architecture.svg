@@ -22,16 +22,16 @@
     <text x="270" y="90" font-weight="600">emu/config.py</text>
     <text x="270" y="112">TitleId, Identity,</text>
     <text x="270" y="130">exécutable « Scarlett »</text>
-    <text x="500" y="90" font-weight="600">emu/loader.py</text>
-    <text x="500" y="112">sections + protections, relocations,</text>
-    <text x="500" y="130">imports (IAT), exports, répertoire TLS</text>
+    <text x="500" y="90" font-weight="600">emu/loader.py · emu/modules.py</text>
+    <text x="500" y="112">sections, relocations, TLS, exports et ordinaux ;</text>
+    <text x="500" y="130">DLL du paquet chargées et liées entre elles</text>
     <text x="270" y="222" font-weight="600">emu/machine.py</text>
     <text x="270" y="244">Unicorn x86-64 (Zen 2)</text>
     <text x="270" y="262">pile, tas, TEB/PEB (GS)</text>
     <text x="270" y="280">budget d’instructions</text>
     <text x="500" y="222" font-weight="600">emu/hle — page HLE</text>
     <text x="500" y="244">gdk.py : xgameruntime (XSystem*, XMem*, XTaskQueue*)</text>
-    <text x="500" y="262">kernel.py : temps, tas, TLS, verrous</text>
+    <text x="500" y="262">kernel.py, library.py : temps, tas, TLS, modules</text>
     <text x="500" y="280">crt.py + guest.py : malloc, memcpy, _initterm</text>
     <text x="40" y="222" font-weight="600">scarlett.py</text>
     <text x="40" y="244">interface Tkinter</text>
@@ -50,5 +50,5 @@
   <rect x="24" y="344" width="830" height="92" rx="8" fill="#fff4f0" stroke="#d98a73" stroke-dasharray="5 4"/>
   <text x="40" y="370" font-weight="600" fill="#8a3b24">Pas encore émulé</text>
   <text x="40" y="394" fill="#5a2a1c">GPU RDNA 2 / D3D12.X (d3d12_xs.dll) · audio · réseau Xbox Live · sauvegardes XGameSave · threads multiples</text>
-  <text x="40" y="414" fill="#5a2a1c">exceptions SEH x64 (.pdata) · DLL annexes · conteneurs XVD/XVC chiffrés (clés CIK/ODK non publiques)</text>
+  <text x="40" y="414" fill="#5a2a1c">exceptions SEH x64 (.pdata) · LoadLibrary dynamique · conteneurs XVD/XVC chiffrés (clés CIK/ODK non publiques)</text>
 </svg>

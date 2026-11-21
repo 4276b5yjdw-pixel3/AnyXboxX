@@ -14,16 +14,18 @@ O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o cód
 | Carregamento PE32+: seções e proteções, realocações, importações, exportações | ✅ feito |
 | TLS: cópia do modelo, índice, callbacks | ✅ feito |
 | TEB e PEB acessíveis pelo registrador GS | ✅ feito |
-| Página HLE: 135 nomes de funções GDK, kernel, CRT e matemáticas emulados | ✅ feito |
+| Página HLE: 158 nomes de funções GDK, kernel, CRT e matemáticas emulados | ✅ feito |
 | Funções desconhecidas: `E_NOTIMPL` e registro no log em vez de uma recusa | ✅ feito |
 | Construtores globais de C++ (`_initterm`) executados como código convidado | ✅ feito |
 | Relatório de compatibilidade (`--rapport`) e bancada de testes (`--banc`) | ✅ feito |
-| 16/16 DLLs de um pacote Scarlett comercial inicializadas (`DllMain` → `TRUE`) | ✅ feito |
-| 49 testes automatizados, 82 % de cobertura | ✅ feito |
-| Carregamento de vários módulos vinculados em uma mesma máquina | ⏳ a fazer |
-| Amostra livre `Xbox-GDK-Samples` compilada e adicionada à bancada | ⏳ a fazer |
+| Vários módulos vinculados em uma mesma máquina: DLLs do pacote, ordinais, redirecionamentos, realocação em caso de conflito | ✅ feito |
+| `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ feito |
+| 16/16 DLLs de um pacote Scarlett inicializadas com suas dependências, 0 chamadas não emuladas | ✅ feito |
+| 61 testes automatizados, 83 % de cobertura | ✅ feito |
+| Execução nativa do código (abordagem Wine) em vez do Unicorn | ⏳ a fazer |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |
-| Carregamento das DLLs auxiliares do pacote | ⏳ a fazer |
+| Carregamento dinâmico de uma DLL durante a execução (`LoadLibrary` + `DllMain`) | ⏳ a fazer |
+| Amostra livre `Xbox-GDK-Samples` compilada e adicionada à bancada | ⏳ a fazer |
 | Gráficos D3D12.X para Direct3D 12 / Vulkan | ⏳ a fazer |
 | Áudio, controle, saves `XGameSave` | ⏳ a fazer |
 
@@ -79,6 +81,7 @@ O relatório lista as funções importadas, a porcentagem já emulada e as funç
 | `emu/machine.py` | processador Unicorn, pilha, heap, TEB/PEB, despacho das chamadas |
 | `emu/hle/` | funções emuladas: `gdk.py`, `kernel.py`, `crt.py`, `libm.py`, `guest.py` |
 | `emu/report.py` | relatório de compatibilidade |
+| `emu/modules.py` | carrega as DLLs do pacote, vincula as importações, ordena as inicializações |
 | `emu/bench.py` | bancada de testes sobre uma pasta de módulos |
 | `scarlett.py` | interface Tkinter e linha de comando |
 

@@ -7,7 +7,7 @@ RX = UC_PROT_READ | UC_PROT_EXEC
 
 # Zones réservées à l'émulateur, loin des bases d'image habituelles (0x140000000).
 THUNKS = 0x7000_0000_0000      # une entrée de 16 octets par fonction HLE
-THUNK_PAGES = 16
+THUNK_PAGES = 64
 SYSTEM = 0x7000_0010_0000      # TEB puis PEB
 STACK = 0x7000_0020_0000
 STACK_SIZE = 0x10_0000          # 1 Mio

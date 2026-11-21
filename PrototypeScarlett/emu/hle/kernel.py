@@ -90,9 +90,18 @@ def SetLastError(c):
     c.machine.last_error = c.arg(0) & 0xFFFF_FFFF
 
 
-@hle("kernel", "GetModuleHandleW", "GetModuleHandleA")
-def get_module_handle(c):
-    return c.machine.image_base if c.arg(0) == 0 else 0
+@hle("kernel")
+def RegisterTraceGuidsW(c):
+    """Traces ETW : accepte l'inscription (8e argument = handle) sans rien journaliser."""
+    if c.arg(7):
+        c.write_u64(c.arg(7), c.machine.new_handle("ETW"))
+    return 0  # ERROR_SUCCESS
+
+
+@hle("kernel")
+def UnregisterTraceGuids(c):
+    c.machine.close_handle(c.arg(0))
+    return 0
 
 
 @hle("kernel")

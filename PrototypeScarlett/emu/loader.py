@@ -1,5 +1,5 @@
 """Chargement d'un exécutable PE32+ GDK dans la mémoire Unicorn."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import struct
 
 import pefile
@@ -13,6 +13,7 @@ MAX_TLS_CALLBACKS = 64
 MAX_TLS_SIZE = 16 * 1024 * 1024
 DIR_EXPORT, DIR_IMPORT, DIR_RELOC, DIR_TLS, DIR_DELAY, DIR_CLR = 0, 1, 5, 9, 13, 14
 SCN_EXEC, SCN_READ, SCN_WRITE = 0x20000000, 0x40000000, 0x80000000
+IMAGE_FILE_DLL = 0x2000
 
 
 @dataclass(frozen=True)
@@ -37,9 +38,12 @@ class Image:
     size: int
     entry: int
     imports: tuple
-    exports: dict
+    exports: dict          # nom → adresse
     tls: Tls | None
     relocated: bool
+    is_dll: bool = False
+    ordinals: dict = field(default_factory=dict)    # ordinal → adresse
+    forwarders: dict = field(default_factory=dict)  # nom ou « #n » → « DLL.Fonction »
 
 
 def _check_headers(pe):
@@ -47,12 +51,17 @@ def _check_headers(pe):
     if pe.FILE_HEADER.Machine != 0x8664 or header.Magic != 0x20B:
         raise ValueError("Le programme doit être un exécutable x86-64 au format PE32+.")
     size = header.SizeOfImage
-    if (not 0 < header.SizeOfHeaders <= size <= MAX_IMAGE
-            or not 0 < header.AddressOfEntryPoint < size):
+    entry_ok = (0 <= header.AddressOfEntryPoint < size if _is_dll(pe)
+                else 0 < header.AddressOfEntryPoint < size)
+    if not 0 < header.SizeOfHeaders <= size <= MAX_IMAGE or not entry_ok:
         raise ValueError("Image PE incompatible ou point d’entrée absent.")
     for index, feature in ((DIR_DELAY, "imports différés"), (DIR_CLR, ".NET")):
         if _directory(pe, index):
             raise ValueError(f"Fonctionnalité non émulée : {feature}.")
+
+
+def _is_dll(pe):
+    return bool(pe.FILE_HEADER.Characteristics & IMAGE_FILE_DLL)
 
 
 def _directory(pe, index):
@@ -66,15 +75,21 @@ def _has_relocations(pe):
             and hasattr(pe, "DIRECTORY_ENTRY_BASERELOC"))
 
 
-def _choose_base(pe):
-    """Garde la base préférée sauf si elle chevauche les zones de l'émulateur."""
+def default_allocate(preferred, size, relocatable):
+    """Placement d'une image seule : base préférée, sinon DEFAULT_BASE."""
+    if preferred is not None:
+        return preferred
+    if not relocatable:
+        raise ValueError("Base d’image inutilisable et table de relocation absente ou illisible.")
+    return DEFAULT_BASE
+
+
+def _choose_base(pe, allocate):
+    """Écarte une base préférée qui chevauche les zones de l'émulateur, puis délègue."""
     base = pe.OPTIONAL_HEADER.ImageBase
-    end = base + align(pe.OPTIONAL_HEADER.SizeOfImage)
-    if base % PAGE or base == 0 or end > THUNKS or base >= HEAP:
-        if not _has_relocations(pe):
-            raise ValueError("Base d’image inutilisable et table de relocation absente ou illisible.")
-        return DEFAULT_BASE
-    return base
+    size = align(pe.OPTIONAL_HEADER.SizeOfImage)
+    usable = not (base % PAGE or base == 0 or base + size > THUNKS or base >= HEAP)
+    return allocate(base if usable else None, size, _has_relocations(pe))
 
 
 def _protection(flags):
@@ -121,11 +136,21 @@ def _imports(pe, delta, base, size):
 
 
 def _exports(pe, base):
+    """Renvoie (exports par nom, exports par ordinal, redirections)."""
     directory = getattr(pe, "DIRECTORY_ENTRY_EXPORT", None)
-    if directory is None:
-        return {}
-    return {s.name.decode(errors="replace"): base + s.address
-            for s in directory.symbols if s.name}
+    names, ordinals, forwarders = {}, {}, {}
+    for symbol in directory.symbols if directory is not None else ():
+        name = symbol.name.decode(errors="replace") if symbol.name else None
+        if symbol.forwarder:
+            target = symbol.forwarder.decode(errors="replace")
+            forwarders[f"#{symbol.ordinal}"] = target
+            if name:
+                forwarders[name] = target
+        elif symbol.address:
+            ordinals[symbol.ordinal] = base + symbol.address
+            if name:
+                names[name] = base + symbol.address
+    return names, ordinals, forwarders
 
 
 def _tls_fields(pe, delta):
@@ -165,14 +190,17 @@ def _tls(fields, image, base):
     return Tls(start, end, zero_fill, index, tuple(callbacks))
 
 
-def read_pe(path, cpu=None):
-    """Analyse le PE ; si `cpu` est fourni, mappe l'image et renvoie ses protections."""
+def read_pe(path, cpu=None, allocate=default_allocate):
+    """Analyse le PE ; si `cpu` est fourni, mappe l'image et renvoie ses protections.
+
+    `allocate(base_préférée_ou_None, taille, relocalisable)` choisit la base finale.
+    """
     if path.stat().st_size > MAX_IMAGE:
         raise ValueError("Ce prototype accepte des exécutables de 256 Mio au maximum.")
     with pefile.PE(str(path), fast_load=True) as pe:
         _check_headers(pe)
         pe.parse_data_directories(directories=[DIR_EXPORT, DIR_IMPORT, DIR_RELOC, DIR_TLS])
-        base = _choose_base(pe)
+        base = _choose_base(pe, allocate)
         size = align(pe.OPTIONAL_HEADER.SizeOfImage)
         delta = base - pe.OPTIONAL_HEADER.ImageBase
         imports = _imports(pe, delta, base, size)
@@ -181,13 +209,18 @@ def read_pe(path, cpu=None):
         # quand la base diffère : tout ce qui précède doit être lu avant.
         image_bytes = pe.get_memory_mapped_image(ImageBase=base)
         protections = _map(cpu, pe, base, image_bytes) if cpu is not None else None
+        names, ordinals, forwarders = _exports(pe, base)
+        entry_rva = pe.OPTIONAL_HEADER.AddressOfEntryPoint
         image = Image(
             base=base,
             size=size,
-            entry=base + pe.OPTIONAL_HEADER.AddressOfEntryPoint,
+            entry=base + entry_rva if entry_rva else 0,
             imports=imports,
-            exports=_exports(pe, base),
+            exports=names,
             tls=_tls(tls_fields, image_bytes, base),
             relocated=delta != 0,
+            is_dll=_is_dll(pe),
+            ordinals=ordinals,
+            forwarders=forwarders,
         )
     return image, protections

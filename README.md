@@ -14,16 +14,18 @@ AnyXboxX charge des exécutables Xbox GDK (format PE32+ x86-64) et exécute leur
 | Chargement PE32+ : sections et protections, relocations, imports, exports | ✅ fait |
 | TLS : copie du modèle, index, callbacks | ✅ fait |
 | TEB et PEB accessibles par le registre GS | ✅ fait |
-| Page HLE : 135 noms de fonctions GDK, kernel, CRT et maths émulés | ✅ fait |
+| Page HLE : 158 noms de fonctions GDK, kernel, CRT et maths émulés | ✅ fait |
 | Fonctions inconnues : `E_NOTIMPL` et journal au lieu d'un refus | ✅ fait |
 | Constructeurs C++ globaux (`_initterm`) en code invité | ✅ fait |
 | Rapport de compatibilité (`--rapport`) et banc d'essai (`--banc`) | ✅ fait |
-| 16/16 DLL d'un paquet Scarlett du commerce initialisées (`DllMain` → `TRUE`) | ✅ fait |
-| 49 tests automatisés, 82 % de couverture | ✅ fait |
-| Chargement de plusieurs modules liés dans une même machine | ⏳ à faire |
-| Échantillon libre `Xbox-GDK-Samples` compilé et ajouté au banc | ⏳ à faire |
+| Plusieurs modules liés dans une même machine : DLL du paquet, ordinaux, redirections, relocation en cas de conflit | ✅ fait |
+| `GetModuleHandle`, `GetProcAddress`, `LoadLibrary`, `RtlPcToFileHeader` | ✅ fait |
+| 16/16 DLL d'un paquet Scarlett initialisées avec leurs dépendances, 0 appel non émulé | ✅ fait |
+| 61 tests automatisés, 83 % de couverture | ✅ fait |
+| Exécution native du code (approche Wine) au lieu d'Unicorn | ⏳ à faire |
 | Exceptions SEH x64 (`.pdata`), threads multiples | ⏳ à faire |
-| Chargement des DLL annexes du paquet | ⏳ à faire |
+| Chargement dynamique d'une DLL pendant l'exécution (`LoadLibrary` + `DllMain`) | ⏳ à faire |
+| Échantillon libre `Xbox-GDK-Samples` compilé et ajouté au banc | ⏳ à faire |
 | Graphismes D3D12.X vers Direct3D 12 / Vulkan | ⏳ à faire |
 | Audio, manette, sauvegardes `XGameSave` | ⏳ à faire |
 
@@ -79,6 +81,7 @@ Le rapport liste les fonctions importées, le pourcentage déjà émulé et les 
 | `emu/machine.py` | processeur Unicorn, pile, tas, TEB/PEB, répartition des appels |
 | `emu/hle/` | fonctions émulées : `gdk.py`, `kernel.py`, `crt.py`, `libm.py`, `guest.py` |
 | `emu/report.py` | rapport de compatibilité |
+| `emu/modules.py` | charge les DLL du paquet, lie les imports, ordonne les initialisations |
 | `emu/bench.py` | banc d'essai sur un dossier de modules |
 | `scarlett.py` | interface Tkinter et ligne de commande |
 

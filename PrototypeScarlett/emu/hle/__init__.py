@@ -1,5 +1,5 @@
 """Couche HLE : l'import des modules enregistre leurs gestionnaires."""
-from . import crt, gdk, kernel, libm  # noqa: F401  (enregistrement par décorateur)
+from . import crt, gdk, kernel, libm, library  # noqa: F401  (enregistrement par décorateur)
 from .core import E_NOTIMPL, REGISTRY, Call, family, lookup
 from .guest import GUEST_CODE
 

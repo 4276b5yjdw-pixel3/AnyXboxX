@@ -28,7 +28,8 @@ def family(dll):
     name = dll.lower().removesuffix(".dll")
     if name == "xgameruntime":
         return "gdk"
-    if name in ("kernel32", "kernelx", "kernelbase") or name.startswith("api-ms-win-core-"):
+    if (name in ("kernel32", "kernelx", "kernelbase", "ntdll", "advapi32")
+            or name.startswith(("api-ms-win-core-", "api-ms-win-eventing-"))):
         return "kernel"
     if name in ("ucrtbase", "msvcrt") or name.startswith(("vcruntime140", "api-ms-win-crt-")):
         return "crt"

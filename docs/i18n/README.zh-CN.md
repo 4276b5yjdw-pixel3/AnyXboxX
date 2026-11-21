@@ -14,16 +14,18 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 | PE32+ 加载：节与保护属性、重定位、导入、导出 | ✅ 已完成 |
 | TLS：模板复制、索引、回调 | ✅ 已完成 |
 | 可通过 GS 寄存器访问 TEB 和 PEB | ✅ 已完成 |
-| HLE 页：模拟了 135 个 GDK、内核、CRT 和数学函数名 | ✅ 已完成 |
+| HLE 页：模拟了 158 个 GDK、内核、CRT 和数学函数名 | ✅ 已完成 |
 | 未知函数：返回 `E_NOTIMPL` 并写入日志，而不是拒绝 | ✅ 已完成 |
 | 全局 C++ 构造函数（`_initterm`）以客体代码方式运行 | ✅ 已完成 |
 | 兼容性报告（`--rapport`）和测试台（`--banc`） | ✅ 已完成 |
-| 商业 Scarlett 包中的 16/16 个 DLL 已初始化（`DllMain` → `TRUE`） | ✅ 已完成 |
-| 49 个自动化测试，82 % 覆盖率 | ✅ 已完成 |
-| 在同一台机器中加载多个相互链接的模块 | ⏳ 待完成 |
-| 编译免费示例 `Xbox-GDK-Samples` 并加入测试台 | ⏳ 待完成 |
+| 在同一台机器中运行多个相互链接的模块：包中的 DLL、序号、转发、冲突时重定位 | ✅ 已完成 |
+| `GetModuleHandle`、`GetProcAddress`、`LoadLibrary`、`RtlPcToFileHeader` | ✅ 已完成 |
+| Scarlett 包中的 16/16 个 DLL 连同依赖项完成初始化，0 个未模拟的调用 | ✅ 已完成 |
+| 61 个自动化测试，83 % 覆盖率 | ✅ 已完成 |
+| 原生执行代码（Wine 方式），取代 Unicorn | ⏳ 待完成 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
-| 加载安装包中的附属 DLL | ⏳ 待完成 |
+| 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
+| 编译免费示例 `Xbox-GDK-Samples` 并加入测试台 | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |
 | 音频、手柄、`XGameSave` 存档 | ⏳ 待完成 |
 
@@ -79,6 +81,7 @@ py -3.12 -m venv .venv
 | `emu/machine.py` | Unicorn 处理器、栈、堆、TEB/PEB、调用分发 |
 | `emu/hle/` | 被模拟的函数：`gdk.py`、`kernel.py`、`crt.py`、`libm.py`、`guest.py` |
 | `emu/report.py` | 兼容性报告 |
+| `emu/modules.py` | 加载包中的 DLL、链接导入、安排初始化顺序 |
 | `emu/bench.py` | 针对模块文件夹的测试台 |
 | `scarlett.py` | Tkinter 界面和命令行 |
 

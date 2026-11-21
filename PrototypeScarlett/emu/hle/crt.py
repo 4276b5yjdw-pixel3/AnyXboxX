@@ -152,6 +152,11 @@ def ___lc_codepage_func(c):
     return 0  # page de code de la locale « C »
 
 
+@hle("crt", "___mb_cur_max_func", "__mb_cur_max_func")
+def mb_cur_max(c):
+    return 1  # la locale « C » code chaque caractère sur un octet
+
+
 @hle("crt")
 def ___lc_locale_name_func(c):
     """Tableau de six noms de locale (un par catégorie LC_*) : nuls pour la locale « C »."""
