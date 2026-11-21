@@ -15,7 +15,7 @@ AnyXboxX is an LGPL-2.1 prototype that runs Xbox Series X (GDK, "Scarlett") exec
 | `PrototypeScarlett/emu/rdna2*.py` | RDNA 2: decoder, operands, reference interpreter (`rdna2_exec*`), HLSL recompiler (`rdna2_hlsl*`), GPU runner glue (`rdna2_gpu.py`) |
 | `PrototypeScarlett/emu/rdna2_ops.py`, `rdna2_shapes.py` | **Generated** from LLVM's public encoding tests by `tools/rdna2_mnemonics.py` and `tools/rdna2_shapes.py`. Never edit by hand. |
 | `runtime/` | C++ runtime DLLs (`xgameruntime`, `xmem`, `d3d12_xs`, `kernelx`, `anyxboxx_tls`), native launcher `anyxboxx.exe`, GPU runner `anyxboxx_gpu_run.exe` |
-| `rust/` | Rust workspace. `anyxboxx-rdna2` bridges to TomBox's RDNA 2 decoder; `anyxboxx-texture` decodes BC7 and GFX10 `SW_4K_S` tiles (ported from Xbox2Windows). |
+| `rust/` | Rust workspace. `anyxboxx-rdna2` bridges to TomBox's RDNA 2 decoder; `anyxboxx-texture` decodes BC7 and GFX10 `SW_4K_S` tiles (ported from Xbox2Windows); `anyxboxx-audio` decodes XMA2 with TomBox's FFmpeg port. |
 | `third_party/tombox/` | Git submodule: [omonkeyz/xbox-emulator](https://github.com/omonkeyz/xbox-emulator) (TomBox continuation, MIT OR Apache-2.0), pinned commit. Do not edit; propose changes upstream. |
 | `tools/` | Generators and comparison tools (GDK interface table, kernelx exports, RDNA 2 tables, TomBox comparison) |
 | `tests/` | pytest suite (about 220 tests) |
