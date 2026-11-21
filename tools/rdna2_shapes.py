@@ -23,6 +23,7 @@ SKIPPED_SUFFIXES = ("_sdwa", "_dpp", "_dpp8")
 RANGE = re.compile(r"^(?:s|v|ttmp)\[(\d+):(\d+)\]$")
 PAIR_NAMES = {"vcc": 2, "exec": 2}
 HWREG_TOKEN = re.compile(r"^hwreg\((HW_REG_[A-Z0-9_]+)")
+SMEM_FLAG_WORDS = frozenset(name for _, name in ops.SMEM_FLAGS)
 
 
 def split_operands(text):
@@ -52,6 +53,8 @@ def read_lines(folder):
         tokens = split_operands(operands)
         if family == "VOP3" and tokens:               # « v2 clamp mul:2 » : modificateurs à part
             tokens[-1] = tokens[-1].split(" ")[0]
+        if family == "SMEM" and tokens:               # « s0 offset:0x64 glc dlc » : garder l'offset
+            tokens[-1] = " ".join(w for w in tokens[-1].split() if w not in SMEM_FLAG_WORDS)
         expected = " ".join(f"{mnemonic.removesuffix('_e32')} {operands}".split())
         yield expected, tokens, data
 

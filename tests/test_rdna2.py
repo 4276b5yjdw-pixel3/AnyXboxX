@@ -1,6 +1,8 @@
 """Décodeur des encodages RDNA 2 (GPU de la Xbox Series X), d'après la documentation publique d'AMD."""
 import struct
 
+import pytest
+
 from emu import rdna2, rdna2_operands
 
 
@@ -97,6 +99,25 @@ def test_operands_follow_llvm_syntax():
     assert text(llvm(0x01, 0x05, 0x0A, 0x30)) == "v_ashrrev_i32 v5, v1, v2"
     assert text(llvm(0x01, 0x07, 0x0A, 0x58, 0x41, 0x31, 0x21, 0x11)) == "v_fmamk_f32 v5, v1, 0x11213141, v3"
     assert text(words(0x7C040501)) == "v_cmp_eq_f32 vcc_lo, v1, v2"            # VOPC, vcc implicite
+
+
+@pytest.mark.parametrize("encoding, expected", [                 # encodages des tests MC de LLVM (gfx10)
+    ((0x41, 0x01, 0x00, 0xF4, 0x45, 0x23, 0x01, 0x00), "s_load_dword s5, s[2:3], s0 offset:0x12345"),
+    ((0x01, 0x05, 0x08, 0xF4, 0x00, 0x00, 0x00, 0xFA), "s_load_dwordx4 s[20:23], s[2:3], 0x0"),
+    ((0x35, 0x05, 0x10, 0xF4, 0x00, 0x00, 0x00, 0x00), "s_load_dwordx16 s[20:35], vcc, s0"),
+    ((0x44, 0x40, 0x61, 0xF4, 0x34, 0x12, 0x00, 0xFA), "s_buffer_store_dword s1, s[8:11], 0x1234 glc dlc"),
+    ((0x41, 0x41, 0x10, 0xF6, 0x00, 0x00, 0x00, 0xCA), "s_atomic_smin s5, s[2:3], s101 dlc"),
+    ((0xC2, 0x01, 0x98, 0xF4, 0x64, 0x00, 0x00, 0xFA), "s_atc_probe 7, s[4:5], 0x64"),
+    ((0x00, 0x19, 0x90, 0xF4, 0x00, 0x00, 0x00, 0x00), "s_memtime s[100:101]"),
+    ((0x00, 0x00, 0x80, 0xF4, 0x00, 0x00, 0x00, 0x00), "s_dcache_inv"),
+])
+def test_smem_operands_follow_llvm_syntax(encoding, expected):
+    assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+def test_smem_offset_is_signed_21_bits():
+    word = 0xF4000141 | (0x7D << 57) | (0x1FFFFF << 32)              # s_load_dword, offset -1, soffset null
+    assert rdna2_operands.text(word.to_bytes(8, "little")) == "s_load_dword s5, s[2:3], -0x1"
 
 
 def test_symbolic_immediates():

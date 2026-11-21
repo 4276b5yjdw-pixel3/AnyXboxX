@@ -1,7 +1,7 @@
 """Opérandes des instructions RDNA 2 : champs, registres et constantes, au format de LLVM.
 
-Couvre les encodages scalaires (SOP1, SOP2, SOPC, SOPK, SOPP) et vectoriels 32 bits
-(VOP1, VOP2, VOPC). La forme de chaque opcode (quels champs, dans quel ordre, quelle
+Couvre les encodages scalaires (SOP1, SOP2, SOPC, SOPK, SOPP), vectoriels (VOP1, VOP2, VOPC,
+VOP3) et les lectures mémoire scalaires (SMEM). La forme de chaque opcode (quels champs, dans quel ordre, quelle
 largeur de registre) vient de rdna2_ops.SHAPES, apprise sur les tests de LLVM.
 """
 import struct
@@ -36,8 +36,17 @@ FIELDS = {
     # VOP3b (retenues, v_div_scale) : le champ abs porte une destination scalaire.
     "VOP3B": {"vdst": (0, 0xFF, "vgpr"), "sdst": (8, 0x7F, "src"), "src0": (32, 0x1FF, "neg0"),
               "src1": (41, 0x1FF, "neg1"), "src2": (50, 0x1FF, "neg2")},
+    # SMEM (deux mots) : sbase désigne une paire de registres (numéro / 2), « offset » réunit
+    # l'adresse immédiate signée sur 21 bits et soffset (bits 63-57). s_atc_probe lit sdata
+    # comme un entier (« sdata_imm »).
+    "SMEM": {"sdata": (6, 0x7F, "src"), "sbase": (0, 0x3F, "sbase"), "offset": (32, 0x1FFFFF, "smem_offset"),
+             "sdata_imm": (6, 0x7F, "imm")},
 }
 FAMILIES = frozenset(FIELDS) - {"VOP3B"}
+TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM"})
+SMEM_SOFFSET_SHIFT, SMEM_OFFSET_BITS = 57, 21
+SMEM_FLAGS = ((16, "glc"), (14, "dlc"))                  # ordre d'écriture de LLVM
+NULL_REGISTER = 125
 VOP3_LIKE = frozenset({"VOP3", "VOP3B"})
 VOP3B_MARK = ("@", "VOP3B")
 OUTPUT_MODIFIERS = {1: "mul:2", 2: "mul:4", 3: "div:2"}
@@ -124,6 +133,10 @@ def render(family, word, literal, element):
         return immediate(value, option)
     if kind == "vgpr":
         return _range("v", value, option)
+    if kind == "sbase":
+        return source(value * 2, option)
+    if kind == "smem_offset":
+        return smem_offset(word)
     operand = source(value, option, literal)
     if kind.startswith(("mod", "neg")):
         index = int(kind[-1])
@@ -149,7 +162,27 @@ def vop3_suffix(family, word, shape):
     return " ".join(parts)
 
 
-ALIASES = frozenset({("VOP1", "sdst"), ("VOP3", "sdst8")})
+def _hex(value):
+    return f"-0x{-value:x}" if value < 0 else f"0x{value:x}"
+
+
+def smem_offset(word):
+    """Décalage SMEM : « 0x64 » (soffset nul), « s7 » ou « s7 offset:0x64 »."""
+    offset = (word >> 32) & ((1 << SMEM_OFFSET_BITS) - 1)
+    if offset >> (SMEM_OFFSET_BITS - 1):
+        offset -= 1 << SMEM_OFFSET_BITS
+    soffset = (word >> SMEM_SOFFSET_SHIFT) & 0x7F
+    if soffset == NULL_REGISTER:
+        return _hex(offset)
+    register = source(soffset)
+    return f"{register} offset:{_hex(offset)}" if offset else register
+
+
+def smem_suffix(word):
+    return " ".join(name for bit, name in SMEM_FLAGS if word >> bit & 1)
+
+
+ALIASES = frozenset({("VOP1", "sdst"), ("VOP3", "sdst8"), ("SMEM", "sdata_imm")})
 
 
 def default_shape(family):
@@ -162,8 +195,8 @@ def vop3_name(name, opcode):
 
 
 def _words(data, offset, family, size):
-    """(mot de l'instruction, littéral) ; en VOP3 le mot fait 64 bits et le littéral suit."""
-    count = 2 if family == "VOP3" else 1
+    """(mot de l'instruction, littéral) ; en VOP3 et SMEM le mot fait 64 bits (littéral après)."""
+    count = 2 if family in TWO_WORD_FAMILIES else 1
     if len(data) < offset + count * rdna2.DWORD:
         return None, None
     word = int.from_bytes(data[offset:offset + count * rdna2.DWORD], "little")
@@ -191,4 +224,6 @@ def text(data, offset=0):
     if family in VOP3_LIKE:
         name = vop3_name(name, opcode)
         operands = f"{operands} {vop3_suffix(family, word, shape)}".strip()
+    if family == "SMEM":
+        operands = f"{operands} {smem_suffix(word)}".strip()
     return f"{name} {operands}".rstrip()
