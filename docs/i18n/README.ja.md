@@ -60,7 +60,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | 396 個の GDK 関数の表：インターフェースとメソッド番号を `xgameruntime.lib` から抽出（`tools/gdk_interfaces.py`） | ✅ 完了 |
 | `XTaskQueue`、`XAsync`、`XThread` を AnyXboxX が提供：testgdk が Windows のランタイムなしで動作 | ✅ 完了 |
 | その他の GDK のインターフェース：Windows の GDK ランタイムに委譲し、トレースで名前を表示 | 🟡 進行中 |
-| 218 件の自動テスト | ✅ 完了 |
+| 220 件の自動テスト | ✅ 完了 |
 | D3D12.X：`D3D12XboxCreateDevice`、コンソールの `ID3D12*` インターフェース、`DXGIXPresentArray` を TomBox の Rust 製 `d3d12_xs.dll`（MIT、実装済みエクスポート 48 個、`tools/build_tombox.py d3d12_xs` でビルド、`ANYXBOXX_D3D12_XS=<パス>` で読み込み）が提供。コンソール実行ファイルがないためここでは検証不可 | 🟡 進行中 |
 | オフラインの `XUser`：常にサインイン済みのローカルプロファイル、変更可能なゲーマータグ（`ANYXBOXX_GAMERTAG`）、testgdk のサインイン成功 | ✅ 完了 |
 | Xbox Series X の識別情報：コンソールの種類（レジストリ値 `ConsoleMode` を模擬、ゲームの DLL 内でも有効）、`XSystem`、`MicrosoftGame.config` から読み取る Title ID、「Xbox Series X」のアナリティクス | ✅ 完了 |
@@ -74,6 +74,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | ネイティブモードでのゲームの暗黙的 TLS（`thread_local`）：キャリア DLL `anyxboxx_tls.dll` により各スレッドが自分のコピーを持つ（最大 256 KiB） | ✅ 完了 |
 | Python なしの C++ ネイティブランチャー（`runtime/build/bin/anyxboxx.exe <game.exe \| フォルダー> [--fps]`）：SimpleTriangle と testgdk が約 12,000 fps | ✅ 完了 |
 | RDNA 2 GPU 逆アセンブラー：1,444 個のニーモニックと LLVM 構文のオペランド（スカラー、VOP1/VOP2/VOPC/VOP3 と修飾子）、LLVM の公開エンコーディング 34,948 件で検証：`scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 進行中 |
+| Rust によるコンソールテクスチャ：Xbox2Windows（MIT）から移植した BC7 デコードと GFX10 `SW_4K_S` タイル解除、参照ダイジェストを再現；`anyxboxx_texture bc7 <blocks.bin> <幅> <高さ> <out.png> [--4k-s]` | 🟡 進行中 |
 | AnyXboxX が自前で書くその他の GDK のインターフェース（`XStore`、`XGameUi`、`XNetworking`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー：最初のプログラムを HLSL に変換し、DXIL にコンパイルして D3D12 で PC の GPU 上で実行（`--hlsl`、`anyxboxx_gpu_run.exe`、GPU がなければ WARP）、メモリは 1,444 エンコーディング中 519 を実行する wave32 リファレンスインタープリター（スカラー、VOP1/VOP2/VOPC/VOP3、メモリ：SMEM、LDS、GLOBAL、V# 境界付き MUBUF、アトミック、分岐、`exec` による分岐）の結果と一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 進行中 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
@@ -179,6 +180,7 @@ def XSystemGetDeviceType(c):
 - [既存のエミュレーターと互換レイヤー](../recherche/etat-de-l-art.md)（フランス語）：WinDurango、XWine1、Xenia、XVD ツール。
 - [調査対象の Scarlett パッケージのリバースエンジニアリングノート](../recherche/paquet/README.md)（フランス語、Codex 作成）：RDS5/ETPF テーブル、RPF ヘッダー、パッケージ構成。
 - [TomBox とその後継](../recherche/tombox.md)（フランス語）：Rust 製コンソール DLL、Direct3D 12.x、RDNA 2 シェーダー変換器、AnyXboxX が再利用するもの（MIT、出典明記）。
+- [Xbox2Windows](../recherche/xbox2windows.md)（フランス語）：静的再コンパイルの研究。BC7 と GFX10 タイリングを AnyXboxX が再利用（MIT、出典明記）。
 
 ## テスト
 
