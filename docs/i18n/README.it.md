@@ -18,7 +18,7 @@ Rigenerare: `scarlett.py --carte <cartella del pacchetto> docs/images/carte-avan
 - **Istruzioni della GPU: 0%.** Gli shader di un gioco per console sono compilati per la GPU RDNA 2 della Series X. Serve un ricompilatore RDNA 2 → DXIL, non ancora iniziato.
 - **Funzioni di sistema: 66%** delle 1 337 funzioni importate dalle DLL del pacchetto di prova sono risolte in modalità isolata.
 - **DLL proprie della console**: `xmem.dll` (3/4) e `d3d12_xs.dll` (2/2) sono tradotte per le funzioni che il pacchetto usa. La creazione del dispositivo D3D12.X resta da scrivere.
-- **Runtime GDK: 85 delle 396 funzioni** sono scritte in AnyXboxX, in C++: la coda di attività (`XTaskQueue`, `XAsync`, `XThread`), l'utente (`XUser`, un profilo locale offline) e l'identità Xbox Series X (`XSystem`, Title ID, analisi, funzionalità del runtime). Entrano in gioco quando AnyXboxX gestisce il runtime da solo: senza Gaming Services, oppure con `ANYXBOXX_SYSTEM_RUNTIME=0`. Se il runtime GDK di Windows è presente, serve tutte le interfacce, coda di attività compresa, perché le sue API accettano solo le proprie code. La traccia (`ANYXBOXX_TRACE=1`) nomina ogni interfaccia richiesta.
+- **Runtime GDK: 121 delle 396 funzioni** sono scritte in AnyXboxX, in C++: la coda di attività (`XTaskQueue`, `XAsync`, `XThread`), l'utente (`XUser`, un profilo locale offline), l'identità Xbox Series X (`XSystem`, Title ID, analisi, funzionalità del runtime) e i salvataggi (`XGameSave`, `XGameSaveFiles`, `XPersistentLocalStorage`). Entrano in gioco quando AnyXboxX gestisce il runtime da solo: senza Gaming Services, oppure con `ANYXBOXX_SYSTEM_RUNTIME=0`. Se il runtime GDK di Windows è presente, serve tutte le interfacce, coda di attività compresa, perché le sue API accettano solo le proprie code. La traccia (`ANYXBOXX_TRACE=1`) nomina ogni interfaccia richiesta.
 
 Il grafico viene rigenerato con `scarlett.py --traduction <cartella del pacchetto> docs/images/traduction.svg`.
 
@@ -47,12 +47,13 @@ Il grafico viene rigenerato con `scarlett.py --traduction <cartella del pacchett
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 143 test automatizzati | ✅ fatto |
+| 149 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice` e interfacce `ID3D12*` della console | ⏳ da fare |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
 | Identità Xbox Series X: tipo di console (valore di registro `ConsoleMode` simulato, anche nelle DLL del gioco), `XSystem`, Title ID letto da `MicrosoftGame.config`, analisi «Xbox Series X» | ✅ fatto |
 | Mappa dell'avanzamento: una casella per funzione (`--carte`) | ✅ fatto |
-| Altre interfacce GDK scritte da AnyXboxX (`XPackage`, `XGameSave`, `XStore`…) | ⏳ da fare |
+| Salvataggi `XGameSave` (contenitori, blob, quota, lettura asincrona) e archiviazione locale persistente, sul disco del PC (`%LOCALAPPDATA%\AnyXboxX\<TitleId>`, oppure `ANYXBOXX_SAVE_DIR`) | ✅ fatto |
+| Altre interfacce GDK scritte da AnyXboxX (`XPackage`, `XStore`, `XGameUi`…) | ⏳ da fare |
 | Ricompilatore di shader RDNA 2 → DXIL | ⏳ da fare |
 | Eccezioni SEH x64 (`.pdata`), thread multipli | ⏳ da fare |
 | Caricamento dinamico di una DLL durante l'esecuzione (`LoadLibrary` + `DllMain`) | ⏳ da fare |

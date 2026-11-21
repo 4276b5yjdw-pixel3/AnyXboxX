@@ -9,4 +9,7 @@ namespace anyxboxx {
 // Title ID déclaré par <TitleId>, ou 0 si le fichier ou l'élément manque.
 uint32_t GameTitleId();
 
+// Taille de <PersistentLocalStorage><SizeMB> en octets, ou 0 si non déclarée.
+uint64_t GameLocalStorageBytes();
+
 }  // namespace anyxboxx

@@ -3,6 +3,8 @@
 
 #include <windows.h>
 
+#include <cstdint>
+
 namespace anyxboxx {
 
 // XTaskQueue, XAsync et XThread : interface {073B7DCB-1FCF-4030-94BE-E3C9EB623428}.
@@ -21,6 +23,13 @@ void* AnalyticsInterface();
 void* GameInterface();
 void* FeatureInterface();
 void* DisplayInterface();
+
+// XUID du profil local si `user` est un handle XUser valide d'AnyXboxX.
+bool LocalUserId(const void* user, uint64_t* xuid);
+
+// Sauvegardes (save_interface.cpp) et stockage local persistant (local_storage_interface.cpp).
+void* GameSaveInterface();
+void* LocalStorageInterface();
 
 // Renvoie l'objet qui sert (fournisseur, interface), ou nullptr.
 void* ServedInterface(const GUID& provider, const GUID& iid);
