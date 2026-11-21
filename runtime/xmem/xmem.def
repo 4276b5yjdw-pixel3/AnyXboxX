@@ -1,0 +1,10 @@
+LIBRARY xmem
+EXPORTS
+  XMemAlloc
+  XMemFree
+  XMemAllocDefault
+  XMemFreeDefault
+  XMemSetAllocationHooks
+  XMemGetAllocationHooks
+  XMemVirtualQuery
+  XMemGetWorkingSetStatistics

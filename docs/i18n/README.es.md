@@ -2,9 +2,20 @@
 
 [Français](../../README.md) · [English](README.en.md) · **Español** · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
-AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su código con Unicorn. Las funciones de sistema de la consola se sustituyen por código Python (emulación de alto nivel, como WinDurango o Wine). El programa se presenta como una Xbox Series X: `XSystemGetDeviceType` devuelve `XboxScarlettAnaconda`.
+AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su código con Unicorn. Las funciones de sistema de la consola se sustituyen por un runtime C++ en modo nativo, y por código Python en la máquina aislada (emulación de alto nivel, como WinDurango o Wine). El programa se presenta como una Xbox Series X: `XSystemGetDeviceType` devuelve `XboxScarlettAnaconda`.
 
 ![Demo de conducción ejecutándose en AnyXboxX](../images/demo-conduite.png)
+
+## Avance de la traducción
+
+![Avance de la traducción de Xbox Series X](../images/traduction.svg)
+
+- **Instrucciones del procesador: 100 %.** La Series X usa un AMD Zen 2 en x86-64, el mismo conjunto de instrucciones que un PC: en modo nativo, el código del juego se ejecuta tal cual, sin traducción.
+- **Instrucciones de la GPU: 0 %.** Los shaders de un juego de consola se compilan para la GPU RDNA 2 de la Series X. Hace falta un recompilador RDNA 2 → DXIL, aún sin empezar.
+- **Funciones de sistema: 66 %** de las 1 337 funciones importadas por las DLL del paquete de prueba se resuelven en modo aislado.
+- **DLL propias de la consola**: `xmem.dll` (3/4) y `d3d12_xs.dll` (2/2) están traducidas para las funciones que usa el paquete. La creación del dispositivo D3D12.X y las interfaces GDK quedan por escribir. Por ahora, esas interfaces se delegan al runtime GDK de Windows.
+
+El gráfico se regenera con `scarlett.py --traduction <carpeta del paquete> docs/images/traduction.svg`.
 
 ## Avance del proyecto
 
@@ -25,9 +36,14 @@ AnyXboxX carga ejecutables de Xbox GDK (formato PE32+ x86-64) y ejecuta su códi
 | Ejecución nativa al estilo Wine (`--natif`): **SimpleTriangle se muestra**, runtime GDK proporcionado por AnyXboxX | ✅ hecho |
 | Segundo juego de prueba libre, `testgdk` de SDL3: **funciona en modo nativo** (ventana, sprites, sonido) | ✅ hecho |
 | Lanzamiento aislado de un paquete o de un exe (`--lancer`) con la lista de llamadas por emular | ✅ hecho |
-| 89 pruebas automatizadas | ✅ hecho |
-| Traducción de D3D12.X (`d3d12_xs.dll`) y `kernelx.dll` para los binarios de consola | ⏳ pendiente |
-| Interfaces del runtime GDK detrás de `QueryApiImpl` (`XUser`, `XTaskQueue`…) | ⏳ pendiente |
+| Runtime C++ (`runtime/`): `xgameruntime.dll`, `xmem.dll`, `d3d12_xs.dll` precargadas en modo nativo, servidas a todas las DLL del juego | ✅ hecho |
+| `xmem.dll`: `XMemAlloc`, `XMemFree`, ganchos, `XMemVirtualQuery` | ✅ hecho |
+| `d3d12_xs.dll`: serialización de las firmas raíz, redirigida al D3D12 del PC | ✅ hecho |
+| Interfaces GDK detrás de `QueryApiImpl`: delegadas al runtime GDK de Windows, listadas por la traza | 🟡 en curso |
+| 110 pruebas automatizadas | ✅ hecho |
+| D3D12.X: `D3D12XboxCreateDevice` e interfaces `ID3D12*` de la consola | ⏳ pendiente |
+| Interfaces GDK escritas por AnyXboxX (`XTaskQueue`, `XUser`…) | ⏳ pendiente |
+| Recompilador de shaders RDNA 2 → DXIL | ⏳ pendiente |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
 | Carga dinámica de una DLL durante la ejecución (`LoadLibrary` + `DllMain`) | ⏳ pendiente |
 | Gráficos D3D12.X hacia Direct3D 12 / Vulkan | ⏳ pendiente |
@@ -53,6 +69,15 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --demo
 ```
+
+El modo nativo necesita el runtime C++. Se compila con Visual Studio 2022 o 2026 (carga de trabajo de C++) y CMake:
+
+```powershell
+cmake -S runtime -B runtime/build -A x64
+cmake --build runtime/build --config Release
+```
+
+Las DLL acaban en `runtime/build/bin`, o en la carpeta indicada por `ANYXBOXX_RUNTIME`. `ANYXBOXX_SYSTEM_RUNTIME=0` desactiva la delegación al runtime GDK de Windows.
 
 El programa de demostración compilado es `PrototypeScarlett/demo.pe`; su código fuente es `PrototypeScarlett/demo.c`.
 

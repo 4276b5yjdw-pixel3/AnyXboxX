@@ -2,9 +2,20 @@
 
 [Français](../../README.md) · [English](README.en.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · [日本語](README.ja.md) · **中文**
 
-AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unicorn 执行其代码。主机的系统函数由 Python 代码替代（高级别模拟，与 WinDurango 或 Wine 类似）。该程序会表现为一台 Xbox Series X：`XSystemGetDeviceType` 返回 `XboxScarlettAnaconda`。
+AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unicorn 执行其代码。主机的系统函数在原生模式下由 C++ 运行时替代，在隔离的虚拟机中由 Python 代码替代（高级别模拟，与 WinDurango 或 Wine 类似）。该程序会表现为一台 Xbox Series X：`XSystemGetDeviceType` 返回 `XboxScarlettAnaconda`。
 
 ![在 AnyXboxX 中运行的驾驶演示](../images/demo-conduite.png)
+
+## 翻译进展
+
+![Xbox Series X 翻译进展](../images/traduction.svg)
+
+- **处理器指令：100%。** Series X 使用 x86-64 的 AMD Zen 2，与 PC 的指令集相同：在原生模式下，游戏代码无需翻译，直接原样运行。
+- **GPU 指令：0%。** 主机游戏的着色器是针对 Series X 的 RDNA 2 GPU 编译的。需要一个 RDNA 2 → DXIL 重编译器，目前尚未开始。
+- **系统函数：66%。** 测试包中各 DLL 导入的 1 337 个函数里，有这个比例在隔离模式下已被解析。
+- **主机专用 DLL**：`xmem.dll`（3/4）和 `d3d12_xs.dll`（2/2）已针对该包用到的函数完成翻译。D3D12.X 设备的创建和 GDK 接口仍待编写。目前，这些接口委托给 Windows 的 GDK 运行时。
+
+该图表由 `scarlett.py --traduction <包文件夹> docs/images/traduction.svg` 重新生成。
 
 ## 项目进展
 
@@ -25,9 +36,14 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 | Wine 式原生执行（`--natif`）：**SimpleTriangle 成功显示**，GDK 运行时由 AnyXboxX 提供 | ✅ 已完成 |
 | 第二个自由测试游戏，SDL3 的 `testgdk`：**以原生模式运行**（窗口、精灵、声音） | ✅ 已完成 |
 | 隔离启动游戏包或 exe（`--lancer`），并给出需要模拟的调用列表 | ✅ 已完成 |
-| 89 个自动化测试 | ✅ 已完成 |
-| 为主机二进制文件翻译 D3D12.X（`d3d12_xs.dll`）和 `kernelx.dll` | ⏳ 待完成 |
-| `QueryApiImpl` 背后的 GDK 运行时接口（`XUser`、`XTaskQueue`…） | ⏳ 待完成 |
+| C++ 运行时（`runtime/`）：`xgameruntime.dll`、`xmem.dll`、`d3d12_xs.dll` 在原生模式下预先加载，并提供给游戏的所有 DLL | ✅ 已完成 |
+| `xmem.dll`：`XMemAlloc`、`XMemFree`、钩子、`XMemVirtualQuery` | ✅ 已完成 |
+| `d3d12_xs.dll`：根签名序列化，重定向到电脑的 D3D12 | ✅ 已完成 |
+| `QueryApiImpl` 背后的 GDK 接口：委托给 Windows 的 GDK 运行时，由跟踪列出 | 🟡 进行中 |
+| 110 个自动化测试 | ✅ 已完成 |
+| D3D12.X：`D3D12XboxCreateDevice` 和主机的 `ID3D12*` 接口 | ⏳ 待完成 |
+| 由 AnyXboxX 自行编写的 GDK 接口（`XTaskQueue`、`XUser`…） | ⏳ 待完成 |
+| RDNA 2 → DXIL 着色器重编译器 | ⏳ 待完成 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
 | 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |
@@ -53,6 +69,15 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --demo
 ```
+
+原生模式需要 C++ 运行时。可使用 Visual Studio 2022 或 2026（C++ 工作负载）和 CMake 编译：
+
+```powershell
+cmake -S runtime -B runtime/build -A x64
+cmake --build runtime/build --config Release
+```
+
+DLL 会输出到 `runtime/build/bin`，或 `ANYXBOXX_RUNTIME` 指定的文件夹。`ANYXBOXX_SYSTEM_RUNTIME=0` 会关闭对 Windows GDK 运行时的委托。
 
 编译好的演示程序是 `PrototypeScarlett/demo.pe`，其源代码是 `PrototypeScarlett/demo.c`。
 

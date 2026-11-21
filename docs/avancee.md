@@ -21,7 +21,8 @@ Cas de test utilisés :
 | Couche HLE, première passe | 16/16 | 4/16 | non mesuré | — |
 | Ajout de `_initialize_onexit_table`, `IsProcessorFeaturePresent`, locale, maths | 16/16 | 16/16 | 523/1337 (39 %) | 7 |
 | Plusieurs modules liés : chaque DLL charge ses dépendances du paquet | 16/16 | 16/16 | 782/1337 (58 %) | 0 |
-| Démarrage d'un `.exe`, texte du CRT, événements, interface GDK PC | 16/16 | **16/16** | **871/1337 (65 %)** | **0** |
+| Démarrage d'un `.exe`, texte du CRT, événements, interface GDK PC | 16/16 | 16/16 | 871/1337 (65 %) | 0 |
+| `xmem.dll` émulée (`XMemAlloc`, `XMemFree`…) | 16/16 | **16/16** | **876/1337 (66 %)** | **0** |
 
 Un import est **résolu** quand il pointe vers une fonction émulée en Python ou vers l'export d'une autre DLL du paquet. Depuis le chargement multi-modules, `msvcp140.dll` tourne avec le vrai `vcruntime140.dll` du paquet, et `concrt140.dll` avec le vrai `msvcp140.dll`.
 
@@ -37,6 +38,21 @@ Fonctions qui ont débloqué le plus de modules :
 | `RtlPcToFileHeader`, `GetProcAddress`, `RegisterTraceGuidsW`, `___mb_cur_max_func` | derniers appels manquants des DLL liées |
 
 Plus aucun appel non émulé pendant l'initialisation des 16 DLL. Les prochains manques apparaîtront quand le code du jeu lui-même s'exécutera.
+
+## Traduction des DLL console
+
+![Avancée de la traduction Xbox Series X](images/traduction.svg)
+
+Mesure : `python PrototypeScarlett/scarlett.py --traduction <dossier du paquet> docs/images/traduction.svg`. Les DLL du paquet n'importent que deux bibliothèques propres à la console :
+
+| DLL | Fonctions importées | Traduction (runtime C++, `runtime/`) |
+|---|---|---|
+| `xmem.dll` | `XMemAlloc`, `XMemFree`, `XMemVirtualQuery`, `XMemGetWorkingSetStatistics` | Tas du PC aligné (64 octets, ou 4 Kio pour les gros blocs), crochets d'allocation ; `VirtualQuery`. Les statistiques renvoient un échec propre : leur structure n'est pas publique. |
+| `d3d12_xs.dll` | `D3D12SerializeVersionedRootSignature`, `D3D12CreateRootSignatureDeserializer` | Redirigées vers le `d3d12.dll` du PC : même contrat, structures publiques. |
+
+Le runtime C++ est préchargé par son chemin complet. Windows retrouve ensuite ces DLL par leur nom : une DLL du jeu chargée par Windows lui-même reçoit aussi celles d'AnyXboxX.
+
+L'exécutable principal du jeu est absent du paquet. Ses propres imports console, notamment la création du périphérique D3D12.X, s'ajouteront à cette liste.
 
 ## Exécution native
 

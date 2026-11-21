@@ -14,6 +14,7 @@ pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="exécution nati
 E_NOINTERFACE = 0x80004002
 WIDE_XGR = 0x200     # L"xgameruntime.dll"
 NAME_QUERY = 0x240   # "QueryApiImpl"
+DLL_MAIN = 0x80     # DllMain des DLL de test : renvoie TRUE
 
 
 def run(path):
@@ -49,7 +50,7 @@ def test_module_handle_of_game_is_its_own_base(tmp_path):
     assert code_value == base & 0xFFFF_FFFF
 
 
-def test_xgameruntime_is_served_by_anyxboxx(tmp_path):
+def test_xgameruntime_is_served_by_anyxboxx(tmp_path, runtime_dir):
     """LoadLibraryExW("xgameruntime.dll") puis GetProcAddress("QueryApiImpl") puis appel."""
     def code(iat):
         asm = (Asm().frame()
@@ -106,6 +107,55 @@ def test_game_runs_from_its_own_folder(tmp_path, monkeypatch):
     monkeypatch.chdir(os.path.dirname(__file__))
     folder = tmp_path / "jeu"
     folder.mkdir()
-    exe = build_pe(folder / "answer.exe", lambda iat: Asm().mov_eax(5).ret().build(), dll=False)
+    # native.run ne libère pas l'image (le jeu termine le processus) : base dédiée.
+    exe = build_pe(folder / "answer.exe", lambda iat: Asm().mov_eax(5).ret().build(), dll=False,
+                   base=0x1_5000_0000)
     assert native.run(exe, log=lambda *_: None) & 0xFFFF_FFFF == 5
     assert os.path.samefile(os.getcwd(), folder)
+
+
+def test_console_xmem_import_is_served_by_cpp_runtime(tmp_path, runtime_dir):
+    """Le jeu importe xmem.dll!XMemAlloc : la DLL C++ d'AnyXboxX répond."""
+    def code(iat):
+        return (Asm().frame().mov_ecx(64).zero_rdx()
+                .call_iat(iat[("xmem.dll", "XMemAlloc")]).unframe().ret().build())
+
+    exe = build_pe(tmp_path / "mem.exe", code, imports=[("xmem.dll", "XMemAlloc")], dll=False)
+    pointer = run(exe)[0]
+    assert pointer and pointer % 64 == 0
+
+
+def test_dll_loaded_by_windows_also_gets_cpp_runtime(tmp_path, runtime_dir):
+    """Une DLL du jeu chargée par Windows trouve xmem.dll déjà préchargé par AnyXboxX."""
+    build_pe(tmp_path / "helper.dll",
+             lambda iat: (Asm().frame().mov_ecx(64).zero_rdx()
+                          .call_iat(iat[("xmem.dll", "XMemAlloc")]).unframe().ret()
+                          .at(DLL_MAIN).mov_eax(1).ret().build()),
+             imports=[("xmem.dll", "XMemAlloc")], exports=[("Alloc", 0)], entry=DLL_MAIN)
+    exe = build_pe(tmp_path / "game.exe",
+                   lambda iat: Asm().frame().call_iat(iat[("helper.dll", "Alloc")]).unframe().ret().build(),
+                   imports=[("helper.dll", "Alloc")], dll=False)
+    pointer = run(exe)[0]
+    assert pointer and pointer % 64 == 0
+
+
+def test_untranslated_console_imports_are_listed_together(tmp_path, runtime_dir):
+    from emu.native import NativeImage
+
+    imports = [("xmem.dll", "XMemPasEncore"), ("d3d12_xs.dll", "D3D12XboxCreateDevice")]
+    exe = build_pe(tmp_path / "todo.exe", lambda iat: Asm().mov_eax(1).ret().build(),
+                   imports=imports, dll=False)
+    with pytest.raises(ValueError) as error:
+        NativeImage(exe)
+    assert "xmem.dll!XMemPasEncore" in str(error.value)
+    assert "d3d12_xs.dll!D3D12XboxCreateDevice" in str(error.value)
+    # L'échec a libéré l'image : un autre programme reprend la même base.
+    assert run(build_pe(tmp_path / "next.exe", lambda iat: Asm().mov_eax(4).ret().build(), dll=False))[0] == 4
+
+
+def test_runtime_is_shared_and_found_by_absolute_path(runtime_dir, monkeypatch):
+    from emu.native import runtime
+
+    assert runtime.shared() is runtime.shared()
+    monkeypatch.setenv("ANYXBOXX_RUNTIME", "dossier/relatif")
+    assert runtime.runtime_dir().is_absolute()

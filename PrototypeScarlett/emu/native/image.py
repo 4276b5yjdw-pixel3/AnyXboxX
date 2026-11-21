@@ -12,13 +12,17 @@ import pefile
 from ..hle.core import family
 from ..modules import dll_name, is_system
 from . import win32
-from .shims import GAME_RUNTIME, LOADER_FUNCTIONS, Shims
+from .shims import LOADER_FUNCTIONS, Shims
 
 MAX_IMAGE = 512 * 1024 * 1024
 DIR_IMPORT, DIR_EXCEPTION, DIR_RELOC, DIR_TLS, DIR_CLR = 1, 3, 5, 9, 14
 RUNTIME_FUNCTION_SIZE = 12
 SCN_EXEC, SCN_READ, SCN_WRITE = 0x20000000, 0x40000000, 0x80000000
 PAGE = 0x1000
+
+
+class UntranslatedImport(ValueError):
+    """Import d'une DLL console que le runtime C++ ne fournit pas encore."""
 
 
 def _align(value):
@@ -47,11 +51,15 @@ class NativeImage:
         with pefile.PE(str(self.path), fast_load=True) as pe:
             self._check(pe)
             pe.parse_data_directories(directories=[DIR_IMPORT, DIR_RELOC])
-            self._map(pe)
-            self.shims = Shims(self)
-            self._bind(pe)
-            self._protect(pe)
-            self._register_exceptions(pe)
+            try:
+                self._map(pe)
+                self.shims = Shims(self)
+                self._bind(pe)
+                self._protect(pe)
+                self._register_exceptions(pe)
+            except BaseException:
+                self.close()   # sinon l'image reste réservée et bloque sa base
+                raise
             self.entry = self.base + pe.OPTIONAL_HEADER.AddressOfEntryPoint
             self.is_dll = bool(pe.FILE_HEADER.Characteristics & 0x2000)
 
@@ -92,15 +100,28 @@ class NativeImage:
         ctypes.memmove(self.base, data, min(len(data), size))
 
     def _bind(self, pe):
+        """Lie chaque import ; les fonctions console pas encore traduites sont listées ensemble."""
         self.bound = {}
+        untranslated = []
         for dll, name, iat_rva in self._imports:
-            address = self.resolve(dll, name)
+            try:
+                address = self.resolve(dll, name)
+            except UntranslatedImport:
+                untranslated.append(f"{dll}!{name}")
+                continue
             win32.write_u64(self.base + iat_rva, address)
             self.bound[f"{dll}!{name}"] = address
+        if untranslated:
+            raise UntranslatedImport("Exécution native : fonctions console pas encore traduites par "
+                                     f"AnyXboxX ({len(untranslated)}) : " + ", ".join(untranslated))
 
     def resolve(self, dll, name):
-        if dll_name(dll).startswith(GAME_RUNTIME):
-            return self.shims.runtime_address(name) or self.shims.runtime_address("XErrorReport")
+        runtime = self.shims.runtime
+        if runtime.handle_for(dll):
+            address = runtime.address(dll, name)
+            if not address:
+                raise UntranslatedImport(f"{dll}!{name}")
+            return address
         if family(dll) == "kernel" and name in LOADER_FUNCTIONS:
             return self.shims.loader[name]
         module = self._load_module(dll)

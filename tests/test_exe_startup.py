@@ -145,3 +145,11 @@ def test_environment_block_is_empty_and_freeable(m):
     block = call(m, "KERNEL32.dll", "GetEnvironmentStringsW")
     assert bytes(m.cpu.mem_read(block, 4)) == b"\0\0\0\0"
     assert call(m, "kernelx.dll", "FreeEnvironmentStringsW", block) == 1
+
+
+def test_xmem_allocates_aligned_blocks_in_isolated_mode(m):
+    small = call(m, "xmem.dll", "XMemAlloc", 100, 0)
+    large = call(m, "xmem.dll", "XMemAlloc", 8192, 0)
+    assert small % 64 == 0 and large % 4096 == 0 and small != large
+    call(m, "xmem.dll", "XMemFree", small, 0)
+    assert call(m, "xmem.dll", "XMemGetWorkingSetStatistics", 0, m.heap.alloc(64)) == 0

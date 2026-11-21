@@ -1,22 +1,17 @@
-"""Fonctions qu'AnyXboxX substitue aux vraies DLL en exécution native.
+"""Fonctions du chargeur de modules qu'AnyXboxX substitue en exécution native.
 
-Deux familles :
-- le chargeur de modules (LoadLibrary, GetProcAddress, GetModuleHandle,
-  GetModuleFileName) : le jeu chargé à la main doit se voir lui-même, et
-  `xgameruntime.dll` doit être servi par AnyXboxX et non par Windows ;
-- le runtime GDK (`xgameruntime.dll`) : identité Xbox Series X.
+LoadLibrary, GetProcAddress, GetModuleHandle et GetModuleFileName : le jeu chargé
+à la main doit se voir lui-même et non python.exe, et `xgameruntime.dll` doit être
+celui d'AnyXboxX (runtime C++, voir runtime.py) et non celui de Windows.
 """
 import ctypes
-from ctypes import c_uint32, c_void_p
 import os
+from ctypes import c_uint32, c_void_p
 
 from . import win32
+from . import runtime
+from .runtime import GAME_RUNTIME
 
-S_OK, E_NOTIMPL, E_NOINTERFACE = 0, 0x80004001, 0x80004002
-XBOX_SERIES_X = 7
-GAME_RUNTIME = "xgameruntime"
-HRESULT4 = ctypes.WINFUNCTYPE(c_uint32, c_void_p, c_void_p, c_void_p, c_void_p)
-VOID2 = ctypes.WINFUNCTYPE(None, c_void_p, c_void_p)
 LOAD_W = ctypes.WINFUNCTYPE(c_void_p, c_void_p, c_void_p, c_uint32)
 LOAD_W1 = ctypes.WINFUNCTYPE(c_void_p, c_void_p)
 PROC = ctypes.WINFUNCTYPE(c_void_p, c_void_p, c_void_p)
@@ -28,14 +23,6 @@ LOADER_FUNCTIONS = frozenset({
 })
 
 
-def _guid(pointer):
-    if not pointer:
-        return "{null}"
-    import uuid
-
-    return "{" + str(uuid.UUID(bytes_le=ctypes.string_at(pointer, 16))).upper() + "}"
-
-
 def _is_runtime(name):
     return name.replace("/", "\\").rsplit("\\", 1)[-1].lower().startswith(GAME_RUNTIME)
 
@@ -45,11 +32,10 @@ class Shims:
         self.image = image
         self.log = image.log
         self.trace = os.environ.get("ANYXBOXX_TRACE") == "1"
-        self._runtime_tag = ctypes.create_string_buffer(16)   # adresse unique = « handle » du runtime
-        self.runtime_handle = ctypes.addressof(self._runtime_tag)
+        self.runtime = runtime.shared()
+        self.runtime_handle = self.runtime.handles["xgameruntime.dll"]
         self._keep = []
         self.loader = {name: self._make(name) for name in LOADER_FUNCTIONS}
-        self.runtime = self._runtime_functions()
 
     def _keepalive(self, callback):
         self._keep.append(callback)   # sans référence, ctypes libérerait le trampoline
@@ -88,12 +74,11 @@ class Shims:
             label = f"#{name}" if name <= 0xFFFF else ctypes.string_at(name).decode(errors="replace")
             if self.trace:
                 self.log(f"[trace] GetProcAddress {module or 0:#x} {label}")
-            if module == self.runtime_handle:
-                address = self.runtime_address(label)
-                if not address:
-                    win32.SetLastError(win32.ERROR_PROC_NOT_FOUND)
-                return address
-            return win32.GetProcAddress(module, name)
+            address = win32.GetProcAddress(module, name)
+            if not address and self.runtime.owns(module):
+                self.log(f"[natif] {label} pas encore fourni par le runtime d'AnyXboxX")
+                win32.SetLastError(win32.ERROR_PROC_NOT_FOUND)
+            return address
         return PROC(get_proc)
 
     def _module_handle(self, pointer, decode, real):
@@ -123,38 +108,6 @@ class Shims:
 
     def _GetModuleFileNameA(self):
         return FILENAME(lambda m, b, s: self._file_name(m, b, s, False, win32.GetModuleFileNameA))
-
-    # --- Runtime GDK ---------------------------------------------------------
-
-    def _runtime_functions(self):
-        def ok(*_):
-            return S_OK
-
-        def query_api(provider, interface, out, _):
-            if self.trace:
-                self.log(f"[trace] QueryApiImpl {_guid(provider)} {_guid(interface)}")
-            if out:
-                win32.write_u64(out, 0)
-            return E_NOINTERFACE
-
-        def error_report(code, message):
-            text = ctypes.string_at(message).decode(errors="replace") if message else ""
-            self.log(f"[XErrorReport] {(code or 0) & 0xFFFF_FFFF:#x} {text}")
-
-        functions = {
-            "InitializeApiImpl": HRESULT4(ok), "InitializeApiImplEx": HRESULT4(ok),
-            "InitializeApiImplEx2": HRESULT4(ok), "UninitializeApiImpl": HRESULT4(ok),
-            "QueryApiImpl": HRESULT4(query_api), "XErrorReport": VOID2(error_report),
-            "XGameRuntimeInitialize": HRESULT4(ok), "XGameRuntimeUninitialize": HRESULT4(ok),
-            "XSystemGetDeviceType": HRESULT4(lambda *_: XBOX_SERIES_X),
-        }
-        return {name: self._keepalive(callback) for name, callback in functions.items()}
-
-    def runtime_address(self, name):
-        address = self.runtime.get(name)
-        if address is None:
-            self.log(f"[natif] xgameruntime!{name} non fourni par AnyXboxX")
-        return address or 0
 
 
 def _overwrite(pointer, data, capacity):

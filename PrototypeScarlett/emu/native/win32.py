@@ -7,6 +7,7 @@ MEM_RELEASE = 0x8000
 PAGE_READONLY, PAGE_READWRITE = 0x02, 0x04
 PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE = 0x20, 0x40
 LOAD_WITH_ALTERED_SEARCH_PATH = 0x8
+LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR, LOAD_LIBRARY_SEARCH_SYSTEM32 = 0x100, 0x800
 ERROR_PROC_NOT_FOUND = 127
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -27,6 +28,7 @@ FlushInstructionCache = _bind("FlushInstructionCache", wt.BOOL, wt.HANDLE, ctype
 GetCurrentProcess = _bind("GetCurrentProcess", wt.HANDLE)
 LoadLibraryExW = _bind("LoadLibraryExW", ctypes.c_void_p, ctypes.c_void_p, wt.HANDLE, wt.DWORD)
 LoadLibraryExA = _bind("LoadLibraryExA", ctypes.c_void_p, ctypes.c_void_p, wt.HANDLE, wt.DWORD)
+FreeLibrary = _bind("FreeLibrary", wt.BOOL, ctypes.c_void_p)
 GetProcAddress = _bind("GetProcAddress", ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
 GetModuleHandleW = _bind("GetModuleHandleW", ctypes.c_void_p, ctypes.c_void_p)
 GetModuleHandleA = _bind("GetModuleHandleA", ctypes.c_void_p, ctypes.c_void_p)
