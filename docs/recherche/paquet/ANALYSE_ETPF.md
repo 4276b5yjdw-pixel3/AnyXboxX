@@ -38,6 +38,16 @@ Pour les 42 paires dont tous les blocs sont marqués zlib et respectent la limit
 
 Ces résultats constituent un indice fort que la valeur triée et la ligne du même rang sont associées, mais montrent qu'une valeur répétée ne garantit pas un contenu identique. Le sens de la valeur elle-même et la cause des différences restent inconnus.
 
+Dans le cas `0x218e33c9913f242c`, les lignes 705 de `ttdb_interiors_0_3.ttpf` et 2 272 de `ttdb_maps_4_7.ttpf` ont les mêmes deux premiers mots et quatre blocs zlib de tailles logiques respectives 65 536, 65 536, 262 144 et 1 048 576 octets. Les empreintes des blocs correspondants sont pourtant différentes pour chacun des quatre blocs. Même des métadonnées et des tailles identiques ne suffisent donc pas à conclure que les données sont interchangeables.
+
+Une recherche locale dans la table candidate est possible avec :
+
+```powershell
+python .\inspect_etpf.py .\data\ttdb\interiors\ttdb_interiors_0_3.ttpf --cle 0x30774179a7df53c0 --limite 0
+```
+
+Le résultat trouve la valeur au rang 993 et présente la ligne ETPF candidate du même rang, associée aux blocs 3 602 à 3 605. La recherche est limitée au fichier fourni ; l'outil vérifie que la table est strictement triée avant d'utiliser une recherche dichotomique. Le champ de résultat conserve la mention « candidate » parce que la signification de la valeur et les exceptions entre fichiers restent ouvertes.
+
 ## Correspondance avec les blocs
 
 Pour chaque groupe de 16 octets, lire son troisième mot comme un entier 32 bits little-endian et calculer `page = mot & 0x1fffff`. La position logique correspondante en octets est `page * 4096`. Sur les 357 115 groupes des 57 fichiers, toutes ces positions correspondent à une borne de début d'un bloc de données de la table RDS5. Dans chacun des fichiers, les positions sont strictement croissantes et la première correspond au bloc 1.
@@ -53,6 +63,26 @@ Le premier mot little-endian `x` de chaque groupe présente deux champs compatib
 Dans les 832 groupes dont le deuxième mot est `0x012000e0` et qui comportent un seul bloc, la taille logique de ce bloc correspond exactement à `largeur × hauteur × 4` octets arrondis au multiple supérieur de 4096. Par exemple, le premier groupe de `ttdb_graphics.ttpf` donne 32 × 32 et un bloc de 4096 octets. Sa décompression produit effectivement 4096 octets. Cette corrélation appuie l'interprétation comme dimensions et pixels de quatre octets pour ce sous-ensemble. L'ordre des canaux, l'agencement des pixels et le sens exact du deuxième mot restent à vérifier.
 
 Le lecteur affiche ces deux valeurs comme `largeur_candidate` et `hauteur_candidate`, ainsi que les quatre bits de poids fort sous `bits_28_31`. Les 357 115 groupes se répartissent notamment entre 60 873 groupes à un bloc, 89 116 à deux blocs, 41 968 à trois blocs et 164 939 à quatre blocs.
+
+Dans **162 375 des 164 939 groupes à quatre blocs**, la taille logique du troisième bloc vaut exactement quatre fois celle du deuxième, et celle du quatrième quatre fois celle du troisième. Parmi ces 162 375 groupes, la taille du premier bloc est inférieure à celle du deuxième dans 132 326 cas et égale dans 30 049 ; elle ne lui est jamais supérieure. Les trois profils les plus fréquents, en unités de 4 096 octets, sont `3, 8, 32, 128` (56 051 groupes), `1, 2, 8, 32` (43 695) et `16, 16, 64, 256` (22 985).
+
+Cette progression est compatible avec une organisation en niveaux de résolution successifs, mais les tailles seules ne prouvent ni que les blocs sont des mipmaps, ni ce que contient le premier bloc. Les 2 564 autres groupes à quatre blocs ne suivent pas la règle exacte. `stats_etpf.py` fournit les comptes et un exemple par profil ; par exemple, la ligne 0 de `data/ttdb/interiors/ttdb_interiors_0_3.ttpf` commence au bloc 1 et suit le profil `3, 8, 32, 128`.
+
+La taille du dernier bloc est elle aussi liée à la surface candidate. Pour les **41 087 groupes à quatre blocs** dont le deuxième mot vaut `0x0220023b`, elle correspond toujours à la moitié de la surface, arrondie à 4 096 octets ; c'est aussi le cas des **24 265 groupes** de mot `0x02200243`. Pour les **13 627 groupes** de mot `0x00200313`, elle correspond toujours à une fois la surface arrondie. Ces comptages incluent tous les groupes à quatre blocs de chaque catégorie ; ils sont indépendants du filtre sur la progression par quatre. Combinées à cette progression, ces relations appuient l'hypothèse d'échelles spatiales, sans identifier le format graphique ni le contenu des blocs.
+
+Pour les groupes à trois blocs, le dernier est exactement quatre fois plus grand que l'avant-dernier dans **41 967 cas sur 41 968**. Pour les groupes à deux blocs, cette relation ne vaut que dans 1 902 cas sur 89 116. Dans les 41 968 groupes à trois blocs, le premier est plus petit que le deuxième ; pour les groupes à deux blocs, il est plus petit dans 86 835 cas et égal dans 2 281. Ces résultats appellent une analyse distincte des premiers blocs plutôt qu'une règle uniforme pour tous les groupes.
+
+L'unique groupe à trois blocs qui ne suit pas le facteur quatre est la ligne 9 252 de `data/ttdb/props/ttdb_props_3_3.ttpf` : ses dimensions candidates sont 1 024 × 16 et les tailles logiques de ses trois blocs sont 4, 8 et 16 pages de 4 096 octets. Le dernier bloc vaut donc deux fois l'avant-dernier. La forme allongée de ces dimensions est une piste, sans preuve que celle-ci explique l'exception.
+
+### Comparaison de niveaux candidats
+
+Dans la catégorie `0x002000e3`, 153 groupes de dimensions candidates 512 × 512 possèdent quatre blocs marqués zlib et trois derniers blocs de 65 536, 262 144 et 1 048 576 octets. `python .\comparer_niveaux_etpf.py .` nécessite NumPy et en choisit 15 avec la graine 42. Le script suppose quatre octets par pixel et des tuiles Morton 128 × 128. Pour chacune des deux paires de blocs successifs, il réduit le plus grand par moyenne 2 × 2 et compare les trois premiers octets de chaque pixel à ceux du plus petit. Le témoin effectue la même comparaison après décalage vertical de la moitié de l'image candidate.
+
+Dans les **30 comparaisons** de cet échantillon, l'écart moyen sans décalage est inférieur à celui du témoin décalé. En utilisant `--nombre 153`, le test porte sur les **153 groupes candidats** de la copie : le résultat est identique pour les **306 comparaisons**. C'est un indice supplémentaire de contenu spatialement apparenté entre les blocs, compatible avec des niveaux de résolution. Il ne confirme pas la disposition Morton, l'ordre des canaux ou la méthode exacte de réduction : une texture lisse ou répétitive peut également influencer le résultat, et le test ne porte que sur une catégorie.
+
+Le premier bloc de chacun de ces 153 groupes se décompresse à 65 536 octets. Les octets situés hors des cinq intervalles suivants sont nuls dans tous ces blocs : `[2048, 2112)`, `[4096, 4352)`, `[8192, 9216)`, `[16384, 20480)` et `[32768, 49152)`. Les tailles de ces intervalles correspondent respectivement à 4 × 4, 8 × 8, 16 × 16, 32 × 32 et 64 × 64 pixels à quatre octets. Cela ne signifie pas que tous les octets de ces intervalles sont non nuls.
+
+Avec les mêmes hypothèses de pixels et de parcours Morton, le script compare également ces cinq intervalles entre eux et le dernier à l'image candidate 128 × 128 du bloc suivant. Pour les 153 groupes, la comparaison sans décalage donne un écart inférieur au témoin décalé dans **153 cas sur 153** pour les paires 32 → 64 et 64 → 128, et dans **151 cas sur 153** pour 16 → 32. Les résultats sont moins nets aux plus petites dimensions : 128 sur 153 pour 8 → 16, et 127 sur 153 pour 4 → 8, avec deux égalités. Ces observations renforcent l'hypothèse de petites résolutions regroupées dans le premier bloc, sans confirmer le format ou la disposition exacte.
 
 Un échantillon supplémentaire reproductible de blocs TTPF a été tiré avec Python, `random.seed(42)` et jusqu'à 40 blocs par fichier dans l'ordre de parcours local. Les 2 160 blocs retenus avaient des tailles stockées et logiques inférieures ou égales à 2 000 000 octets. Dans cet échantillon, les 1 889 blocs dont le bit 29 est actif ont produit un flux zlib complet à la taille logique attendue. Les 271 blocs restants n'ont pas été décodés par zlib. Le format de ces 271 blocs reste inconnu, et les 2 160 essais représentent un échantillon.
 

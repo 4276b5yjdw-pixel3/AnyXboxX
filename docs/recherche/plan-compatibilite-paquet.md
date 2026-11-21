@@ -41,6 +41,10 @@ Pour les ressources, les hypothèses d'arrondi de taille du document ETPF sont v
 
 Les essais de continuité spatiale documentés dans [ANALYSE_ETPF.md](paquet/ANALYSE_ETPF.md) rendent des parcours Morton candidats pour certaines petites ressources à quatre octets par pixel ; les résultats varient selon les blocs et ne prouvent pas une disposition universelle. Pour une implémentation, chercher une image de référence connue et ajouter un test avec dimensions, octets et résultat attendus avant d'adopter une transformation.
 
+Les tailles des derniers blocs de la plupart des groupes de trois ou quatre suivent une progression par quatre. Elles sont compatibles avec plusieurs échelles d'une texture, mais le contenu du premier bloc reste inconnu et des exceptions existent. Ne pas déduire une table de mipmaps complète de ces seules tailles ; conserver les bornes des blocs et tester les hypothèses sur des ressources de référence.
+
+Pour une catégorie précise de 153 groupes de dimensions candidates 512 × 512, des comparaisons de contenu suggèrent que le premier bloc réunit de petites résolutions dans cinq intervalles séparés par des zéros. Le test `comparer_niveaux_etpf.py` et ses hypothèses sont décrits dans [l'analyse ETPF](paquet/ANALYSE_ETPF.md) ; il demande NumPy. Cette observation n'établit pas une disposition valable pour les autres catégories.
+
 L'index ETPF comprend aussi une table candidate de valeurs 64 bits triées. Des comparaisons entre fichiers appuient leur association aux lignes de même rang, mais trois paires de valeurs identiques ont donné des contenus zlib différents. Si un futur lecteur les utilise pour la recherche, conserver le contexte du fichier et ne pas dédupliquer les ressources uniquement sur cette valeur. La commande `python ..\comparer_cles_etpf.py .. --comparer-blocs` reproduit les comparaisons depuis la racine AnyXboxX.
 
 Pour examiner une valeur dans un fichier précis, `inspect_etpf.py --cle` fournit son rang et la ligne candidate correspondante, après vérification de l'ordre de la table. Voir l'exemple et les limites dans l'analyse ETPF ; cet outil ne met pas encore en œuvre le chargement de ressources du jeu.
