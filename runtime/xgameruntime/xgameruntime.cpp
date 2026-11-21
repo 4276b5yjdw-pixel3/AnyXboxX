@@ -4,7 +4,8 @@
 // xgameruntime.lib charge cette DLL, appelle InitializeApiImpl*, puis demande
 // chaque interface par QueryApiImpl(fournisseur, interface).
 //
-// AnyXboxX ne sert encore aucune interface lui-même. Si le runtime GDK de
+// AnyXboxX sert lui-même les interfaces de served_interfaces.inc (XTaskQueue,
+// XAsync, XThread) quand il gère seul le runtime. Sinon, si le runtime GDK de
 // Windows est installé (Gaming Services, System32\xgameruntime.dll), les
 // demandes lui sont déléguées : le jeu fonctionne, et la trace liste chaque
 // interface déléguée, c'est-à-dire ce qu'il reste à écrire. Sans lui, ou avec
@@ -12,7 +13,9 @@
 #include <windows.h>
 
 #include <cstdio>
+#include <cstring>
 
+#include "interfaces.h"
 #include "trace.h"
 
 namespace {
@@ -73,6 +76,53 @@ bool FirstQuery(const GUID* provider, const GUID* iid) {
   return first;
 }
 
+void FormatGuid(const GUID* guid, char (&out)[kGuidText]);
+
+// Table générée par tools/gdk_interfaces.py : nomme l'API derrière chaque couple de GUID.
+struct GdkApi {
+  const char* name;
+  const char* provider;
+  const char* iid;
+  int method;
+};
+
+const GdkApi kGdkApis[] = {
+#define ANYXBOXX_GDK_API(name, provider, iid, method) {#name, provider, iid, method},
+#include "gdk_api_table.inc"
+#undef ANYXBOXX_GDK_API
+};
+
+// « {GUID} » de FormatGuid comparé au « GUID » de la table, sans accolades.
+bool SameGuid(const char* braced, const char* bare) { return std::strncmp(braced + 1, bare, 36) == 0; }
+
+// Première fonction de l'interface et nombre de fonctions, pour une trace lisible.
+void DescribeInterface(const char* provider, const char* iid, char* out, size_t size) {
+  const char* first = nullptr;
+  int count = 0;
+  for (const GdkApi& api : kGdkApis) {
+    if (SameGuid(provider, api.provider) && SameGuid(iid, api.iid)) {
+      first = first ? first : api.name;
+      ++count;
+    }
+  }
+  if (first == nullptr) {
+    std::snprintf(out, size, "interface inconnue");
+  } else {
+    std::snprintf(out, size, "%s… (%d fonctions)", first, count);
+  }
+}
+
+void TraceQuery(const GUID* provider, const GUID* iid, const char* outcome) {
+  if (!anyxboxx::TraceEnabled() || !FirstQuery(provider, iid)) return;
+  char provider_text[kGuidText];
+  char iid_text[kGuidText];
+  char description[96];
+  FormatGuid(provider, provider_text);
+  FormatGuid(iid, iid_text);
+  DescribeInterface(provider_text, iid_text, description, sizeof description);
+  anyxboxx::Log("[runtime] QueryApiImpl %s %s : %s -> %s", provider_text, iid_text, description, outcome);
+}
+
 HRESULT Initialize(const char* name, void* a, void* b, void* c, void* d, void* e, void* f,
                    void* g, void* h) {
   const auto system = SystemFunction<InitializeRoutine>(name);
@@ -117,16 +167,23 @@ HRESULT WINAPI UninitializeApiImpl(void* a, void* b, void* c, void* d, void* e, 
 HRESULT WINAPI QueryApiImpl(const GUID* provider, const GUID* iid, void** out, void* reserved) {
   if (out != nullptr) *out = nullptr;
   if (provider == nullptr || iid == nullptr || out == nullptr) return E_NOINTERFACE;
+  // Un seul runtime pour tout : les API de Windows (XUser, XGameSave…) prennent des
+  // XAsyncBlock et des files de tâches, qu'elles ne savent lire que si elles les ont
+  // créées. AnyXboxX ne sert donc ses interfaces que lorsqu'il gère seul le runtime.
+  // Décision unique : le module de Windows est-il chargé (et Initialize* lui a été relayé) ?
   const auto system = SystemFunction<QueryRoutine>("QueryApiImpl");
-  const HRESULT result = system ? system(provider, iid, out, reserved) : E_NOINTERFACE;
-  if (anyxboxx::TraceEnabled() && FirstQuery(provider, iid)) {
-    char provider_text[kGuidText];
-    char iid_text[kGuidText];
-    FormatGuid(provider, provider_text);
-    FormatGuid(iid, iid_text);
-    anyxboxx::Log("[runtime] QueryApiImpl %s %s -> 0x%08lX%s", provider_text, iid_text,
-                  static_cast<unsigned long>(result), system ? " (délégué à Windows)" : "");
+  if (SystemRuntime() == nullptr) {
+    if (void* served = anyxboxx::ServedInterface(*provider, *iid)) {
+      *out = served;  // objet statique : AddRef/Release sans effet
+      TraceQuery(provider, iid, "servie par AnyXboxX");
+      return S_OK;
+    }
   }
+  const HRESULT result = system ? system(provider, iid, out, reserved) : E_NOINTERFACE;
+  char outcome[64];
+  std::snprintf(outcome, sizeof outcome, "0x%08lX%s", static_cast<unsigned long>(result),
+                system ? " (déléguée à Windows)" : " (non servie)");
+  TraceQuery(provider, iid, outcome);
   return result;
 }
 

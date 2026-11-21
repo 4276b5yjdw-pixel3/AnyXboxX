@@ -54,6 +54,24 @@ Le runtime C++ est préchargé par son chemin complet. Windows retrouve ensuite 
 
 L'exécutable principal du jeu est absent du paquet. Ses propres imports console, notamment la création du périphérique D3D12.X, s'ajouteront à cette liste.
 
+## Runtime GDK : table des interfaces
+
+Sur PC, chaque fonction `X*` de la bibliothèque statique du GDK (`xgameruntime.lib`) appelle `QueryApiImpl(&fournisseur, &interface, &objet)`, puis une méthode de l'objet, de type COM : 0 `QueryInterface`, 1 `AddRef`, 2 `Release`, puis les API. Chaque méthode reçoit `this`, suivi des arguments de la fonction publique.
+
+`python tools/gdk_interfaces.py` relit le désassemblage de la bibliothèque et produit `runtime/xgameruntime/gdk_api_table.inc` : **396 fonctions réparties sur 34 interfaces** pour le GDK 2610. Les plus grosses :
+
+| Interface | Fonctions | Servie par |
+|---|---|---|
+| `XStore` | 70 | Windows |
+| `XGameUi` | 42 | Windows |
+| `XUser` | 33 | Windows |
+| `XGameStreaming` | 32 | Windows |
+| `XPackage` | 31 | Windows |
+| `XGameSave` | 30 | Windows |
+| `XTaskQueue` / `XAsync` / `XThread` | 27 | **AnyXboxX** |
+
+`runtime/xgameruntime/served_interfaces.inc` liste les interfaces servies par AnyXboxX. Ce fichier est lu à la fois par le C++ et par la mesure `--traduction`.
+
 ## Exécution native
 
 Depuis le 21 novembre 2026, `--natif` charge un exécutable et le lance directement sur le processeur (approche Wine). Premier résultat : le jeu de test **SimpleTriangle s'affiche**, avec le runtime GDK servi par AnyXboxX. Détails, captures et limites : [jeu-de-test.md](jeu-de-test.md).

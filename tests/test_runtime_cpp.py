@@ -123,3 +123,72 @@ def test_without_windows_runtime_unknown_interfaces_are_refused(runtime_dir):
 def test_unknown_interface_delegated_to_windows_fails_cleanly(runtime_dir):
     code, pointer = _runtime_in_subprocess(runtime_dir, "1")
     assert code & 0x8000_0000 and pointer == "None"
+
+
+TASK_QUEUE_GUID = bytes.fromhex("cb7d3b07cf1f304094bee3c9eb623428")   # {073B7DCB-…} en mémoire
+MANUAL, THREAD_POOL = 0, 1
+WORK_PORT = 0
+CALLBACK = ctypes.WINFUNCTYPE(None, ctypes.c_void_p, ctypes.c_bool)
+ASYNC_WORK = ctypes.WINFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p)
+
+
+class AsyncBlock(ctypes.Structure):
+    _fields_ = [("queue", ctypes.c_void_p), ("context", ctypes.c_void_p),
+                ("callback", ctypes.c_void_p), ("internal", ctypes.c_ubyte * 32)]
+
+
+class TaskQueueApi:
+    """L'interface vue comme le jeu la voit : méthode n° k de l'objet rendu par QueryApiImpl."""
+
+    def __init__(self, runtime_dir):
+        runtime = load(runtime_dir, "xgameruntime.dll")
+        runtime.QueryApiImpl.restype = ctypes.c_uint32
+        guid = (ctypes.c_ubyte * 16).from_buffer_copy(TASK_QUEUE_GUID)
+        self.object = ctypes.c_void_p()
+        assert runtime.QueryApiImpl(guid, guid, ctypes.byref(self.object), None) == S_OK
+        self.vtable = ctypes.cast(ctypes.cast(self.object, ctypes.POINTER(ctypes.c_void_p))[0],
+                                  ctypes.POINTER(ctypes.c_void_p))
+
+    def method(self, index, restype, *argtypes):
+        function = ctypes.WINFUNCTYPE(restype, ctypes.c_void_p, *argtypes)(self.vtable[index])
+        return lambda *args: function(self.object, *args)
+
+
+def test_task_queue_is_served_by_anyxboxx_and_dispatches_callbacks(runtime_dir):
+    api = TaskQueueApi(runtime_dir)
+    create = api.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p))
+    submit = api.method(18, ctypes.c_uint32, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, CALLBACK)
+    dispatch = api.method(16, ctypes.c_bool, ctypes.c_void_p, ctypes.c_int, ctypes.c_uint32)
+    close = api.method(17, None, ctypes.c_void_p)
+    queue = ctypes.c_void_p()
+    assert create(MANUAL, MANUAL, ctypes.byref(queue)) == S_OK
+    calls = []
+    callback = CALLBACK(lambda context, canceled: calls.append((context, canceled)))
+    assert submit(queue, WORK_PORT, 42, callback) == S_OK
+    assert calls == []                              # file manuelle : rien avant Dispatch
+    assert dispatch(queue, WORK_PORT, 0)
+    assert calls == [(42, False)]
+    close(queue)
+
+
+def test_async_run_completes_on_thread_pool_queue(runtime_dir):
+    api = TaskQueueApi(runtime_dir)
+    create = api.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p))
+    run = api.method(6, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ASYNC_WORK)
+    status = api.method(3, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.c_bool)
+    close = api.method(17, None, ctypes.c_void_p)
+    queue = ctypes.c_void_p()
+    assert create(THREAD_POOL, THREAD_POOL, ctypes.byref(queue)) == S_OK
+    block = AsyncBlock(queue=queue)
+    work = ASYNC_WORK(lambda pointer: 0x1234)
+    assert run(ctypes.byref(block), work) == S_OK
+    assert status(ctypes.byref(block), True) == 0x1234   # attend la fin du travail
+    close(queue)
+
+
+def test_thread_time_sensitivity_is_per_thread(runtime_dir):
+    api = TaskQueueApi(runtime_dir)
+    set_sensitive = api.method(27, ctypes.c_uint32, ctypes.c_bool)
+    is_sensitive = api.method(30, ctypes.c_bool)
+    assert set_sensitive(True) == S_OK and is_sensitive()
+    assert set_sensitive(False) == S_OK and not is_sensitive()

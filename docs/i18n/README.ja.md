@@ -13,7 +13,8 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 - **プロセッサ命令：100 %。** Series X は x86-64 の AMD Zen 2 を使っており、PC と同じ命令セットです。ネイティブモードでは、ゲームのコードは変換なしでそのまま実行されます。
 - **GPU 命令：0 %。** コンソール向けゲームのシェーダーは、Series X の RDNA 2 GPU 向けにコンパイルされています。RDNA 2 → DXIL の再コンパイラーが必要ですが、まだ着手していません。
 - **システム関数：66 %。** テスト用パッケージの DLL がインポートする 1 337 個の関数のうち、この割合が隔離モードで解決できています。
-- **コンソール固有の DLL**：`xmem.dll`（3/4）と `d3d12_xs.dll`（2/2）は、パッケージが使う関数について変換済みです。D3D12.X のデバイス作成と GDK のインターフェースはこれから書く必要があります。現時点では、これらのインターフェースは Windows の GDK ランタイムに委譲しています。
+- **コンソール固有の DLL**：`xmem.dll`（3/4）と `d3d12_xs.dll`（2/2）は、パッケージが使う関数について変換済みです。D3D12.X のデバイス作成はこれから書く必要があります。
+- **GDK ランタイム：396 個の関数のうち 27 個**（タスクキュー `XTaskQueue`、`XAsync`、`XThread`）は AnyXboxX 内に C++ で書かれています。これらは AnyXboxX がランタイムを単独で管理するとき（Gaming Services がない場合、または `ANYXBOXX_SYSTEM_RUNTIME=0` を指定した場合）に使われます。Windows の GDK ランタイムがある場合は、その API が自前のキューしか受け付けないため、タスクキューを含むすべてのインターフェースをそちらが提供します。トレース（`ANYXBOXX_TRACE=1`）は、要求された各インターフェースの名前を出力します。
 
 グラフは `scarlett.py --traduction <パッケージのフォルダー> docs/images/traduction.svg` で再生成されます。
 
@@ -39,10 +40,12 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 | C++ ランタイム（`runtime/`）：`xgameruntime.dll`、`xmem.dll`、`d3d12_xs.dll` をネイティブモードで事前に読み込み、ゲームのすべての DLL に提供 | ✅ 完了 |
 | `xmem.dll`：`XMemAlloc`、`XMemFree`、フック、`XMemVirtualQuery` | ✅ 完了 |
 | `d3d12_xs.dll`：ルートシグネチャのシリアライズ。PC の D3D12 にリダイレクト | ✅ 完了 |
-| `QueryApiImpl` の背後にある GDK のインターフェース：Windows の GDK ランタイムに委譲し、トレースで一覧表示 | 🟡 進行中 |
-| 110 件の自動テスト | ✅ 完了 |
+| 396 個の GDK 関数の表：インターフェースとメソッド番号を `xgameruntime.lib` から抽出（`tools/gdk_interfaces.py`） | ✅ 完了 |
+| `XTaskQueue`、`XAsync`、`XThread` を AnyXboxX が提供：testgdk が Windows のランタイムなしで動作 | ✅ 完了 |
+| その他の GDK のインターフェース：Windows の GDK ランタイムに委譲し、トレースで名前を表示 | 🟡 進行中 |
+| 123 件の自動テスト | ✅ 完了 |
 | D3D12.X：`D3D12XboxCreateDevice` とコンソールの `ID3D12*` インターフェース | ⏳ 未着手 |
-| AnyXboxX が自前で書く GDK のインターフェース（`XTaskQueue`、`XUser`…） | ⏳ 未着手 |
+| AnyXboxX が自前で書くその他の GDK のインターフェース（`XUser`、`XGameSave`、`XSystem`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー | ⏳ 未着手 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
 | 実行中の DLL の動的読み込み（`LoadLibrary` + `DllMain`） | ⏳ 未着手 |
@@ -77,7 +80,7 @@ cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
 ```
 
-DLL は `runtime/build/bin`、または `ANYXBOXX_RUNTIME` で指定したフォルダーに出力されます。`ANYXBOXX_SYSTEM_RUNTIME=0` を指定すると、Windows の GDK ランタイムへの委譲が無効になります。
+タスクキューは [libHttpClient](https://github.com/microsoft/libHttpClient) の `Task` モジュールを流用しています（MIT ライセンス、`runtime/third_party/libhttpclient-task`）。DLL は `runtime/build/bin`、または `ANYXBOXX_RUNTIME` で指定したフォルダーに出力されます。`ANYXBOXX_SYSTEM_RUNTIME=0` を指定すると、Windows の GDK ランタイムへの委譲が無効になります。
 
 コンパイル済みのデモプログラムは `PrototypeScarlett/demo.pe` で、ソースコードは `PrototypeScarlett/demo.c` です。
 

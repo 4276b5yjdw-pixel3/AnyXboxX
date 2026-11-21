@@ -27,6 +27,19 @@ function(anyxboxx_dll name)
   target_compile_options(${name} PRIVATE /W4 /WX /permissive- /utf-8)
 endfunction()
 
-anyxboxx_dll(xgameruntime xgameruntime/xgameruntime.cpp xgameruntime/xgameruntime.def)
+# Module Task de libHttpClient (MIT) : XTaskQueue et XAsync, servis par xgameruntime.
+set(TASK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/libhttpclient-task")
+add_library(anyxboxx_task STATIC
+  ${TASK_DIR}/source/AsyncLib.cpp
+  ${TASK_DIR}/source/TaskQueue.cpp
+  ${TASK_DIR}/source/ThreadPool_win32.cpp
+  ${TASK_DIR}/source/WaitTimer_win32.cpp)
+target_include_directories(anyxboxx_task PUBLIC "${TASK_DIR}/include" PRIVATE "${TASK_DIR}/source")
+target_compile_definitions(anyxboxx_task PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_compile_options(anyxboxx_task PRIVATE /W3 /utf-8 /permissive-)
+
+anyxboxx_dll(xgameruntime xgameruntime/xgameruntime.cpp xgameruntime/task_queue_interface.cpp
+             xgameruntime/xgameruntime.def)
+target_link_libraries(xgameruntime PRIVATE anyxboxx_task)
 anyxboxx_dll(xmem xmem/xmem.cpp xmem/xmem.def)
 anyxboxx_dll(d3d12_xs d3d12_xs/d3d12_xs.cpp d3d12_xs/d3d12_xs.def)
