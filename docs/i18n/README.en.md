@@ -62,7 +62,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 174 automated tests | ✅ done |
+| 180 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice` and the console's `ID3D12*` interfaces | ⏳ to do |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
 | Xbox Series X identity: console type (simulated `ConsoleMode` registry value, including inside the game's DLLs), `XSystem`, Title ID read from `MicrosoftGame.config`, "Xbox Series X" analytics | ✅ done |
@@ -75,6 +75,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | `kernelx.dll` (console kernel): 2,661 functions forwarded to Windows `kernel32`/`kernelbase` | ✅ done |
 | Implicit TLS (`thread_local`) for games in native mode: carrier DLL `anyxboxx_tls.dll`, every thread gets its own copy (up to 256 KiB) | ✅ done |
 | Native C++ launcher without Python (`runtime/build/bin/anyxboxx.exe <game.exe \| folder> [--fps]`): SimpleTriangle and testgdk at ~12,000 fps | ✅ done |
+| RDNA 2 GPU encoding decoder (families, opcodes, lengths, literals): `scarlett.py --rdna2 <shader.bin>` | 🟡 in progress |
 | Other GDK interfaces written by AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ to do |
 | RDNA 2 → DXIL shader recompiler | ⏳ to do |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |

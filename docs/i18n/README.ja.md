@@ -62,7 +62,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | 396 個の GDK 関数の表：インターフェースとメソッド番号を `xgameruntime.lib` から抽出（`tools/gdk_interfaces.py`） | ✅ 完了 |
 | `XTaskQueue`、`XAsync`、`XThread` を AnyXboxX が提供：testgdk が Windows のランタイムなしで動作 | ✅ 完了 |
 | その他の GDK のインターフェース：Windows の GDK ランタイムに委譲し、トレースで名前を表示 | 🟡 進行中 |
-| 174 件の自動テスト | ✅ 完了 |
+| 180 件の自動テスト | ✅ 完了 |
 | D3D12.X：`D3D12XboxCreateDevice` とコンソールの `ID3D12*` インターフェース | ⏳ 未着手 |
 | オフラインの `XUser`：常にサインイン済みのローカルプロファイル、変更可能なゲーマータグ（`ANYXBOXX_GAMERTAG`）、testgdk のサインイン成功 | ✅ 完了 |
 | Xbox Series X の識別情報：コンソールの種類（レジストリ値 `ConsoleMode` を模擬、ゲームの DLL 内でも有効）、`XSystem`、`MicrosoftGame.config` から読み取る Title ID、「Xbox Series X」のアナリティクス | ✅ 完了 |
@@ -72,6 +72,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | `kernelx.dll`（コンソールのカーネル）: 2,661 個の関数を Windows の `kernel32`/`kernelbase` へ転送 | ✅ 完了 |
 | ネイティブモードでのゲームの暗黙的 TLS（`thread_local`）：キャリア DLL `anyxboxx_tls.dll` により各スレッドが自分のコピーを持つ（最大 256 KiB） | ✅ 完了 |
 | Python なしの C++ ネイティブランチャー（`runtime/build/bin/anyxboxx.exe <game.exe \| フォルダー> [--fps]`）：SimpleTriangle と testgdk が約 12,000 fps | ✅ 完了 |
+| RDNA 2 GPU エンコーディングのデコーダー（ファミリー、オペコード、長さ、リテラル）：`scarlett.py --rdna2 <shader.bin>` | 🟡 進行中 |
 | AnyXboxX が自前で書くその他の GDK のインターフェース（`XStore`、`XGameUi`、`XNetworking`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー | ⏳ 未着手 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
