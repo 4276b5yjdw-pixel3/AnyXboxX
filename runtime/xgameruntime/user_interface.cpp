@@ -343,6 +343,12 @@ const anyxboxx::StaticInterface kGamertag{kGamertagMethods};
 namespace anyxboxx {
 
 void* UserInterface() { return const_cast<StaticInterface*>(&kUser); }
+
+bool LocalUserId(const void* user, uint64_t* xuid) {
+  if (!Valid(static_cast<XUserHandle>(const_cast<void*>(user))) || xuid == nullptr) return false;
+  *xuid = kXuid;
+  return true;
+}
 void* GamertagInterface() { return const_cast<StaticInterface*>(&kGamertag); }
 
 }  // namespace anyxboxx

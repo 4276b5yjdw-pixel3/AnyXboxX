@@ -2,11 +2,11 @@
 <style>.ok{fill:#2ea043}.no{fill:#484f58}</style>
 <rect width="960" height="811" fill="#0d1117"/>
 <g><title>CPU x86-64 : 100 %</title><rect x="24.0" y="24" width="127.0" height="22" rx="4" fill="#161b22"/><rect x="104.0" y="24" width="47.0" height="22" rx="4" fill="#2ea043"/><text x="64.0" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">CPU x86-64</text><text x="127.5" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">100 %</text></g>
-<g><title>Runtime GDK : 85/396</title><rect x="159.0" y="24" width="140.2" height="22" rx="4" fill="#161b22"/><rect x="245.6" y="24" width="53.6" height="22" rx="4" fill="#d29922"/><text x="202.3" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Runtime GDK</text><text x="272.4" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">85/396</text></g>
-<g><title>Imports du paquet : 876/1337</title><rect x="307.2" y="24" width="193.0" height="22" rx="4" fill="#161b22"/><rect x="433.4" y="24" width="66.8" height="22" rx="4" fill="#d29922"/><text x="370.3" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Imports du paquet</text><text x="466.8" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">876/1337</text></g>
-<g><title>DLL console : 5/6</title><rect x="508.2" y="24" width="120.4" height="22" rx="4" fill="#161b22"/><rect x="594.8" y="24" width="33.8" height="22" rx="4" fill="#d29922"/><text x="551.5" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">DLL console</text><text x="611.7" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">5/6</text></g>
-<g><title>GPU RDNA 2 : 0 %</title><rect x="636.6" y="24" width="113.8" height="22" rx="4" fill="#161b22"/><rect x="716.6" y="24" width="33.8" height="22" rx="4" fill="#484f58"/><text x="676.6" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">GPU RDNA 2</text><text x="733.5" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">0 %</text></g>
-<text x="24" y="84" font-size="15" font-weight="600" fill="#e6edf3">Runtime GDK : 21.5 % (85/396)</text>
+<g><title>Runtime GDK : 121/396</title><rect x="159.0" y="24" width="146.8" height="22" rx="4" fill="#161b22"/><rect x="245.6" y="24" width="60.2" height="22" rx="4" fill="#d29922"/><text x="202.3" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Runtime GDK</text><text x="275.7" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">121/396</text></g>
+<g><title>Imports du paquet : 876/1337</title><rect x="313.8" y="24" width="193.0" height="22" rx="4" fill="#161b22"/><rect x="440.0" y="24" width="66.8" height="22" rx="4" fill="#d29922"/><text x="376.9" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">Imports du paquet</text><text x="473.4" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">876/1337</text></g>
+<g><title>DLL console : 5/6</title><rect x="514.8" y="24" width="120.4" height="22" rx="4" fill="#161b22"/><rect x="601.4" y="24" width="33.8" height="22" rx="4" fill="#d29922"/><text x="558.1" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">DLL console</text><text x="618.3" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">5/6</text></g>
+<g><title>GPU RDNA 2 : 0 %</title><rect x="643.2" y="24" width="113.8" height="22" rx="4" fill="#161b22"/><rect x="723.2" y="24" width="33.8" height="22" rx="4" fill="#484f58"/><text x="683.2" y="39" text-anchor="middle" fill="#e6edf3" font-size="12">GPU RDNA 2</text><text x="740.1" y="39" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="600">0 %</text></g>
+<text x="24" y="84" font-size="15" font-weight="600" fill="#e6edf3">Runtime GDK : 30.6 % (121/396)</text>
 <g><title>XStore : 0/70</title>
 <rect x="24.0" y="98.0" width="161.2" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="28.0" y="110.0" font-size="11" fill="#e6edf3">XStore</text>
@@ -205,39 +205,39 @@
 <rect class="no" x="478.6" y="169.0" width="10" height="10"/>
 <rect class="no" x="434.6" y="180.0" width="10" height="10"/>
 </g>
-<g><title>XGameSave : 0/30</title>
+<g><title>XGameSave : 30/30</title>
 <rect x="503.0" y="98.0" width="69.1" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="507.0" y="110.0" font-size="11" fill="#e6edf3">XGameSave</text>
-<rect class="no" x="506.0" y="114.0" width="10" height="10"/>
-<rect class="no" x="517.0" y="114.0" width="10" height="10"/>
-<rect class="no" x="528.0" y="114.0" width="10" height="10"/>
-<rect class="no" x="539.0" y="114.0" width="10" height="10"/>
-<rect class="no" x="550.0" y="114.0" width="10" height="10"/>
-<rect class="no" x="506.0" y="125.0" width="10" height="10"/>
-<rect class="no" x="517.0" y="125.0" width="10" height="10"/>
-<rect class="no" x="528.0" y="125.0" width="10" height="10"/>
-<rect class="no" x="539.0" y="125.0" width="10" height="10"/>
-<rect class="no" x="550.0" y="125.0" width="10" height="10"/>
-<rect class="no" x="506.0" y="136.0" width="10" height="10"/>
-<rect class="no" x="517.0" y="136.0" width="10" height="10"/>
-<rect class="no" x="528.0" y="136.0" width="10" height="10"/>
-<rect class="no" x="539.0" y="136.0" width="10" height="10"/>
-<rect class="no" x="550.0" y="136.0" width="10" height="10"/>
-<rect class="no" x="506.0" y="147.0" width="10" height="10"/>
-<rect class="no" x="517.0" y="147.0" width="10" height="10"/>
-<rect class="no" x="528.0" y="147.0" width="10" height="10"/>
-<rect class="no" x="539.0" y="147.0" width="10" height="10"/>
-<rect class="no" x="550.0" y="147.0" width="10" height="10"/>
-<rect class="no" x="506.0" y="158.0" width="10" height="10"/>
-<rect class="no" x="517.0" y="158.0" width="10" height="10"/>
-<rect class="no" x="528.0" y="158.0" width="10" height="10"/>
-<rect class="no" x="539.0" y="158.0" width="10" height="10"/>
-<rect class="no" x="550.0" y="158.0" width="10" height="10"/>
-<rect class="no" x="506.0" y="169.0" width="10" height="10"/>
-<rect class="no" x="517.0" y="169.0" width="10" height="10"/>
-<rect class="no" x="528.0" y="169.0" width="10" height="10"/>
-<rect class="no" x="539.0" y="169.0" width="10" height="10"/>
-<rect class="no" x="550.0" y="169.0" width="10" height="10"/>
+<rect class="ok" x="506.0" y="114.0" width="10" height="10"/>
+<rect class="ok" x="517.0" y="114.0" width="10" height="10"/>
+<rect class="ok" x="528.0" y="114.0" width="10" height="10"/>
+<rect class="ok" x="539.0" y="114.0" width="10" height="10"/>
+<rect class="ok" x="550.0" y="114.0" width="10" height="10"/>
+<rect class="ok" x="506.0" y="125.0" width="10" height="10"/>
+<rect class="ok" x="517.0" y="125.0" width="10" height="10"/>
+<rect class="ok" x="528.0" y="125.0" width="10" height="10"/>
+<rect class="ok" x="539.0" y="125.0" width="10" height="10"/>
+<rect class="ok" x="550.0" y="125.0" width="10" height="10"/>
+<rect class="ok" x="506.0" y="136.0" width="10" height="10"/>
+<rect class="ok" x="517.0" y="136.0" width="10" height="10"/>
+<rect class="ok" x="528.0" y="136.0" width="10" height="10"/>
+<rect class="ok" x="539.0" y="136.0" width="10" height="10"/>
+<rect class="ok" x="550.0" y="136.0" width="10" height="10"/>
+<rect class="ok" x="506.0" y="147.0" width="10" height="10"/>
+<rect class="ok" x="517.0" y="147.0" width="10" height="10"/>
+<rect class="ok" x="528.0" y="147.0" width="10" height="10"/>
+<rect class="ok" x="539.0" y="147.0" width="10" height="10"/>
+<rect class="ok" x="550.0" y="147.0" width="10" height="10"/>
+<rect class="ok" x="506.0" y="158.0" width="10" height="10"/>
+<rect class="ok" x="517.0" y="158.0" width="10" height="10"/>
+<rect class="ok" x="528.0" y="158.0" width="10" height="10"/>
+<rect class="ok" x="539.0" y="158.0" width="10" height="10"/>
+<rect class="ok" x="550.0" y="158.0" width="10" height="10"/>
+<rect class="ok" x="506.0" y="169.0" width="10" height="10"/>
+<rect class="ok" x="517.0" y="169.0" width="10" height="10"/>
+<rect class="ok" x="528.0" y="169.0" width="10" height="10"/>
+<rect class="ok" x="539.0" y="169.0" width="10" height="10"/>
+<rect class="ok" x="550.0" y="169.0" width="10" height="10"/>
 </g>
 <g><title>XTaskQueue : 27/27</title>
 <rect x="572.1" y="98.0" width="62.2" height="110.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
@@ -361,15 +361,15 @@
 <rect class="ok" x="804.9" y="114.0" width="10" height="10"/>
 <rect class="ok" x="815.9" y="114.0" width="10" height="10"/>
 </g>
-<g><title>XPersistentLocalStorage : 0/6</title>
+<g><title>XPersistentLocalStorage : 6/6</title>
 <rect x="790.9" y="142.0" width="46.1" height="33.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>
 <text x="794.9" y="154.0" font-size="11" fill="#e6edf3">XPer…</text>
-<rect class="no" x="793.9" y="158.0" width="6" height="6"/>
-<rect class="no" x="800.9" y="158.0" width="6" height="6"/>
-<rect class="no" x="807.9" y="158.0" width="6" height="6"/>
-<rect class="no" x="814.9" y="158.0" width="6" height="6"/>
-<rect class="no" x="821.9" y="158.0" width="6" height="6"/>
-<rect class="no" x="793.9" y="165.0" width="6" height="6"/>
+<rect class="ok" x="793.9" y="158.0" width="6" height="6"/>
+<rect class="ok" x="800.9" y="158.0" width="6" height="6"/>
+<rect class="ok" x="807.9" y="158.0" width="6" height="6"/>
+<rect class="ok" x="814.9" y="158.0" width="6" height="6"/>
+<rect class="ok" x="821.9" y="158.0" width="6" height="6"/>
+<rect class="ok" x="793.9" y="165.0" width="6" height="6"/>
 </g>
 <g><title>XSystem : 6/6</title>
 <rect x="790.9" y="175.0" width="46.1" height="33.0" rx="2" fill="#161b22" stroke="#0d1117" stroke-width="1"/>

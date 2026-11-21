@@ -67,7 +67,7 @@ Sur PC, chaque fonction `X*` de la bibliothèque statique du GDK (`xgameruntime.
 | `XUser` (+ 4 versions d'interface, `XUserGetGamertag`) | 44 | **AnyXboxX** (profil hors ligne) |
 | `XGameStreaming` | 32 | Windows |
 | `XPackage` | 31 | Windows |
-| `XGameSave` | 30 | Windows |
+| `XGameSave` (+ `XGameSaveFiles`) | 30 | **AnyXboxX** (disque du PC) |
 | `XTaskQueue` / `XAsync` / `XThread` | 27 | **AnyXboxX** |
 
 ## Identité Xbox Series X
@@ -75,6 +75,10 @@ Sur PC, chaque fonction `X*` de la bibliothèque statique du GDK (`xgameruntime.
 `XSystemGetDeviceType` n'est pas une interface : `xgameruntime.lib`, lié dans le jeu, lit `HKLM\Software\Microsoft\Windows NT\CurrentVersion\OEM`, valeur `ConsoleMode`. La valeur 0x64 donne `XboxScarlettAnaconda`, et l'absence de valeur donne `Pc`. En mode natif, AnyXboxX redirige les fonctions de registre du jeu **et des DLL de son dossier** vers un registre simulé (`runtime/xgameruntime/registry.cpp`) : seule cette clé est simulée, le reste va au vrai registre.
 
 `XGameGetXboxTitleId` renvoie le `<TitleId>` du `MicrosoftGame.config` du jeu. `XSystemGetAnalyticsInfo` annonce la famille « Windows.Xbox » et le modèle « Xbox Series X », et le bac à sable Xbox Live est `RETAIL`.
+
+## Sauvegardes
+
+`XGameSave` et `XPersistentLocalStorage` écrivent sur le disque du PC, dans `%LOCALAPPDATA%\AnyXboxX\<TitleId>\` (ou `ANYXBOXX_SAVE_DIR`). L'organisation est `saves\<configuration>\<XUID>\<conteneur>\<blob>.blob`. Les noms du jeu sont encodés en `%XX` pour tout caractère hors `[A-Za-z0-9_-]` : aucun nom ne peut sortir du dossier. Chaque blob est écrit dans un fichier temporaire puis renommé, ce qui évite les sauvegardes à moitié écrites. Le quota simulé est de 256 Mio par configuration ; il n'y a pas de synchronisation cloud. Le stockage local annonce la taille du `<PersistentLocalStorage><SizeMB>` du `MicrosoftGame.config`.
 
 `runtime/xgameruntime/served_interfaces.inc` liste les interfaces servies par AnyXboxX. Ce fichier est lu à la fois par le C++ et par la mesure `--traduction`.
 

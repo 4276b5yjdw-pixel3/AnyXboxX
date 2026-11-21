@@ -69,4 +69,13 @@ uint32_t GameTitleId() {
   return static_cast<uint32_t>(title_id);
 }
 
+uint64_t GameLocalStorageBytes() {
+  const std::string value = ElementText(ReadConfigText(), "SizeMB");
+  if (value.empty() || value.size() > 9) return 0;
+  char* end = nullptr;
+  const unsigned long megabytes = std::strtoul(value.c_str(), &end, 10);
+  if (end == nullptr || *end != '\0') return 0;
+  return static_cast<uint64_t>(megabytes) * 1024 * 1024;
+}
+
 }  // namespace anyxboxx
