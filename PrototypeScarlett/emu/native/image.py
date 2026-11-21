@@ -58,6 +58,7 @@ class NativeImage:
                 self._bind(pe)
                 self._protect(pe)
                 self._register_exceptions(pe)
+                self._install_tls(pe)
             except BaseException:
                 self.close()   # sinon l'image reste réservée et bloque sa base
                 raise
@@ -74,7 +75,7 @@ class NativeImage:
         if not 0 < header.SizeOfImage <= MAX_IMAGE:
             raise ValueError("Exécution native : taille d’image invalide.")
         dirs = header.DATA_DIRECTORY
-        for index, feature in ((DIR_TLS, "TLS implicite"), (DIR_CLR, ".NET")):
+        for index, feature in ((DIR_CLR, ".NET"),):
             if index < len(dirs) and dirs[index].VirtualAddress:
                 raise ValueError(f"Exécution native : {feature} pas encore pris en charge.")
 
@@ -177,7 +178,22 @@ class NativeImage:
         prototype = ctypes.CFUNCTYPE(ctypes.c_int64, *([ctypes.c_uint64] * len(arguments)))
         return prototype(self.entry)(*arguments)
 
+    def _install_tls(self, pe):
+        """TLS implicite (thread_local) : confiée au runtime C++, qui équipe chaque thread."""
+        directory = pe.OPTIONAL_HEADER.DATA_DIRECTORY[DIR_TLS]
+        if not directory.VirtualAddress:
+            return
+        install = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p)(
+            self.shims.runtime.export("AnyXboxX_InstallImageTls", "anyxboxx_tls.dll"))
+        if not install(self.base, self.base + directory.VirtualAddress):
+            raise ValueError("Exécution native : installation de la TLS implicite impossible.")
+        self._tls_installed = True
+
     def close(self):
+        if getattr(self, "_tls_installed", False):
+            remove = ctypes.WINFUNCTYPE(None, ctypes.c_void_p)(self.shims.runtime.export("AnyXboxX_RemoveImageTls", "anyxboxx_tls.dll"))
+            remove(self.base)
+            self._tls_installed = False
         if self._function_table:
             win32.RtlDeleteFunctionTable(self._function_table)
             self._function_table = None
