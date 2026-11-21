@@ -35,3 +35,7 @@ Ils ont examiné le même paquet que celui étudié par AnyXboxX et arrivent à 
 2. Leur dépôt en sous-module Git (`third_party/tombox`), compilé avec `cargo`.
 3. Le lanceur `anyxboxx.exe` charge leurs DLL Rust pour les bibliothèques console qu'AnyXboxX ne couvre pas.
 4. Leur traducteur `tombox-xshader` vérifié par notre interpréteur de référence sur le GPU.
+
+## Confrontation de leur décodeur
+
+Leur désassembleur RDNA 2 (`tombox-xshader`), appelé depuis la passerelle Rust d'AnyXboxX (`rust/anyxboxx-rdna2`), a été confronté aux 29 522 encodages uniques des tests de LLVM par `tools/compare_tombox.py` : aucune longueur fausse, 24 831 encodages identiques (84 %), 4 586 opcodes absents de leur table et 105 noms différents. Détail et exemples : [tombox-decodeur.md](tombox-decodeur.md). La table d'AnyXboxX, générée depuis LLVM, couvre ces opcodes manquants ; elle peut leur être proposée.

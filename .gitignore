@@ -6,3 +6,6 @@ __pycache__/
 .coverage
 .pytest_cache/
 /runtime/build/
+
+# Rust
+rust/target/

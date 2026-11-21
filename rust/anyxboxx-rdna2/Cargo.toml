@@ -1,0 +1,14 @@
+[package]
+name = "anyxboxx-rdna2"
+version = "0.1.0"
+edition = "2021"
+description = "Passerelle vers le décodeur RDNA 2 de TomBox (tombox-xshader) pour le confronter à AnyXboxX."
+license = "LGPL-2.1-or-later"
+
+[[bin]]
+name = "anyxboxx_rdna2"
+path = "src/main.rs"
+
+[dependencies]
+# Suite de TomBox (MIT ou Apache-2.0), sous-module third_party/tombox — voir THIRD_PARTY.md.
+tombox-xshader = { path = "../../third_party/tombox/crates/tombox-xshader" }
