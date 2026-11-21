@@ -9,7 +9,6 @@ au texte de LLVM, ligne par ligne (mode wave32).
     python tools/rdna2_shapes.py <dossier des .s> [--verifier]
 """
 import re
-import struct
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -20,7 +19,7 @@ from emu import rdna2, rdna2_operands as ops  # noqa: E402
 from rdna2_mnemonics import llvm_lines  # noqa: E402
 
 OUTPUT = ROOT / "PrototypeScarlett" / "emu" / "rdna2_shapes.py"
-SKIPPED_SUFFIXES = ("_sdwa", "_dpp", "_dpp8", "_e64")
+SKIPPED_SUFFIXES = ("_sdwa", "_dpp", "_dpp8")
 RANGE = re.compile(r"^(?:s|v|ttmp)\[(\d+):(\d+)\]$")
 PAIR_NAMES = {"vcc": 2, "exec": 2}
 HWREG_TOKEN = re.compile(r"^hwreg\((HW_REG_[A-Z0-9_]+)")
@@ -40,7 +39,7 @@ def split_operands(text):
 
 
 def read_lines(folder):
-    """(mnémonique, opérandes, octets) des lignes wave32 des familles couvertes."""
+    """(texte attendu, opérandes sans modificateurs finaux, octets) des lignes wave32 couvertes."""
     for _, prefix, instruction, data in llvm_lines(folder):
         if "W64" in prefix or not instruction or not instruction[0].isalpha():
             continue
@@ -48,8 +47,13 @@ def read_lines(folder):
         if mnemonic.endswith(SKIPPED_SUFFIXES):
             continue
         family, _, size = rdna2.classify(data + bytes(8))
-        if family in ops.FAMILIES and size * rdna2.DWORD == len(data):
-            yield mnemonic.removesuffix("_e32"), split_operands(operands), data
+        if family not in ops.FAMILIES or size * rdna2.DWORD != len(data):
+            continue
+        tokens = split_operands(operands)
+        if family == "VOP3" and tokens:               # « v2 clamp mul:2 » : modificateurs à part
+            tokens[-1] = tokens[-1].split(" ")[0]
+        expected = " ".join(f"{mnemonic.removesuffix('_e32')} {operands}".split())
+        yield expected, tokens, data
 
 
 def _width(token):
@@ -57,8 +61,8 @@ def _width(token):
     return int(found.group(2)) - int(found.group(1)) + 1 if found else PAIR_NAMES.get(token, 1)
 
 
-def _literal(data):
-    return struct.unpack_from("<I", data, rdna2.DWORD)[0] if len(data) >= 2 * rdna2.DWORD else None
+def _word_and_literal(data, family):
+    return ops._words(data, 0, family, len(data) // rdna2.DWORD)
 
 
 def candidates(family, word, literal, token):
@@ -92,13 +96,22 @@ def learn_shape(family, word, literal, tokens):
     return tuple(shape)
 
 
+def _vop3_shape(word, literal, tokens):
+    """VOP3 ou VOP3b (destination scalaire dans le champ abs) : la forme sans texte figé."""
+    plain = learn_shape("VOP3", word, literal, tokens)
+    carry = learn_shape("VOP3B", word, literal, tokens)
+    fixed = [sum(name == "=" for name, _ in shape) for shape in (plain, carry)]
+    return plain if fixed[0] <= fixed[1] else (ops.VOP3B_MARK, *carry)
+
+
 def learn(folder):
     """Formes par (famille, opcode) et noms des registres matériels (hwreg)."""
     votes, names = defaultdict(Counter), {}
     for _, tokens, data in read_lines(folder):
         family, opcode, _ = rdna2.classify(data)
-        word = struct.unpack_from("<I", data)[0]
-        votes[(family, opcode)][learn_shape(family, word, _literal(data), tokens)] += 1
+        word, literal = _word_and_literal(data, family)
+        shape = _vop3_shape(word, literal, tokens) if family == "VOP3" else learn_shape(family, word, literal, tokens)
+        votes[(family, opcode)][shape] += 1
         for token in tokens:
             found = HWREG_TOKEN.match(token)
             if found:
@@ -110,8 +123,7 @@ def learn(folder):
 def conformity(folder):
     """Par famille : (lignes identiques à LLVM, total), et quelques écarts."""
     scores, samples = defaultdict(lambda: [0, 0]), []
-    for mnemonic, tokens, data in read_lines(folder):
-        expected = f"{mnemonic} {', '.join(tokens)}".rstrip()
+    for expected, _, data in read_lines(folder):
         got = ops.text(data)
         family = rdna2.classify(data)[0]
         scores[family][1] += 1

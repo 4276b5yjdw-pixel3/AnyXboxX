@@ -110,7 +110,8 @@ def test_collect_small_package(folders):
     assert imports.blocks[0].total == 3
     gpu = status.sections[-1]
     assert gpu.counted and 0 < gpu.done < gpu.total
-    assert "VOP3" in [b.name for b in gpu.blocks] and next(b for b in gpu.blocks if b.name == "VOP3").done == 0
+    done = {b.name: b.done for b in gpu.blocks}
+    assert done["VOP3"] > 0 and done["DS"] == 0          # mémoire (LDS) pas encore exécutée
     assert dict((n, v) for n, v, _ in status.badges)["GPU RDNA 2"] == f"{gpu.done}/{gpu.total}"
     ET.fromstring(status_map.render(status))
 

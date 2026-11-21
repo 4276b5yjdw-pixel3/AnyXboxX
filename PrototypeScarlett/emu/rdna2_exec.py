@@ -8,7 +8,7 @@ qui les nomme, ce qui mesure ce qui reste à traduire.
 """
 import struct
 
-from emu import rdna2
+from emu import rdna2, rdna2_exec_vop3
 from emu.rdna2_exec_ops import SCALAR, VECTOR, VECTOR_COMPARE, BRANCHES, float_bits
 
 LANES = 32
@@ -93,8 +93,14 @@ def step(wave, data):
     name = rdna2.mnemonic(family, opcode) or f"{family}#{opcode}"
     if name == "s_endpgm":
         return False
-    if family not in DECODED_FAMILIES:
+    if not executable(family, name):
         raise Untranslated(f"instruction non traduite : {name} ({family}, opcode 0x{opcode:X})")
+    if family == "VOP3":
+        word = int.from_bytes(data[wave.pc:wave.pc + 2 * rdna2.DWORD], "little")
+        literal = struct.unpack_from("<I", data, wave.pc + 2 * rdna2.DWORD)[0] if size > 2 else None
+        rdna2_exec_vop3.execute(wave, name, opcode, word, literal)
+        wave.pc += size * rdna2.DWORD
+        return True
     word = struct.unpack_from("<I", data, wave.pc)[0]
     literal = struct.unpack_from("<I", data, wave.pc + rdna2.DWORD)[0] if size > 1 else None
     fields = _fields(family, word)
@@ -150,6 +156,8 @@ EXECUTABLE = frozenset({"s_endpgm", *SCALAR, *VECTOR, *VECTOR_COMPARE, *BRANCHES
 
 def executable(family, name):
     """Vrai si l'interpréteur exécute cette instruction dans cet encodage."""
+    if family == "VOP3":
+        return name in rdna2_exec_vop3.EXECUTABLE
     return family in DECODED_FAMILIES and name in EXECUTABLE
 
 
