@@ -38,6 +38,7 @@ VOP2_WITH_LITERAL = frozenset({0x20, 0x21, 0x2C, 0x2D, 0x37, 0x38})   # v_madmk/
 SOPK_SETREG_IMM32 = 0x15
 VOP_EXTENSIONS = frozenset({0xE9, 0xEA, 0xF9, 0xFA})     # DPP8, DPP8 FI, SDWA, DPP16
 OPCODE_HIGH_BIT = {"MIMG": 0, "MUBUF": 25}
+MTBUF_OPCODE_BIT3 = 21                   # bit 53 de l'instruction (second mot) : 4e bit de l'opcode MTBUF
 
 
 @dataclass(frozen=True)
@@ -85,12 +86,14 @@ def _size(family, word, second):
     return size + (1 if _has_literal(family, word, second) else 0)
 
 
-def _opcode(family, word):
+def _opcode(family, word, second):
     base = "FLAT" if family in FLAT_SEGMENTS.values() else family
     shift, mask = OPCODE.get(base, (0, 0))
     opcode = (word >> shift) & mask
     if base in OPCODE_HIGH_BIT:              # bit OPM : 8e bit de l'opcode
         opcode |= ((word >> OPCODE_HIGH_BIT[base]) & 1) << 7
+    if base == "MTBUF" and second is not None:   # MTBUFe_gfx10 de LLVM : Inst{53} = op{3}
+        opcode |= ((second >> MTBUF_OPCODE_BIT3) & 1) << 3
     return opcode
 
 
@@ -99,13 +102,15 @@ def classify(data, offset=0):
     word = struct.unpack_from("<I", data, offset)[0]
     second = struct.unpack_from("<I", data, offset + DWORD)[0] if len(data) >= offset + 2 * DWORD else None
     family = _family(word)
-    return family, _opcode(family, word), _size(family, word, second)
+    return family, _opcode(family, word, second), _size(family, word, second)
 
 
 # Encodages absents des tests d'encodage gfx10 de LLVM (qui n'ont que la forme VOP3 0x200-0x202) :
-# opcodes VINTRP du chapitre « Parameter Interpolation » de la documentation ISA RDNA 2 d'AMD.
+# opcodes VINTRP du chapitre « Parameter Interpolation » de la documentation ISA RDNA 2 d'AMD,
+# et les deux opcodes MTBUF « xyz » que mtbuf-gfx10.s n'essaie pas (chapitre « MTBUF Instructions »).
 ISA_ONLY_MNEMONICS = {("VINTRP", 0): "v_interp_p1_f32", ("VINTRP", 1): "v_interp_p2_f32",
-                      ("VINTRP", 2): "v_interp_mov_f32"}
+                      ("VINTRP", 2): "v_interp_mov_f32",
+                      ("MTBUF", 2): "tbuffer_load_format_xyz", ("MTBUF", 6): "tbuffer_store_format_xyz"}
 
 
 def mnemonic(family, opcode):
@@ -139,7 +144,7 @@ RAW_COLUMN = 27     # trois mots de 32 bits en hexadécimal
 
 def listing(data):
     """Une ligne par instruction : décalage, mots bruts, puis l'instruction au format de LLVM
-    (opérandes compris pour les familles scalaires et VOP1/VOP2/VOPC), sinon son mnémonique."""
+    (opérandes compris pour les familles couvertes par rdna2_operands), sinon son mnémonique."""
     from emu import rdna2_operands
 
     lines = []
@@ -147,7 +152,7 @@ def listing(data):
         raw = struct.unpack_from(f"<{instruction.size}I", data, instruction.offset)
         name = mnemonic(instruction.family, instruction.opcode)
         label = name or f"{instruction.family.lower()}_op_0x{instruction.opcode:X}"
-        if instruction.family in rdna2_operands.FAMILIES:
+        if instruction.family in rdna2_operands.FAMILIES | set(rdna2_operands.FIXED_FORMAT):
             label = rdna2_operands.text(data, instruction.offset) or label
         words = " ".join(f"{w:08X}" for w in raw)
         lines.append(f"{instruction.offset:06X}  {words:{RAW_COLUMN}} {label}")

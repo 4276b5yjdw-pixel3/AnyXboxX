@@ -1,7 +1,7 @@
 """Génère PrototypeScarlett/emu/rdna2_ops.py : (famille, opcode) → mnémonique RDNA 2.
 
-Source : les tests d'encodage publics de LLVM (llvm/test/MC/AMDGPU/gfx10_asm_*.s et
-gfx1030_new.s, licence Apache 2.0 avec exception LLVM). Chaque ligne « encoding: [...] »
+Source : les tests d'encodage publics de LLVM (llvm/test/MC/AMDGPU/gfx10_asm_*.s,
+gfx1030_new.s et mtbuf-gfx10.s, licence Apache 2.0 avec exception LLVM). Chaque ligne « encoding: [...] »
 est passée au décodeur d'AnyXboxX ; on vérifie au passage que la longueur qu'il calcule
 est celle de LLVM. Les noms de gfx1030 (RDNA 2) l'emportent sur ceux de gfx1010.
 

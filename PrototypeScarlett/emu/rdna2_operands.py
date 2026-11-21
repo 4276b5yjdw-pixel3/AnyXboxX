@@ -1,13 +1,15 @@
 """Opérandes des instructions RDNA 2 : champs, registres et constantes, au format de LLVM.
 
 Couvre les encodages scalaires (SOP1, SOP2, SOPC, SOPK, SOPP), vectoriels (VOP1, VOP2, VOPC,
-VOP3), les accès mémoire scalaires (SMEM), la mémoire partagée (DS) et les exports (EXP, rdna2_exp). La forme de chaque opcode (quels champs, dans quel ordre, quelle
-largeur de registre) vient de rdna2_ops.SHAPES, apprise sur les tests de LLVM.
+VOP3), les accès mémoire scalaires (SMEM), la mémoire partagée (DS), les exports (EXP,
+rdna2_exp), les tampons et FLAT/GLOBAL/SCRATCH (rdna2_operands_vmem) et les images (MIMG,
+rdna2_operands_mimg). La forme de chaque opcode (quels champs, dans quel ordre, quelle
+largeur de registre) vient de rdna2_shapes.SHAPES, apprise sur les tests de LLVM.
 """
 import re
 import struct
 
-from emu import rdna2, rdna2_exp, rdna2_swizzle
+from emu import rdna2, rdna2_exp, rdna2_operands_mimg, rdna2_operands_vmem as vmem, rdna2_swizzle
 
 LITERAL = 255
 INLINE_FLOATS = {240: "0.5", 241: "-0.5", 242: "1.0", 243: "-1.0", 244: "2.0", 245: "-2.0",
@@ -46,11 +48,12 @@ FIELDS = {
     # offset (bits 15-0) ou offset0/offset1 (bits 7-0 et 15-8), puis gds (bit 17) : suffixes.
     "DS": {"addr": (32, 0xFF, "vgpr"), "data0": (40, 0xFF, "vgpr"), "data1": (48, 0xFF, "vgpr"),
            "vdst": (56, 0xFF, "vgpr")},
+    **vmem.FIELDS,                       # MUBUF, MTBUF, FLAT, GLOBAL, SCRATCH (deux mots)
 }
 FAMILIES = frozenset(FIELDS) - {"VOP3B"}
 # Familles au texte fixe, sans forme apprise : fonction (data, offset) → texte.
-FIXED_FORMAT = {"EXP": rdna2_exp.text, "VINTRP": rdna2_exp.vintrp_text}
-TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM", "DS"})
+FIXED_FORMAT = {"EXP": rdna2_exp.text, "VINTRP": rdna2_exp.vintrp_text, "MIMG": rdna2_operands_mimg.text}
+TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM", "DS"}) | vmem.FAMILIES
 DS_TWO_OFFSETS = re.compile(r"^ds_(?:read|write|wrxchg)2(?:st64)?_")
 DS_SWIZZLE = "ds_swizzle_b32"
 DS_GDS_BIT, BYTE, U16 = 17, 0xFF, 0xFFFF
@@ -139,6 +142,8 @@ def render(family, word, literal, element):
         return "<littéral>" if literal is None else f"0x{literal:x}"
     shift, mask, kind = FIELDS[family][name]
     value = (word >> shift) & mask
+    if kind in vmem.KINDS:
+        return vmem.render_kind(kind, family, word, value, option, source)
     if kind == "imm":
         return immediate(value, option)
     if kind == "vgpr":
@@ -250,6 +255,8 @@ def text(data, offset=0):
     shape = SHAPES.get((family, opcode), default_shape(family))
     if shape[:1] == (VOP3B_MARK,):
         family, shape = "VOP3B", shape[1:]
+    if family in vmem.FAMILIES:
+        shape = vmem.adjust_shape(family, name, word, shape)
     operands = ", ".join(render(family, word, literal, element) for element in shape)
     if family in VOP3_LIKE:
         name = vop3_name(name, opcode)
@@ -258,4 +265,6 @@ def text(data, offset=0):
         operands = f"{operands} {smem_suffix(word)}".strip()
     if family == "DS":
         operands = f"{operands} {ds_suffix(name, word)}".strip()
+    if family in vmem.FAMILIES:
+        operands = f"{operands} {vmem.suffix(family, word)}".strip()
     return f"{name} {operands}".rstrip()
