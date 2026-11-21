@@ -149,6 +149,33 @@ def test_swizzle_offsets(offset, expected):
     assert rdna2_swizzle.text(offset) == expected
 
 
+def exp_bytes(target, enable=0xF, sources=(0, 0, 0, 0), compr=False, done=False, vm=False):
+    word = enable | target << 4 | compr << 10 | done << 11 | vm << 12 | 0x3E << 26
+    word |= sum(register << (32 + 8 * index) for index, register in enumerate(sources))
+    return word.to_bytes(8, "little")
+
+
+@pytest.mark.parametrize("encoding, expected", [                 # encodages des tests MC de LLVM (gfx10)
+    ((0x0F, 0x08, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00), "exp mrt0, v0, v0, v0, v0 done"),
+    ((0x8F, 0x04, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00), "exp mrtz, v0, v0, v0, v0 compr"),
+    ((0x9F, 0x10, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00), "exp null, v0, v0, v0, v0 vm"),
+    ((0xCF, 0x00, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00), "exp pos0, v0, v0, v0, v0"),
+    ((0x4F, 0x01, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00), "exp prim, v0, v0, v0, v0"),
+    ((0x0F, 0x02, 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00), "exp param0, v0, v0, v0, v0"),
+])
+def test_exp_follows_llvm_syntax(encoding, expected):
+    assert rdna2_operands.text(bytes(encoding)) == expected
+
+
+def test_exp_sources_targets_and_flags():                       # AMDGPUInstPrinter::printExpSrcN/printExpTgt
+    text = rdna2_operands.text
+    assert text(exp_bytes(3, 0b0101, (1, 2, 3, 4))) == "exp mrt3, v1, off, v3, off"
+    assert text(exp_bytes(16, 0b0011, (5, 6, 7, 8), compr=True, done=True, vm=True)) == \
+        "exp pos4, v5, v5, off, off done compr vm"                # compr : src0, src0, src1, src1
+    assert text(exp_bytes(63, 0b1100, (5, 6, 7, 8), compr=True)) == "exp param31, off, off, v6, v6 compr"
+    assert text(exp_bytes(21)) == "exp invalid_target_21, v0, v0, v0, v0"   # dual_src_blend : gfx11+
+
+
 def test_symbolic_immediates():
     assert rdna2_operands.waitcnt(0x1234) == "vmcnt(4) expcnt(3) lgkmcnt(18)"
     assert rdna2_operands.waitcnt(0x0000) == "vmcnt(0) expcnt(0) lgkmcnt(0)"

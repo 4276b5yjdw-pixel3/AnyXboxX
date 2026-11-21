@@ -48,7 +48,8 @@ def read_lines(folder):
         if mnemonic.endswith(SKIPPED_SUFFIXES):
             continue
         family, _, size = rdna2.classify(data + bytes(8))
-        if family not in ops.FAMILIES or size * rdna2.DWORD != len(data):
+        covered = family in ops.FAMILIES or family in ops.FIXED_FORMAT
+        if not covered or size * rdna2.DWORD != len(data):
             continue
         tokens = split_operands(operands)
         if family == "VOP3" and tokens:               # « v2 clamp mul:2 » : modificateurs à part
@@ -116,6 +117,8 @@ def learn(folder):
     votes, names = defaultdict(Counter), {}
     for _, tokens, data in read_lines(folder):
         family, opcode, _ = rdna2.classify(data)
+        if family in ops.FIXED_FORMAT:                # texte fixe (EXP) : rien à apprendre
+            continue
         word, literal = _word_and_literal(data, family)
         shape = _vop3_shape(word, literal, tokens) if family == "VOP3" else learn_shape(family, word, literal, tokens)
         votes[(family, opcode)][shape] += 1
