@@ -60,7 +60,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Tabela das 396 funções do GDK: interface e número do método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ feito |
 | `XTaskQueue`, `XAsync`, `XThread` fornecidas pelo AnyXboxX: o testgdk roda sem o runtime do Windows | ✅ feito |
 | Outras interfaces do GDK: delegadas ao runtime GDK do Windows, nomeadas pelo rastreamento | 🟡 em andamento |
-| 218 testes automatizados | ✅ feito |
+| 220 testes automatizados | ✅ feito |
 | D3D12.X: `D3D12XboxCreateDevice`, interfaces `ID3D12*` do console e `DXGIXPresentArray`, servidos pela `d3d12_xs.dll` em Rust do TomBox (MIT, 48 exportações implementadas, compilada por `tools/build_tombox.py d3d12_xs`, carregada com `ANYXBOXX_D3D12_XS=<caminho>`); não testável aqui sem um executável de console | 🟡 em andamento |
 | `XUser` offline: perfil local sempre conectado, gamertag configurável (`ANYXBOXX_GAMERTAG`), login do testgdk bem-sucedido | ✅ feito |
 | Identidade do Xbox Series X: tipo de console (valor de registro `ConsoleMode` simulado, inclusive nas DLLs do jogo), `XSystem`, Title ID lido de `MicrosoftGame.config`, análise de uso «Xbox Series X» | ✅ feito |
@@ -74,6 +74,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | TLS implícito (`thread_local`) dos jogos no modo nativo: DLL portadora `anyxboxx_tls.dll`, cada thread recebe sua cópia (até 256 KiB) | ✅ feito |
 | Inicializador nativo em C++ sem Python (`runtime/build/bin/anyxboxx.exe <jogo.exe \| pasta> [--fps]`): SimpleTriangle e testgdk a ~12 000 qps | ✅ feito |
 | Desmontador de GPU RDNA 2: 1.444 mnemônicos e operandos na sintaxe do LLVM (escalares, VOP1/VOP2/VOPC/VOP3 com modificadores), verificado em 34.948 codificações públicas do LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 em andamento |
+| Texturas de console em Rust: decodificação BC7 e destilização GFX10 `SW_4K_S` portadas do Xbox2Windows (MIT), resumos de referência reproduzidos; `anyxboxx_texture bc7 <blocos.bin> <l> <a> <saida.png> [--4k-s]` | 🟡 em andamento |
 | Outras interfaces do GDK escritas pelo AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ a fazer |
 | Recompilador de shaders RDNA 2 → DXIL: primeiros programas traduzidos para HLSL, compilados para DXIL e executados na GPU do PC com D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP sem GPU), memória idêntica a um interpretador de referência wave32 que executa 519 de 1.444 codificações (escalares, VOP1/VOP2/VOPC/VOP3, memória: SMEM, LDS, GLOBAL, MUBUF com limites V#, atômicas, desvios, divergência por `exec`): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 em andamento |
 | Exceções SEH x64 (`.pdata`), múltiplas threads | ⏳ a fazer |
@@ -179,6 +180,7 @@ def XSystemGetDeviceType(c):
 - [Emuladores e camadas de compatibilidade existentes](../recherche/etat-de-l-art.md) (em francês): WinDurango, XWine1, Xenia, ferramentas XVD.
 - [Notas de engenharia reversa do pacote Scarlett estudado](../recherche/paquet/README.md) (em francês, escritas pelo Codex): tabelas RDS5/ETPF, cabeçalhos RPF, organização do pacote.
 - [TomBox e sua continuação](../recherche/tombox.md) (em francês): DLLs de console em Rust, Direct3D 12.x, tradutor de shaders RDNA 2, o que o AnyXboxX reaproveita (MIT, citado).
+- [Xbox2Windows](../recherche/xbox2windows.md) (em francês): pesquisa sobre recompilação estática; BC7 e tiling GFX10 reaproveitados pelo AnyXboxX (MIT, citado).
 
 ## Testes
 
