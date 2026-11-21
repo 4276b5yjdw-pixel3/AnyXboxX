@@ -60,7 +60,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 224 automated tests | ✅ done |
+| 229 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice`, console `ID3D12*` interfaces and `DXGIXPresentArray`, served by TomBox's Rust `d3d12_xs.dll` (MIT, 48 implemented exports, built by `tools/build_tombox.py d3d12_xs`, loaded with `ANYXBOXX_D3D12_XS=<path>`); untestable here without a console executable | 🟡 in progress |
 | Console libraries from TomBox (Rust, MIT) for what AnyXboxX lacks: `xg_xs` (texture layouts, 23 exports) and full `xmem` (38 exports), with `ANYXBOXX_TOMBOX_DIR=<folder>`; built by `tools/build_tombox.py xg_xs xmem` | 🟡 in progress |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
@@ -78,6 +78,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Console textures in Rust: BC7 decoding and GFX10 `SW_4K_S` detiling ported from Xbox2Windows (MIT), reproducing their reference digests; `anyxboxx_texture bc7 <blocks.bin> <w> <h> <out.png> [--4k-s]` | 🟡 in progress |
 | Other GDK interfaces written by AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ to do |
 | RDNA 2 → DXIL shader recompiler: first programs translated to HLSL, compiled to DXIL and run on the PC's GPU with D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP without a GPU), memory identical to a wave32 reference interpreter running 519 of 1,444 encodings (scalar, VOP1/VOP2/VOPC/VOP3, memory: SMEM, LDS, GLOBAL, MUBUF with V# bounds, atomics, branches, `exec` divergence): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in progress |
+| Shader cache: translated shaders compiled to DXIL once, then reused from disk (1.4 ms) or memory (0.8 ms) instead of dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` or `ANYXBOXX_SHADER_CACHE`, size-capped | 🟡 in progress |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
 | Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |

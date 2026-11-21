@@ -3,18 +3,24 @@
     hlsl = rdna2_hlsl.translate(programme, sgprs)
     mémoire_finale = rdna2_gpu.run(hlsl, mémoire_initiale)
 
-dxc vient du SDK Windows (ou de ANYXBOXX_DXC) ; anyxboxx_gpu_run.exe est compilé avec le runtime
-C++ (dossier ANYXBOXX_RUNTIME, sinon runtime/build/bin). Sans GPU, WARP est utilisé.
+dxc vient du SDK Windows (ou de ANYXBOXX_DXC) et le DXIL est gardé en cache (emu/shader_cache.py) ;
+anyxboxx_gpu_run.exe est compilé avec le runtime C++ (dossier ANYXBOXX_RUNTIME, sinon runtime/build/bin).
+Sans GPU, WARP est utilisé.
 """
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 
+from . import shader_cache
+
 REPOSITORY = Path(__file__).resolve().parents[2]
 KITS = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Windows Kits" / "10" / "bin"
 SHADER_MODEL = "cs_6_0"
 TIMEOUT = 120
+
+
+_CACHE = shader_cache.ShaderCache()     # dossier créé à la première écriture
 
 
 class GpuUnavailable(RuntimeError):
@@ -52,13 +58,28 @@ def compile_hlsl(hlsl, folder):
     return output
 
 
-def run(hlsl, memory, groups=1):
-    """Compile `hlsl`, l'exécute avec `memory` (bytes) en u0 et renvoie la mémoire finale."""
+def compile_dxil(hlsl, cache=None):
+    """DXIL de `hlsl` : depuis le cache disque si possible, sinon compilé par dxc puis mis en cache."""
+    cache = cache if cache is not None else _CACHE
+    key = shader_cache.cache_key(hlsl, SHADER_MODEL, find_dxc())
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    with tempfile.TemporaryDirectory(prefix="anyxboxx-dxc-") as folder:
+        dxil = compile_hlsl(hlsl, folder).read_bytes()
+    cache.put(key, dxil)
+    return dxil
+
+
+def run(hlsl, memory, groups=1, cache=None):
+    """Compile `hlsl` (cache disque), l'exécute avec `memory` (bytes) en u0 et renvoie la mémoire finale."""
     runner = find_runner()
     if runner is None:
         raise GpuUnavailable("anyxboxx_gpu_run.exe introuvable : compilez runtime/ avec CMake")
+    dxil = compile_dxil(hlsl, cache)
     with tempfile.TemporaryDirectory(prefix="anyxboxx-gpu-") as folder:
-        shader = compile_hlsl(hlsl, folder)
+        shader = Path(folder) / "shader.dxil"
+        shader.write_bytes(dxil)
         image = Path(folder) / "memory.bin"
         image.write_bytes(memory)
         result = subprocess.run([str(runner), str(shader), str(image), str(groups)],
