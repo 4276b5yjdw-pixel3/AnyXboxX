@@ -1,6 +1,8 @@
 # Composants tiers
 
-AnyXboxX est distribué sous [GNU LGPL 2.1 ou ultérieure](LICENSE). Les composants suivants gardent leur propre licence.
+AnyXboxX est distribué sous [GNU GPL 3.0 ou ultérieure](LICENSE). Les composants suivants gardent leur propre licence.
+
+Jusqu'au 21 novembre 2026, AnyXboxX était sous LGPL 2.1 ou ultérieure. La clause « ou ultérieure » permet de passer à la GPL 3.0, et l'auteur du projet en était le seul contributeur. Ce passage permet de reprendre du code GPL-3.0, comme celui de Leonida. Les composants ci-dessous sont tous compatibles avec la GPL 3.0 : MIT, Apache 2.0 et LGPL 2.1 ou ultérieure.
 
 | Composant | Origine | Licence | Utilisation dans AnyXboxX |
 | --- | --- | --- | --- |
