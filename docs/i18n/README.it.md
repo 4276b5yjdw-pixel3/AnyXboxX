@@ -60,7 +60,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 265 test automatizzati | ✅ fatto |
+| 272 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
 | Librerie console di TomBox (Rust, MIT) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
@@ -75,7 +75,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | `kernelx.dll` (kernel della console): 2 661 funzioni reindirizzate a `kernel32`/`kernelbase` di Windows | ✅ fatto |
 | TLS implicito (`thread_local`) dei giochi in modalità nativa: DLL portante `anyxboxx_tls.dll`, ogni thread riceve la sua copia (fino a 256 KiB) | ✅ fatto |
 | Launcher nativo in C++ senza Python (`runtime/build/bin/anyxboxx.exe <gioco.exe \| cartella> [--fps]`): SimpleTriangle e testgdk a ~12 000 fps | ✅ fatto |
-| Disassembler GPU RDNA 2: 1.444 mnemonici e operandi in sintassi LLVM (scalari, VOP1/VOP2/VOPC/VOP3/SMEM/DS con modificatori), verificato su 34.948 codifiche pubbliche di LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in corso |
+| Disassembler GPU RDNA 2: 1.444 mnemonici e operandi in sintassi LLVM (scalari, VOP1/VOP2/VOPC/VOP3/SMEM/DS/EXP con modificatori), verificato su 34.948 codifiche pubbliche di LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in corso |
 | Texture console in Rust: decodifica BC7 e de-tiling GFX10 `SW_4K_S` portati da Xbox2Windows (MIT), digest di riferimento riprodotti; `anyxboxx_texture bc7 <blocchi.bin> <l> <a> <uscita.png> [--4k-s]` | 🟡 in corso |
 | Altre interfacce GDK scritte da AnyXboxX (`XStore`, `XGameUi`, `XNetworking`…) | ⏳ da fare |
 | Ricompilatore di shader RDNA 2 → DXIL: primi programmi tradotti in HLSL, compilati in DXIL ed eseguiti sulla GPU del PC con D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP senza GPU), memoria identica a un interprete di riferimento wave32 che esegue 519 codifiche su 1.444 (scalari, VOP1/VOP2/VOPC/VOP3, memoria: SMEM, LDS, GLOBAL, MUBUF con limiti V#, atomiche, salti, divergenza con `exec`): `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in corso |

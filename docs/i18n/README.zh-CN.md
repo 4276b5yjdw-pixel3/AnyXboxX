@@ -60,7 +60,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 396 个 GDK 函数的表：接口和方法编号，提取自 `xgameruntime.lib`（`tools/gdk_interfaces.py`） | ✅ 已完成 |
 | `XTaskQueue`、`XAsync`、`XThread` 由 AnyXboxX 提供：testgdk 无需 Windows 的运行时即可运行 | ✅ 已完成 |
 | 其他 GDK 接口：委托给 Windows 的 GDK 运行时，由跟踪列出名称 | 🟡 进行中 |
-| 265 个自动化测试 | ✅ 已完成 |
+| 272 个自动化测试 | ✅ 已完成 |
 | D3D12.X：`D3D12XboxCreateDevice`、主机的 `ID3D12*` 接口和 `DXGIXPresentArray`，由 TomBox 的 Rust 版 `d3d12_xs.dll` 提供（MIT，48 个已实现导出，用 `tools/build_tombox.py d3d12_xs` 构建，通过 `ANYXBOXX_D3D12_XS=<路径>` 加载）；没有主机可执行文件，此处无法测试 | 🟡 进行中 |
 | 用 TomBox（Rust，MIT）的主机库补足 AnyXboxX 缺少的部分：`xg_xs`（纹理布局，23 个导出）和完整的 `xmem`（38 个导出），通过 `ANYXBOXX_TOMBOX_DIR=<文件夹>` 使用；由 `tools/build_tombox.py xg_xs xmem` 构建 | 🟡 进行中 |
 | 离线 `XUser`：始终已登录的本地档案、可设置的游戏玩家标签（`ANYXBOXX_GAMERTAG`）、testgdk 登录成功 | ✅ 已完成 |
@@ -75,7 +75,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | `kernelx.dll`（主机内核）：2,661 个函数转发到 Windows 的 `kernel32`/`kernelbase` | ✅ 完成 |
 | 原生模式下游戏的隐式 TLS（`thread_local`）：载体 DLL `anyxboxx_tls.dll`，每个线程获得自己的副本（最多 256 KiB） | ✅ 完成 |
 | 不依赖 Python 的 C++ 原生启动器（`runtime/build/bin/anyxboxx.exe <游戏.exe \| 文件夹> [--fps]`）：SimpleTriangle 和 testgdk 约 12,000 帧/秒 | ✅ 完成 |
-| RDNA 2 GPU 反汇编器：1,444 个助记符及 LLVM 语法的操作数（标量、VOP1/VOP2/VOPC/VOP3/SMEM/DS 及修饰符），已用 LLVM 的 34,948 条公开编码验证：`scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 进行中 |
+| RDNA 2 GPU 反汇编器：1,444 个助记符及 LLVM 语法的操作数（标量、VOP1/VOP2/VOPC/VOP3/SMEM/DS/EXP 及修饰符），已用 LLVM 的 34,948 条公开编码验证：`scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 进行中 |
 | Rust 实现的主机纹理：从 Xbox2Windows（MIT）移植的 BC7 解码和 GFX10 `SW_4K_S` 去平铺，复现了参考摘要；`anyxboxx_texture bc7 <blocks.bin> <宽> <高> <out.png> [--4k-s]` | 🟡 进行中 |
 | 由 AnyXboxX 自行编写的其他 GDK 接口（`XStore`、`XGameUi`、`XNetworking`…） | ⏳ 待完成 |
 | RDNA 2 → DXIL 着色器重编译器：首批程序已翻译为 HLSL、编译为 DXIL 并通过 D3D12 在 PC 的 GPU 上运行（`--hlsl`、`anyxboxx_gpu_run.exe`，无 GPU 时用 WARP），内存与 wave32 参考解释器的结果完全一致，该解释器可执行 1,444 种编码中的 519 种（标量、VOP1/VOP2/VOPC/VOP3、内存：SMEM、LDS、GLOBAL、带 V# 边界的 MUBUF、原子操作、分支、`exec` 分歧）：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 进行中 |

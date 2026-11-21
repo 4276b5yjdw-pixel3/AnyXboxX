@@ -1,13 +1,13 @@
 """Opérandes des instructions RDNA 2 : champs, registres et constantes, au format de LLVM.
 
 Couvre les encodages scalaires (SOP1, SOP2, SOPC, SOPK, SOPP), vectoriels (VOP1, VOP2, VOPC,
-VOP3), les accès mémoire scalaires (SMEM) et la mémoire partagée (DS). La forme de chaque opcode (quels champs, dans quel ordre, quelle
+VOP3), les accès mémoire scalaires (SMEM), la mémoire partagée (DS) et les exports (EXP, rdna2_exp). La forme de chaque opcode (quels champs, dans quel ordre, quelle
 largeur de registre) vient de rdna2_ops.SHAPES, apprise sur les tests de LLVM.
 """
 import re
 import struct
 
-from emu import rdna2, rdna2_swizzle
+from emu import rdna2, rdna2_exp, rdna2_swizzle
 
 LITERAL = 255
 INLINE_FLOATS = {240: "0.5", 241: "-0.5", 242: "1.0", 243: "-1.0", 244: "2.0", 245: "-2.0",
@@ -48,6 +48,8 @@ FIELDS = {
            "vdst": (56, 0xFF, "vgpr")},
 }
 FAMILIES = frozenset(FIELDS) - {"VOP3B"}
+# Familles au texte fixe, sans forme apprise : fonction (data, offset) → texte.
+FIXED_FORMAT = {"EXP": rdna2_exp.text}
 TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM", "DS"})
 DS_TWO_OFFSETS = re.compile(r"^ds_(?:read|write|wrxchg)2(?:st64)?_")
 DS_SWIZZLE = "ds_swizzle_b32"
@@ -237,6 +239,8 @@ def text(data, offset=0):
     from emu.rdna2_shapes import SHAPES
 
     family, opcode, size = rdna2.classify(data, offset)
+    if family in FIXED_FORMAT:
+        return FIXED_FORMAT[family](data, offset)
     name = rdna2.mnemonic(family, opcode)
     if family not in FAMILIES or name is None:
         return None
