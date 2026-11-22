@@ -133,19 +133,20 @@ def _gdk_tools():
 
 
 def gdk_blocks(table=translation.RUNTIME_SOURCES / "gdk_api_table.inc",
-               served=translation.RUNTIME_SOURCES / "served_interfaces.inc"):
-    """Un bloc par interface GDK, nommée par le préfixe commun de ses fonctions."""
+               served=translation.RUNTIME_SOURCES / "served_interfaces.inc", sources=translation.RUNTIME_SOURCES):
+    """Un bloc par interface GDK, nommée par le préfixe commun de ses fonctions (stubs non comptés)."""
     tools = _gdk_tools()
     apis = tuple(tools.GdkApi(n, p, i, int(m)) for n, p, i, m in
                  translation.API_LINE.findall(Path(table).read_text(encoding="utf-8")))
     served_keys = {(p.upper(), i.upper()) for p, i in
                    translation.SERVED_LINE.findall(Path(served).read_text(encoding="utf-8"))}
+    stubs = translation.not_implemented_functions(sources)
     names = tools.groups(apis)
     counts = {}
     for api in apis:
         done, total = counts.get((api.provider, api.interface), (0, 0))
         counts[(api.provider, api.interface)] = (
-            done + ((api.provider, api.interface) in served_keys), total + 1)
+            done + ((api.provider, api.interface) in served_keys and api.name not in stubs), total + 1)
     return tuple(Block(names[key], d, t) for key, (d, t) in sorted(counts.items(), key=lambda kv: names[kv[0]]))
 
 

@@ -42,6 +42,14 @@ void* ActivationInterface();
 void* ProtocolInterface();
 void* ErrorInterface();
 
+// Jetons d'abonnement partagés (XTaskQueueRegistrationToken) : E_INVALIDARG si rappel ou jeton nul.
+HRESULT AddSubscription(const void* callback, void* token);
+bool RemoveSubscription(uint64_t token);
+
+// État HDR de l'écran et connectivité réseau du PC (platform_interface.cpp).
+void* HdrDisplayInterface();
+void* NetworkingInterface();
+
 // Renvoie l'objet qui sert (fournisseur, interface), ou nullptr.
 void* ServedInterface(const GUID& provider, const GUID& iid);
 

@@ -71,15 +71,24 @@ STATIC_AREAS = (
 RUNTIME_SOURCES = Path(__file__).resolve().parents[2] / "runtime" / "xgameruntime"
 API_LINE = re.compile(r'ANYXBOXX_GDK_API\((\w+), "([^"]+)", "([^"]+)", (\d+)\)')
 SERVED_LINE = re.compile(r'ANYXBOXX_SERVED_INTERFACE\(\w+, "([^"]+)", "([^"]+)"\)')
+# Méthode d'une table C++ branchée sur le stub, avec le nom de la fonction en commentaire.
+NOT_IMPLEMENTED_LINE = re.compile(r'ANYXBOXX_NOT_IMPLEMENTED,\s*//\s*\d+\s+(X\w+)')
+
+
+def not_implemented_functions(sources=RUNTIME_SOURCES):
+    """Fonctions X* que les tables C++ du runtime branchent sur ANYXBOXX_NOT_IMPLEMENTED."""
+    return {name for path in Path(sources).glob("*.cpp")
+            for name in NOT_IMPLEMENTED_LINE.findall(path.read_text(encoding="utf-8"))}
 
 
 def gdk_runtime_area(table=RUNTIME_SOURCES / "gdk_api_table.inc",
-                     served=RUNTIME_SOURCES / "served_interfaces.inc"):
-    """Fonctions X* du GDK dont l'interface est servie par AnyXboxX (et non par Windows)."""
+                     served=RUNTIME_SOURCES / "served_interfaces.inc", sources=RUNTIME_SOURCES):
+    """Fonctions X* du GDK écrites par AnyXboxX : interface servie (et non par Windows), sans stub."""
     apis = API_LINE.findall(Path(table).read_text(encoding="utf-8"))
+    stubs = not_implemented_functions(sources)
     served_keys = set((p.upper(), i.upper()) for p, i in SERVED_LINE.findall(Path(served).read_text(encoding="utf-8")))
     interfaces = {(provider, iid) for _, provider, iid, _ in apis}
-    done = sum((provider, iid) in served_keys for _, provider, iid, _ in apis)
+    done = sum((provider, iid) in served_keys and name not in stubs for name, provider, iid, _ in apis)
     return Area("GDK runtime functions served by AnyXboxX", done, len(apis),
                 f"{len(served_keys & interfaces)}/{len(interfaces)} interfaces (used when the Windows "
                 "GDK runtime is off)")
