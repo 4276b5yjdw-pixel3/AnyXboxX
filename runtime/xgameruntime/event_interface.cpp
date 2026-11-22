@@ -66,8 +66,9 @@ ErrorState& Errors() {
   return state;
 }
 
-// XErrorReport n'est pas déclaré dans XError.h (seulement cité) : signature déduite de XErrorCallback.
-void XErrorReport(HRESULT hr, const char* message) noexcept {
+// XErrorReport n'est pas déclaré dans XError.h (seulement cité). Signature d'après xgameruntime-docs
+// (GPL-3.0, faits seulement) : HRESULT XErrorReport(HRESULT, const char*) ; S_OK une fois traité.
+HRESULT XErrorReport(HRESULT hr, const char* message) noexcept {
   ErrorCallback callback = nullptr;
   void* context = nullptr;
   {
@@ -78,6 +79,7 @@ void XErrorReport(HRESULT hr, const char* message) noexcept {
   anyxboxx::Log("[runtime] XErrorReport 0x%08lX : %s", static_cast<unsigned long>(hr),
                 message != nullptr ? message : "");
   if (callback != nullptr) callback(hr, message, context);
+  return S_OK;
 }
 
 void XErrorSetCallback(ErrorCallback callback, void* context) noexcept {
