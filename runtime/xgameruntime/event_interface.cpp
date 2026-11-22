@@ -66,6 +66,7 @@ ErrorState& Errors() {
   return state;
 }
 
+// XErrorReport n'est pas déclaré dans XError.h (seulement cité) : signature déduite de XErrorCallback.
 void XErrorReport(HRESULT hr, const char* message) noexcept {
   ErrorCallback callback = nullptr;
   void* context = nullptr;
@@ -137,5 +138,10 @@ void* PendingInviteInterface() { return const_cast<StaticInterface*>(&kPendingIn
 void* ActivationInterface() { return const_cast<StaticInterface*>(&kActivation); }
 void* ProtocolInterface() { return const_cast<StaticInterface*>(&kProtocol); }
 void* ErrorInterface() { return const_cast<StaticInterface*>(&kError); }
+
+HRESULT AddSubscription(const void* callback, void* token) {
+  return Registry().Add(callback, static_cast<RegistrationToken*>(token));
+}
+bool RemoveSubscription(uint64_t token) { return Registry().Remove(RegistrationToken{token}); }
 
 }  // namespace anyxboxx

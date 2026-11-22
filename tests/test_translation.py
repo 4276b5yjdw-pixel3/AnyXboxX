@@ -133,6 +133,28 @@ def test_gdk_runtime_area_counts_functions_of_served_interfaces(tmp_path):
     assert "1/2 interfaces" in area.note
 
 
+def test_gdk_runtime_area_leaves_out_functions_answering_not_implemented(tmp_path):
+    """Une fonction branchée sur ANYXBOXX_NOT_IMPLEMENTED dans une table C++ n'est pas « servie »."""
+    table = tmp_path / "table.inc"
+    table.write_text('ANYXBOXX_GDK_API(XNetworkingGetConnectivityHint, "CCCC", "CCCC", 15)\n'
+                     'ANYXBOXX_GDK_API(XNetworkingQueryStatistics, "CCCC", "CCCC", 20)\n', encoding="utf-8")
+    served = tmp_path / "served.inc"
+    served.write_text('ANYXBOXX_SERVED_INTERFACE(NetworkingInterface, "CCCC", "CCCC")\n', encoding="utf-8")
+    (tmp_path / "networking.cpp").write_text(
+        "    ANYXBOXX_METHOD(XNetworkingGetConnectivityHint),  // 15\n"
+        "    ANYXBOXX_NOT_IMPLEMENTED,  // 20 XNetworkingQueryStatistics\n", encoding="utf-8")
+    area = translation.gdk_runtime_area(table, served, sources=tmp_path)
+    assert (area.done, area.total) == (1, 2)
+
+
+def test_progress_map_and_translation_table_agree_on_the_gdk_runtime():
+    from emu import status_map
+
+    blocks = status_map.gdk_blocks()
+    area = translation.gdk_runtime_area()
+    assert (sum(b.done for b in blocks), sum(b.total for b in blocks)) == (area.done, area.total)
+
+
 def test_repository_tables_are_consistent():
     """La table générée couvre les 396 API du GDK 2610 et XTaskQueue y est servie."""
     area = translation.gdk_runtime_area()
