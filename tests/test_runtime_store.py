@@ -32,6 +32,7 @@ ENUMERATE_QUERY, HAS_MORE_PAGES, CLOSE_QUERY = 15, 16, 19
 ACQUIRE_PACKAGE_LICENSE, ACQUIRE_PACKAGE_LICENSE_RESULT = 20, 21
 QUERY_GAME_LICENSE, QUERY_GAME_LICENSE_RESULT = 28, 29
 SHOW_PURCHASE_UI, SHOW_PURCHASE_UI_RESULT = 49, 50
+SHOW_RATE_AND_REVIEW_UI, SHOW_RATE_AND_REVIEW_UI_RESULT = 51, 52
 DOWNLOAD_PACKAGES, DOWNLOAD_PACKAGES_RESULT_COUNT = 62, 63
 QUERY_PACKAGE_IDENTIFIER = 65
 REGISTER_LICENSE_CHANGED, UNREGISTER_LICENSE_CHANGED = 66, 67
@@ -164,6 +165,14 @@ def test_purchase_and_downloads_fail_like_an_unreachable_store(store):
     assert store.result(DOWNLOAD_PACKAGES_RESULT_COUNT, block, (ctypes.POINTER(ctypes.c_uint32), ctypes.byref(count))) \
         == E_GAMESTORE_NETWORK_ERROR and count.value == 0
 
+
+def test_rate_and_review_result_writes_only_its_one_byte_bool(store):
+    begun, status, block = store.call(SHOW_RATE_AND_REVIEW_UI)
+    assert begun == S_OK and status == E_GAMESTORE_NETWORK_ERROR
+    canary = (ctypes.c_uint8 * 4)(0xAA, 0xAA, 0xAA, 0xAA)    # XStoreRateAndReviewResult { bool wasUpdated; }
+    assert store.result(SHOW_RATE_AND_REVIEW_UI_RESULT, block, (P, ctypes.addressof(canary))) \
+        == E_GAMESTORE_NETWORK_ERROR
+    assert list(canary) == [0, 0xAA, 0xAA, 0xAA]
 
 def test_license_change_subscription_never_fires(store):
     register = store.api.method(REGISTER_LICENSE_CHANGED, ctypes.c_uint32, P, P, P, P, ctypes.POINTER(ctypes.c_uint64))

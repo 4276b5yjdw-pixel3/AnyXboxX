@@ -177,9 +177,10 @@ HRESULT XStoreLicenseResult(XAsyncBlock* async, void** license) noexcept {
   return XAsyncGetStatus(async, false);
 }
 
-HRESULT XStoreRateAndReviewResult(XAsyncBlock* async, uint32_t* result) noexcept {
-  if (result == nullptr) return E_INVALIDARG;
-  *result = 0;
+// XStoreRateAndReviewResult { bool wasUpdated; } : un seul octet à écrire.
+HRESULT XStoreRateAndReviewResult(XAsyncBlock* async, bool* was_updated) noexcept {
+  if (was_updated == nullptr) return E_INVALIDARG;
+  *was_updated = false;
   return XAsyncGetStatus(async, false);
 }
 
