@@ -10,6 +10,8 @@ from .bench import PATTERNS, is_pe32_plus
 from .modules import dll_name
 
 CONSOLE_DLLS = ("xmem.dll", "d3d12_xs.dll", "kernelx.dll", "xg_xs.dll", "xgameruntime.dll")
+TOMBOX_PREFERRED = ("d3d12_xs.dll", "xmem.dll")     # comme emu/native/runtime.py
+TOMBOX_BUILD = Path(__file__).resolve().parents[2] / "third_party" / "tombox" / "target" / "release"
 DIRECTORY_IMPORT = pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"]
 DIRECTORY_EXPORT = pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]
 COMPLETE = "complete"
@@ -49,6 +51,15 @@ def gpu_area():
     done, total = coverage()
     return Area("GPU instructions (RDNA 2, console shaders)", done, total,
                 "run by the reference interpreter (wave32); recompiled to DXIL: compute, vertex, pixel")
+
+
+def gpu_disassembly_area():
+    """Encodages RDNA 2 relus et écrits avec leurs opérandes par le désassembleur (syntaxe LLVM)."""
+    from .rdna2_coverage import coverage
+
+    done, total = coverage()
+    return Area("GPU instructions disassembled (RDNA 2, LLVM syntax)", done, total,
+                "operands checked against LLVM's public encoding tests; VOP3P not yet in the table")
 
 STATIC_AREAS = (
     Area("D3D12.X: device and ID3D12* interfaces", 1, 1,
@@ -147,17 +158,28 @@ def runtime_exports(runtime_dir):
     return result
 
 
-def measure(package_dir, runtime_dir, extra=()):
-    """Une `Area` par DLL console importée par le paquet, suivie de `extra`."""
+def tombox_exports(tombox_dir):
+    """Exports des DLL de TomBox que le lanceur préfère aux nôtres (TOMBOX_PREFERRED), si compilées."""
+    if tombox_dir is None or not Path(tombox_dir).is_dir():
+        return {}
+    return {name: _exported_names(Path(tombox_dir) / name) for name in TOMBOX_PREFERRED
+            if (Path(tombox_dir) / name).is_file()}
+
+
+def measure(package_dir, runtime_dir, extra=(), tombox_dir=None):
+    """Une `Area` par DLL console importée par le paquet, suivie de `extra`.
+
+    `tombox_dir` : dossier des DLL de TomBox ; leurs exports comptent aussi (le lanceur les charge)."""
     imports = package_imports(package_dir)
     exports = runtime_exports(runtime_dir)
+    tombox = tombox_exports(tombox_dir)
     areas = []
     for dll in CONSOLE_DLLS:
         if dll not in imports:
             continue
-        exported = exports.get(dll, frozenset())
+        exported = exports.get(dll, frozenset()) | tombox.get(dll, frozenset())
         missing = sorted(imports[dll] - exported)
-        partial = sorted(n for n in imports[dll] & exported if n in PARTIAL)
+        partial = sorted(n for n in imports[dll] & exported if n in PARTIAL and n not in tombox.get(dll, ()))
         remaining = missing + [f"{n} (partial: {PARTIAL[n]})" for n in partial]
         listed = ", ".join(remaining[:MAX_LISTED]) + (", …" if len(remaining) > MAX_LISTED else "")
         areas.append(Area(dll, len(imports[dll]) - len(remaining), len(imports[dll]),
