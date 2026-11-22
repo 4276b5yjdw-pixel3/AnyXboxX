@@ -91,7 +91,7 @@ def test_mnemonics_come_from_the_rdna2_table():
 def test_listing_names_each_instruction():
     program = words(0x7E000301, 0xBE8003FF, 0x12345678, 0xBF810000, 0xFFFFFFFF)
     lines = rdna2.listing(program)
-    assert [line[36:] for line in lines] == ["v_mov_b32 v0, v1", "s_mov_b32 s0, 0x12345678", "s_endpgm",
+    assert [line[36:] for line in lines] == ["v_mov_b32_e32 v0, v1", "s_mov_b32 s0, 0x12345678", "s_endpgm",
                                              "inconnue_op_0x0"]
     assert lines[1].split()[1:3] == ["BE8003FF", "12345678"]
 
@@ -102,10 +102,10 @@ def test_operands_follow_llvm_syntax():
     assert text(words(0xBE8004FF, 0x12345678)) == "s_mov_b64 s[0:1], 0x12345678"
     assert text(llvm(0x01, 0x02, 0x7F, 0x80)) == "s_add_u32 exec_hi, s1, s2"
     assert text(llvm(0xC1, 0x02, 0x00, 0x80)) == "s_add_u32 s0, -1, s2"            # constante entière en ligne
-    assert text(llvm(0xF0, 0x02, 0x0A, 0x7E)) == "v_mov_b32 v5, 0.5"               # constante flottante en ligne
-    assert text(llvm(0x01, 0x05, 0x0A, 0x30)) == "v_ashrrev_i32 v5, v1, v2"
+    assert text(llvm(0xF0, 0x02, 0x0A, 0x7E)) == "v_mov_b32_e32 v5, 0.5"             # constante flottante en ligne
+    assert text(llvm(0x01, 0x05, 0x0A, 0x30)) == "v_ashrrev_i32_e32 v5, v1, v2"
     assert text(llvm(0x01, 0x07, 0x0A, 0x58, 0x41, 0x31, 0x21, 0x11)) == "v_fmamk_f32 v5, v1, 0x11213141, v3"
-    assert text(words(0x7C040501)) == "v_cmp_eq_f32 vcc_lo, v1, v2"            # VOPC, vcc implicite
+    assert text(words(0x7C040501)) == "v_cmp_eq_f32_e32 vcc_lo, v1, v2"            # VOPC, vcc implicite
 
 
 @pytest.mark.parametrize("encoding, expected", [                 # encodages des tests MC de LLVM (gfx10)
@@ -269,5 +269,5 @@ def test_symbolic_immediates():
 
 def test_implicit_vcc_and_scalar_destination():
     text = rdna2_operands.text
-    assert text(llvm(0x01, 0x05, 0x0A, 0x02)) == "v_cndmask_b32 v5, v1, v2, vcc_lo"    # vcc implicite (wave32)
+    assert text(llvm(0x01, 0x05, 0x0A, 0x02)) == "v_cndmask_b32_e32 v5, v1, v2, vcc_lo"    # vcc implicite (wave32)
     assert text(llvm(0x01, 0x05, 0x0A, 0x7E)) == "v_readfirstlane_b32 s5, v1"          # sdst dans le champ vdst

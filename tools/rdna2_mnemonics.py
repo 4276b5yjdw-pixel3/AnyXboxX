@@ -5,7 +5,12 @@ gfx1030_new.s et mtbuf-gfx10.s, licence Apache 2.0 avec exception LLVM). Chaque 
 est passée au décodeur d'AnyXboxX ; on vérifie au passage que la longueur qu'il calcule
 est celle de LLVM. Les noms de gfx1030 (RDNA 2) l'emportent sur ceux de gfx1010.
 
-    python tools/rdna2_mnemonics.py <dossier des .s> [--verifier]
+Seconde source : les fichiers .td du même dossier (llvm/lib/Target/AMDGPU/VOP3PInstructions.td),
+dont les lignes « defm V_… : VOP3P_Real_gfx10…<0xNN> » donnent les opcodes VOP3P gfx10, absents
+des tests d'encodage. Elles ne complètent que les opcodes que les encodages ne nomment pas ; un
+désaccord entre les deux sources est signalé.
+
+    python tools/rdna2_mnemonics.py <dossier des .s et .td> [--verifier]
 """
 import re
 import sys
@@ -97,6 +102,31 @@ def _complete_segments(table):
             table[(segment, opcode)] = f"{segment.lower()}_{operation}"
 
 
+TD_GFX10 = re.compile(r"^\s*defm\s+(V_\w+)\s*:\s*VOP3P_Real_gfx10\w*\s*<\s*(0x[0-9A-Fa-f]+)\s*>")
+
+
+def td_mnemonics(folder):
+    """(« VOP3P », opcode) → mnémonique, d'après les définitions gfx10 des fichiers .td du dossier."""
+    table = {}
+    for path in sorted(Path(folder).glob("*.td")):
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            match = TD_GFX10.match(line)
+            if match:
+                table[("VOP3P", int(match.group(2), 16))] = match.group(1).lower()
+    return table
+
+
+def merge_td(table, td):
+    """Ajoute à `table` les opcodes que seule la .td nomme ; renvoie les désaccords (clé, encodages, td)."""
+    disagreements = []
+    for key, name in sorted(td.items()):
+        if key not in table:
+            table[key] = name
+        elif table[key] != name:
+            disagreements.append((key, table[key], name))
+    return disagreements
+
+
 def render(table):
     lines = ['"""Mnémoniques RDNA 2 par (famille, opcode). Généré par tools/rdna2_mnemonics.py',
              "depuis les tests d'encodage de LLVM (Apache 2.0 avec exception LLVM). Ne pas modifier.\"\"\"",
@@ -117,6 +147,12 @@ def main(argv):
     if "--verifier" in argv:
         return 1 if wrong else 0
     table = choose(votes, preferred)
+    disagreements = merge_td(table, td_mnemonics(argv[0]))
+    for (family, opcode), encoded, declared in disagreements:
+        print(f"  désaccord {family} 0x{opcode:02X} : encodages « {encoded} », .td « {declared} »")
+    if disagreements:
+        return 1
+    table = dict(sorted(table.items()))
     OUTPUT.write_text(render(table), encoding="utf-8")
     print(f"{len(table)} mnémoniques écrits dans {OUTPUT.relative_to(ROOT)}")
     return 0

@@ -10,12 +10,12 @@
 <text x="270" y="136" text-anchor="end" fill="#1d2230">GPU instructions disassembled (RDNA 2, LLVM syntax)</text>
 <rect x="300" y="122" width="220" height="18" rx="3" fill="#e3e6ee"/>
 <rect x="300" y="122" width="220" height="18" rx="3" fill="#107c10"/>
-<text x="532" y="136" fill="#1d2230">1458/1458 (100%)</text>
-<text x="300" y="156" font-size="11" fill="#4b5263">operands checked against LLVM's public encoding tests; VOP3P not yet in the table</text>
+<text x="532" y="136" fill="#1d2230">1487/1487 (100%)</text>
+<text x="300" y="156" font-size="11" fill="#4b5263">operands checked against LLVM's public encoding tests; SDWA and DPP forms not decoded yet</text>
 <text x="270" y="182" text-anchor="end" fill="#1d2230">GPU instructions (RDNA 2, console shaders)</text>
 <rect x="300" y="168" width="220" height="18" rx="3" fill="#e3e6ee"/>
-<rect x="300" y="168" width="79" height="18" rx="3" fill="#e8890c"/>
-<text x="532" y="182" fill="#1d2230">521/1458 (36%)</text>
+<rect x="300" y="168" width="77" height="18" rx="3" fill="#e8890c"/>
+<text x="532" y="182" fill="#1d2230">521/1487 (35%)</text>
 <text x="300" y="202" font-size="11" fill="#4b5263">run by the reference interpreter (wave32); recompiled to DXIL: compute, vertex, pixel</text>
 <text x="270" y="228" text-anchor="end" fill="#1d2230">System functions imported by the package</text>
 <rect x="300" y="214" width="220" height="18" rx="3" fill="#e3e6ee"/>
@@ -24,9 +24,9 @@
 <text x="300" y="248" font-size="11" fill="#4b5263">isolated mode: emulated or provided by a package DLL</text>
 <text x="270" y="274" text-anchor="end" fill="#1d2230">xmem.dll</text>
 <rect x="300" y="260" width="220" height="18" rx="3" fill="#e3e6ee"/>
-<rect x="300" y="260" width="220" height="18" rx="3" fill="#107c10"/>
-<text x="532" y="274" fill="#1d2230">4/4 (100%)</text>
-<text x="300" y="294" font-size="11" fill="#4b5263">complete</text>
+<rect x="300" y="260" width="165" height="18" rx="3" fill="#e8890c"/>
+<text x="532" y="274" fill="#1d2230">3/4 (75%)</text>
+<text x="300" y="294" font-size="11" fill="#4b5263">XMemGetWorkingSetStatistics (partial: non-public structure)</text>
 <text x="270" y="320" text-anchor="end" fill="#1d2230">d3d12_xs.dll</text>
 <rect x="300" y="306" width="220" height="18" rx="3" fill="#e3e6ee"/>
 <rect x="300" y="306" width="220" height="18" rx="3" fill="#107c10"/>
