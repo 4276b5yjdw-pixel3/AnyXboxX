@@ -95,6 +95,14 @@ VBR de plus de 64 bits ; trois modules génériques s'ajoutent (`call_evidence.p
 - **Leonida** `a0acd33d77` → `49475796c2` : accès image cohérents (`glc`), offsets scalaires constants.
 - **Xbox2Windows** `0f8e7fa` → `a97ba9f` : le retarget DXIL signale les intrinsèques `xbox.*`.
 
+## Mise à jour du 22 novembre, 20 h
+
+- **TomBox** `dbe89c8` → `a541bbb` (historique intact) : mesh shaders à 256 threads et sorties par primitive,
+  constantes de root signature sur les SGPR utilisateur (Scarlett), vue réseau hors ligne.
+- **Leonida** `49475796c2` → `162821017e` : `v_cmp(x)_class_f32` préserve les NaN de signalisation.
+- **Xbox2Windows** `a97ba9f` → `ff7f68a` : retarget DXIL et ses dépendances recopiés.
+- Contrôle : 51 des 52 shaders de `XboxBvhBuilder.dll` traduits, comme avant (`tools/fssm_mesure.py`).
+
 ## Ce qui n'est pas repris
 
 Tout ce qui est propre à un jeu : formats d'archives et de ressources (RPF, AWC, TTPF, XBCH,
