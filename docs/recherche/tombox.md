@@ -1,6 +1,6 @@
 # TomBox et sa suite : ce que nous reprenons
 
-[TomBox](https://github.com/drycheetah84/TomBox) (drycheetah84) et sa suite [omonkeyz/xbox-emulator](https://github.com/omonkeyz/xbox-emulator) (licence MIT ou Apache-2.0) réimplémentent en Rust la couche plateforme de la Xbox Series X|S. Chaque DLL console (`d3d12_xs`, `xg_xs`, `xmem`, `xma`…) y devient une DLL de remplacement, et `tombox-xshader` traduit les shaders RDNA 2 en HLSL. AnyXboxX reprend leur code et leurs observations publiées, en les citant ; aucun fichier de jeu ou de console n'est repris.
+[TomBox](https://github.com/drycheetah84/TomBox) (drycheetah84) et sa suite [omonkeyz/xbox-emulator](https://github.com/omonkeyz/xbox-emulator) (licence GPL-3.0 ou ultérieure depuis le 22 novembre 2026, MIT ou Apache-2.0 avant) réimplémentent en Rust la couche plateforme de la Xbox Series X|S. Chaque DLL console (`d3d12_xs`, `xg_xs`, `xmem`, `xma`…) y devient une DLL de remplacement, et `tombox-xshader` traduit les shaders RDNA 2 en HLSL. AnyXboxX reprend leur code et leurs observations publiées, en les citant ; aucun fichier de jeu ou de console n'est repris.
 
 État relevé le 21 novembre 2026 (commit `fef9a6e` de omonkeyz/xbox-emulator), d'après leurs fichiers `README.md`, `docs/MILESTONES.md`, `docs/BLOCKERS.md` et `docs/DEVELOPMENT_LOG.md`.
 
