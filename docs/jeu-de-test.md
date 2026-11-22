@@ -118,7 +118,7 @@ Mesures du 22 novembre 2026. `Fundamentals_Desktop` est l'exemple Xbox Live de [
 Ce que le test a appris :
 
 1. **Un `E_NOTIMPL` peut être fatal.** Les exemples Microsoft enveloppent beaucoup d'appels dans `DX::ThrowIfFailed`. Un jeu réel fera de même : il vaut mieux une réponse hors ligne honnête (image générée, abonnement sans événement) qu'un échec.
-2. **`XStore` est la prochaine interface à servir** : l'exemple la demande dès le démarrage (licence du jeu, mises à jour).
+2. **`XStore` est la prochaine interface à servir** : l'exemple la demande dès le démarrage (licence du jeu, mises à jour). Servie hors ligne depuis `feat/xstore-hors-ligne` : licence locale valide, requêtes de produits vides, achat et téléchargements en `E_GAMESTORE_NETWORK_ERROR`.
 3. Deux méthodes de `XNetworking` non écrites sont appelées, sans doute par `libHttpClient` ou `XCurl` pour la sécurité HTTPS ; l'exemple les tolère.
 
 Reproduire (GDK public installé, Visual Studio 2026) :
