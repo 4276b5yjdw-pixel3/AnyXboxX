@@ -20,6 +20,7 @@ MIN_SECTION_H = 110
 GPU_FAMILIES = ("SOP1", "SOP2", "SOPK", "SOPC", "SOPP", "SMEM", "VOP1", "VOP2", "VOP3", "VOP3P",
                 "VOPC", "DS", "MUBUF", "MTBUF", "MIMG", "FLAT", "GLOBAL", "SCRATCH", "EXP", "VINTRP")
 GPU_TITLE = "RDNA 2 GPU instructions (reference interpreter)"
+DISASSEMBLY_TITLE = "RDNA 2 GPU instructions (disassembler, LLVM syntax)"
 
 
 @dataclass(frozen=True)
@@ -160,9 +161,9 @@ def package_blocks(package_dir):
     return tuple(b for b in blocks if b.total)
 
 
-def console_blocks(package_dir, runtime_dir):
-    """Un bloc par DLL console importée par le paquet (fonctions exportées par le runtime C++)."""
-    areas = translation.measure(package_dir, runtime_dir)
+def console_blocks(package_dir, runtime_dir, tombox_dir=None):
+    """Un bloc par DLL console importée par le paquet (exports du runtime C++ et des DLL TomBox préférées)."""
+    areas = translation.measure(package_dir, runtime_dir, tombox_dir=tombox_dir)
     return tuple(Block(a.name, a.done, a.total) for a in areas)
 
 
@@ -178,22 +179,32 @@ def gpu_blocks():
     return tuple(b for b in blocks if b.total)
 
 
+def disassembly_blocks():
+    """Un bloc par famille d'encodage RDNA 2 : encodages écrits avec leurs opérandes (syntaxe LLVM)."""
+    from .rdna2_coverage import by_family
+
+    counts = by_family()
+    return tuple(Block(family, *counts[family]) for family in GPU_FAMILIES if family in counts)
+
+
 def _badge(label, done, total):
     return (label, f"{done}/{total}", done / total if total else 0.0)
 
 
-def collect(package_dir, runtime_dir):
+def collect(package_dir, runtime_dir, tombox_dir=None):
     """Mesure tout : sections de la carte et badges d'en-tête."""
     gdk = Section("GDK runtime", gdk_blocks())
     imports = Section("Package imports", package_blocks(package_dir))
-    console = Section("Console DLLs", console_blocks(package_dir, runtime_dir))
+    console = Section("Console DLLs", console_blocks(package_dir, runtime_dir, tombox_dir))
+    disassembly = Section(DISASSEMBLY_TITLE, disassembly_blocks())
     gpu = Section(GPU_TITLE, gpu_blocks())
     badges = (("CPU x86-64", "100%", 1.0),
               _badge("GDK runtime", gdk.done, gdk.total),
               _badge("Package imports", imports.done, imports.total),
               _badge("Console DLLs", console.done, console.total),
+              _badge("GPU disassembly", disassembly.done, disassembly.total),
               _badge("GPU RDNA 2", gpu.done, gpu.total))
-    return Status((gdk, imports, console, gpu), badges)
+    return Status((gdk, imports, console, disassembly, gpu), badges)
 
 
 # --- Rendu SVG -----------------------------------------------------------------------------

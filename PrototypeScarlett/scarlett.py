@@ -168,9 +168,10 @@ def print_translation(package, svg_path=None):
         from emu import bench, translation
 
         runtime = os.environ.get("ANYXBOXX_RUNTIME") or HERE.parent / "runtime" / "build" / "bin"
-        overview = (translation.CPU_AREA, translation.gpu_area(),
+        overview = (translation.CPU_AREA, translation.gpu_disassembly_area(), translation.gpu_area(),
                     translation.functions_area(bench.run(Path(package))))
-        areas = translation.measure(package, Path(runtime),
+        tombox = os.environ.get("ANYXBOXX_TOMBOX_DIR") or translation.TOMBOX_BUILD
+        areas = translation.measure(package, Path(runtime), tombox_dir=tombox,
                                     extra=(*translation.STATIC_AREAS, translation.gdk_runtime_area()))
         areas = (*overview, *areas)
         print(translation.table(areas))
@@ -186,10 +187,11 @@ def print_translation(package, svg_path=None):
 def print_map(package, svg_path):
     """Écrit la carte SVG de l'avancée (une case par fonction) et affiche les badges."""
     try:
-        from emu import status_map
+        from emu import status_map, translation
 
         runtime = os.environ.get("ANYXBOXX_RUNTIME") or HERE.parent / "runtime" / "build" / "bin"
-        status = status_map.collect(Path(package), Path(runtime))
+        tombox = os.environ.get("ANYXBOXX_TOMBOX_DIR") or translation.TOMBOX_BUILD
+        status = status_map.collect(Path(package), Path(runtime), tombox)
         svg_path.parent.mkdir(parents=True, exist_ok=True)
         svg_path.write_text(status_map.render(status), encoding="utf-8")
         for label, value, _ in status.badges:

@@ -137,3 +137,19 @@ def test_repository_tables_are_consistent():
     """La table générée couvre les 396 API du GDK 2610 et XTaskQueue y est servie."""
     area = translation.gdk_runtime_area()
     assert area.total >= 396 and area.done >= 27
+
+
+def test_tombox_exports_count_for_the_preferred_dlls(folders, tmp_path):
+    tombox = tmp_path / "tombox"
+    tombox.mkdir()
+    build_pe(tombox / "xmem.dll", lambda iat: CODE, exports=[("XMemFree", 0)])
+    by_name = {a.name: a for a in translation.measure(*folders, tombox_dir=tombox)}
+    assert (by_name["xmem.dll"].done, by_name["xmem.dll"].total) == (2, 2)      # XMemAlloc chez nous, XMemFree chez TomBox
+    assert translation.tombox_exports(None) == {} and translation.tombox_exports(tmp_path / "absent") == {}
+
+
+def test_disassembly_area_counts_every_table_encoding():
+    from emu.rdna2_ops import MNEMONICS
+
+    area = translation.gpu_disassembly_area()
+    assert area.total == len(MNEMONICS) and 0 < area.done <= area.total
