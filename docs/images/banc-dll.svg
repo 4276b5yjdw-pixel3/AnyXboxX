@@ -8,12 +8,12 @@
 <text x="780" y="109" fill="#1d2230">95% · 22 ✓</text>
 <text x="240" y="135" text-anchor="end" fill="#1d2230">amd_fidelityfx_upscaler_xbox.dll</text>
 <rect x="250" y="122" width="520" height="18" rx="3" fill="#e3e6ee"/>
-<rect x="250" y="122" width="406" height="18" rx="3" fill="#107c10"/>
-<text x="780" y="135" fill="#1d2230">78% · 86 ✓</text>
+<rect x="250" y="122" width="421" height="18" rx="3" fill="#107c10"/>
+<text x="780" y="135" fill="#1d2230">81% · 86 ✓</text>
 <text x="240" y="161" text-anchor="end" fill="#1d2230">Bink2Scarlett.dll</text>
 <rect x="250" y="148" width="520" height="18" rx="3" fill="#e3e6ee"/>
-<rect x="250" y="148" width="312" height="18" rx="3" fill="#107c10"/>
-<text x="780" y="161" fill="#1d2230">60% · 60 ✓</text>
+<rect x="250" y="148" width="328" height="18" rx="3" fill="#107c10"/>
+<text x="780" y="161" fill="#1d2230">63% · 60 ✓</text>
 <text x="240" y="187" text-anchor="end" fill="#1d2230">concrt140.dll</text>
 <rect x="250" y="174" width="520" height="18" rx="3" fill="#e3e6ee"/>
 <rect x="250" y="174" width="406" height="18" rx="3" fill="#107c10"/>
