@@ -1,7 +1,7 @@
 # Leonida : traducteur RDNA 2 → SPIR-V (copie)
 
 Fichiers copiés **sans modification** depuis [ItsNotRexed/Leonida](https://github.com/ItsNotRexed/Leonida),
-dossier `tools/`, commit `bb2e18421d` (22 novembre 2026). Licence : GNU GPL 3.0 (fichier `LICENSE`,
+dossier `tools/`, commit `a0acd33d77` (22 novembre 2026, soir). Licence : GNU GPL 3.0 (fichier `LICENSE`,
 la même que celle d'AnyXboxX). Tout le mérite de ce code revient aux auteurs de Leonida.
 
 | Fichier | Rôle |
@@ -10,6 +10,7 @@ la même que celle d'AnyXboxX). Tout le mérite de ce code revient aux auteurs d
 | `shader_ir.py` | lecture du désassemblage LLVM (`<instruction> ; encoding: [...]`) |
 | `cfg_structure.py` | contrôle de flux structuré (boucles et gardes au lieu d'un `switch`) |
 | `lane_masks.py` | analyse des masques de lanes (EXEC, VCC) |
+| `wave64_halves.py` | shaders wave64 graphiques sur des sous-groupes de 32 : le programme est-il invariant par moitié de vague ? |
 | `fssm_header.py` | table des entrées d'un pixel shader dans le programme RDNA 2 précompilé (FSSM) |
 | `shader_meta.py`, `spirv_stubs.py` | métadonnées de pipeline et modules d'appoint |
 | `cpu_ref.py`, `ab_control_flow.py` | référence CPU et comparaison A/B du contrôle de flux |
