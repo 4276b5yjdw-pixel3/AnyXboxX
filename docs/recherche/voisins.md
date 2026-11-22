@@ -103,6 +103,22 @@ VBR de plus de 64 bits ; trois modules génériques s'ajoutent (`call_evidence.p
 - **Xbox2Windows** `a97ba9f` → `ff7f68a` : retarget DXIL et ses dépendances recopiés.
 - Contrôle : 51 des 52 shaders de `XboxBvhBuilder.dll` traduits, comme avant (`tools/fssm_mesure.py`).
 
+## Mise à jour du 22 novembre, 23 h, et suivi automatique
+
+- **Suivi automatique** : le workflow `.github/workflows/voisins.yml` lance `tools/sync_voisins.py` toutes les
+  heures. Il avance le sous-module TomBox, recopie sans modification les fichiers de `third_party/leonida` et
+  `third_party/xbox2windows` (et les modules qu'ils se mettent à importer), change les numéros de commit, puis
+  ouvre ou met à jour une seule pull request `auto/voisins` que la CI teste. Il ne fusionne rien et s'arrête
+  si une licence change ou si un fichier copié disparaît. Les commits qui touchent du code porté à la main
+  (BC7, tuiles, `era_heap`, descripteurs GFX10) sont seulement signalés dans la pull request.
+- **TomBox** `a541bbb` → `30a1b53` : flux de PSO Scarlett (sous-objets 23 à 30 renumérotés), protection contre
+  un périphérique retiré, préchauffage des PSO, course corrigée dans le balayage de `xmem`, service audio XVM.
+- **Leonida** `162821017e` → `aa2988cc55` (2 531 commits en quatre heures) : chargements de tampons typés
+  par une seule table de tailles ; nouvelle dépendance copiée, `wave64_emulate_opt.py`. `buffer_store_short`
+  (réservé par AnyXboxX sur leur #2300) n'est toujours pas traité chez eux.
+- **Xbox2Windows** `ff7f68a` → `6f48648` : le retarget DXIL refuse les appels `xbox.*` non résolus avant un PSO ;
+  nouvelle dépendance copiée, `tools/xbox_intrinsic_gate.py`.
+
 ## Ce qui n'est pas repris
 
 Tout ce qui est propre à un jeu : formats d'archives et de ressources (RPF, AWC, TTPF, XBCH,
