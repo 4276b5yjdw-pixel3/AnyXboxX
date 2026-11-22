@@ -2,8 +2,8 @@
 //
 // Le jeu voit un seul utilisateur, toujours connecté, adulte, avec tous les
 // privilèges : identifiant fixe, gamertag réglable (ANYXBOXX_GAMERTAG, défaut
-// « AnyXboxX »). Aucune connexion à Xbox Live : les jetons, photos de profil et
-// fenêtres de connexion échouent proprement (E_NOTIMPL) ou réussissent à vide.
+// « AnyXboxX »). Aucune connexion à Xbox Live : les jetons et fenêtres de connexion
+// échouent proprement (E_NOTIMPL) ou réussissent à vide ; la photo de profil est un PNG généré.
 //
 // Objet du fournisseur {01ACD177…} : ses versions d'interface prolongent la même
 // table (méthodes 3 à 49, gdk_api_table.inc). XUserGetGamertag a sa propre
@@ -12,11 +12,16 @@
 
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <new>
+#include <utility>
+#include <vector>
 
 #include "XAsync.h"
 #include "XAsyncProvider.h"
 #include "XTaskQueue.h"
+#include "async_call.h"
+#include "gamer_picture.h"
 #include "interface_helpers.h"
 #include "interfaces.h"
 #include "trace.h"
@@ -198,10 +203,31 @@ HRESULT XUserGetGamertag(XUserHandle user, XUserGamertagComponent component, siz
   return S_OK;
 }
 
-// Pas de photo de profil hors ligne.
-HRESULT XUserGetGamerPictureAsync(XUserHandle, uint32_t, XAsyncBlock*) noexcept { return E_NOTIMPL; }
-HRESULT XUserGetGamerPictureResultSize(XAsyncBlock*, size_t*) noexcept { return E_NOTIMPL; }
-HRESULT XUserGetGamerPictureResult(XAsyncBlock*, size_t, void*, size_t*) noexcept { return E_NOTIMPL; }
+// Photo de profil hors ligne : PNG généré à la taille demandée (gamer_picture.cpp).
+const char kPictureIdentity = 0;
+
+HRESULT XUserGetGamerPictureAsync(XUserHandle user, uint32_t size_code, XAsyncBlock* async) noexcept {
+  uint32_t side = 0;
+  if (!Valid(user) || async == nullptr || !anyxboxx::GamerPictureSide(size_code, &side)) return E_INVALIDARG;
+  try {
+    auto png = std::make_shared<const std::vector<uint8_t>>(anyxboxx::GamerPicturePng(side));
+    anyxboxx::AsyncCall call;
+    call.size = png->size();
+    call.write = [png](void* buffer) { std::memcpy(buffer, png->data(), png->size()); };
+    return anyxboxx::BeginAsyncCall(async, &kPictureIdentity, "XUserGetGamerPictureAsync", std::move(call));
+  } catch (const std::bad_alloc&) {
+    return E_OUTOFMEMORY;
+  }
+}
+
+HRESULT XUserGetGamerPictureResultSize(XAsyncBlock* async, size_t* size) noexcept {
+  if (size == nullptr) return E_INVALIDARG;
+  return XAsyncGetResultSize(async, size);
+}
+
+HRESULT XUserGetGamerPictureResult(XAsyncBlock* async, size_t size, void* buffer, size_t* used) noexcept {
+  return XAsyncGetResult(async, &kPictureIdentity, size, buffer, used);
+}
 
 HRESULT XUserGetAgeGroup(XUserHandle user, XUserAgeGroup* age_group) noexcept {
   if (!Valid(user) || age_group == nullptr) return E_INVALIDARG;
