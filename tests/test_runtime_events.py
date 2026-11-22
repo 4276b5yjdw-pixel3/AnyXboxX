@@ -57,12 +57,12 @@ def test_accepting_an_invite_is_not_implemented(runtime_dir, interface, index):
 
 def test_xerror_report_reaches_the_title_callback(runtime_dir):
     api = GdkInterface(runtime_dir, *ERROR)
-    report = api.method(3, None, ctypes.c_int32, ctypes.c_char_p)
+    report = api.method(3, ctypes.c_uint32, ctypes.c_int32, ctypes.c_char_p)   # HRESULT (xgameruntime-docs)
     set_callback = api.method(4, None, ctypes.c_void_p, ctypes.c_void_p)
     seen = []
     callback = ERROR_CALLBACK(lambda hr, message, context: seen.append((hr, message, context)) or True)
     set_callback(ctypes.cast(callback, ctypes.c_void_p), ctypes.c_void_p(0x1234))
-    report(ctypes.c_int32(E_INVALIDARG - (1 << 32)).value, b"parametre invalide")
+    assert report(ctypes.c_int32(E_INVALIDARG - (1 << 32)).value, b"parametre invalide") == S_OK
     set_callback(None, None)
     report(0, b"sans rappel")
     assert seen == [(E_INVALIDARG - (1 << 32), b"parametre invalide", 0x1234)]
