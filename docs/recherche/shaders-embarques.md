@@ -26,7 +26,7 @@ Reproduire (extraction avec les outils GPL-3.0 de Leonida, dans un dossier de tr
 ```powershell
 python -I pe_shader_containers.py <paquet>\XboxBvhBuilder.dll --json <travail>\containers.json --extract <travail>\dxbc
 python -I fssm_unpack.py <travail>\dxbc
-python toolsssm_mesure.py <travail>\dxbc
+python tools\fssm_mesure.py <travail>\dxbc
 ```
 
 Le même outil servira sur les shaders du jeu quand l'exécutable et ses PSO seront disponibles.
