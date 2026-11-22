@@ -34,6 +34,14 @@ void* LocalStorageInterface();
 // XPackage : paquet installé en local (package_interface.cpp).
 void* PackageInterface();
 
+// Abonnements hors ligne et XError (event_interface.cpp) : invitations (2 versions),
+// activations, protocoles ; le rappel ne part jamais sans Xbox Live.
+void* InviteInterface();
+void* PendingInviteInterface();
+void* ActivationInterface();
+void* ProtocolInterface();
+void* ErrorInterface();
+
 // Renvoie l'objet qui sert (fournisseur, interface), ou nullptr.
 void* ServedInterface(const GUID& provider, const GUID& iid);
 
