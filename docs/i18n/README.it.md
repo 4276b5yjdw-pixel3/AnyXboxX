@@ -62,7 +62,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
 | 360 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
-| Librerie console di TomBox (Rust, MIT) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
+| Librerie console di TomBox (Rust, GPL-3.0) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
 | Identità Xbox Series X: tipo di console (valore di registro `ConsoleMode` simulato, anche nelle DLL del gioco), `XSystem`, Title ID letto da `MicrosoftGame.config`, analisi «Xbox Series X» | ✅ fatto |
 | Mappa dell'avanzamento: una casella per funzione (`--carte`) | ✅ fatto |
