@@ -51,8 +51,9 @@ def gpu_area():
                 "run by the reference interpreter (wave32); recompiled to DXIL: compute, vertex, pixel")
 
 STATIC_AREAS = (
-    Area("D3D12.X: device and ID3D12* interfaces", 0, 1,
-         "not started: console method tables differ from the PC", counted=False),
+    Area("D3D12.X: device and ID3D12* interfaces", 1, 1,
+         "served by TomBox's d3d12_xs.dll (194/200 methods by their count), not yet tried with a game",
+         counted=False),
 )
 
 

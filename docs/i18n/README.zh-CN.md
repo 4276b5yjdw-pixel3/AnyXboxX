@@ -15,7 +15,7 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 - **处理器指令：100%。** Series X 使用 x86-64 的 AMD Zen 2，与 PC 的指令集相同：在原生模式下，游戏代码无需翻译，直接原样运行。
 - **GPU 指令：36%。** 主机游戏的着色器是针对 Series X 的 RDNA 2 GPU 编译的。1,458 种 RDNA 2 编码中已有 521 种可在参考解释器中运行，RDNA 2 → DXIL 重编译器已能用 D3D12 绘制首个顶点着色器和像素着色器。
 - **系统函数：66%。** 测试包中各 DLL 导入的 1 337 个函数里，有这个比例在隔离模式下已被解析。
-- **主机专用 DLL**：`xmem.dll`（3/4）和 `d3d12_xs.dll`（2/2）已针对该包用到的函数完成翻译。D3D12.X 设备的创建仍待编写。
+- **主机专用 DLL**：`xmem.dll`（3/4）和 `d3d12_xs.dll`（2/2）已针对该包用到的函数完成翻译。D3D12.X（设备和 `ID3D12*` 接口）由 TomBox 的 `d3d12_xs.dll` 提供，尚未用游戏测试。
 - **GDK 运行时：396 个函数中的 152 个**是在 AnyXboxX 中用 C++ 编写的：任务队列（`XTaskQueue`、`XAsync`、`XThread`）、用户（`XUser`，一个离线的本地档案）、Xbox Series X 的身份（`XSystem`、Title ID、分析数据、运行时功能）、存档（`XGameSave`、`XGameSaveFiles`、`XPersistentLocalStorage`）和游戏包（`XPackage`）。当 AnyXboxX 单独管理运行时（没有 Gaming Services，或使用 `ANYXBOXX_SYSTEM_RUNTIME=0`）时，它们才会生效。如果存在 Windows 的 GDK 运行时，则由它提供所有接口（包括任务队列），因为其 API 只接受它自己的队列。跟踪（`ANYXBOXX_TRACE=1`）会列出每个被请求接口的名称。
 
 该图表由 `scarlett.py --traduction <包文件夹> docs/images/traduction.svg` 重新生成。
