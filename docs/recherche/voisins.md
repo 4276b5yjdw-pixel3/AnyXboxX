@@ -7,7 +7,7 @@ Détails par projet : [tombox.md](tombox.md), [xbox2windows.md](xbox2windows.md)
 
 | Projet | Licence | Taille du travail | Leur meilleure avance |
 | --- | --- | --- | --- |
-| [Leonida](https://github.com/ItsNotRexed/Leonida) | GPL-3.0 | traducteur RDNA 2 → SPIR-V de 6 580 lignes | shaders : toutes les familles d'un jeu, contrôle de flux structuré, descripteurs GFX10 |
+| [Leonida](https://github.com/ItsNotRexed/Leonida) | GPL-3.0 | traducteur RDNA 2 → SPIR-V de 9 722 lignes (22 novembre) | shaders : toutes les familles d'un jeu, contrôle de flux structuré, descripteurs GFX10, émulation wave64 |
 | [omonkeyz/xbox-emulator](https://github.com/omonkeyz/xbox-emulator) (TomBox) | MIT ou Apache 2.0 | `d3d12_xs` de 32 400 lignes (Rust) | D3D12.X (194/200 méthodes), traduction RDNA 2 → HLSL, bibliothèques console |
 | [Xbox2Windows](https://github.com/R0Y00/Xbox2Windows) | MIT | environ 100 tests ctest | mémoire ERA et alias GPU, recompilation CPU, retarget DXIL, banc GPU |
 
@@ -28,6 +28,21 @@ Détails par projet : [tombox.md](tombox.md), [xbox2windows.md](xbox2windows.md)
 
 Le point 10 n'est utile que si l'exécution native échoue, puisque le processeur de la console a
 le même jeu d'instructions que le PC.
+
+## Leonida au 22 novembre 2026 (commit `bb2e18421d`)
+
+Notre copie de `third_party/leonida/` passe de `8bd0087d2d` à `bb2e18421d` : le traducteur grossit
+de 6 580 à 9 722 lignes, sans changer l'appel `translate(chemin)` qu'utilise `emu/rdna2_spirv.py`.
+D'après leur README à ce commit :
+
+| Domaine | Leur état | Pour AnyXboxX |
+| --- | --- | --- |
+| RDNA 2 → SPIR-V | les 26 503 shaders du jeu traduits et acceptés par `spirv-val` ; 21 545 sont wave64 | récupéré par la copie mise à jour |
+| Wave64 sur GPU à sous-groupes de 32 (NVIDIA, Intel) | exact en compute et mesh (`--wave64-emulate`), approché en VS/PS/GS | option du traducteur, pas encore exposée par `scarlett.py --spirv` |
+| Tests GPU du traducteur | plus de 30 couples GPU et pilote (NVIDIA, AMD GCN3 à RDNA4, Intel, Apple, llvmpipe) | à comparer avec notre banc `--banc` (#70) |
+| D3D12 Xbox → Vulkan | file, listes de commandes, barrières, copies, requêtes ; pas encore de pipelines ni de draws | AnyXboxX vise D3D12 natif via TomBox (#18, #22) |
+| Manettes | shim GameInput sur SDL3 (vibrations, gâchettes DualSense) | candidat pour une issue GameInput |
+| Textures BCPack | décodeur Python « clean-room » de BC1 à BC7, une table d'historique manque | provenance à vérifier avant toute reprise (règle 2) |
 
 ## Ce qui n'est pas repris
 
