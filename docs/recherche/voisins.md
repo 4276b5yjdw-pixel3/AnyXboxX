@@ -73,6 +73,19 @@ VBR de plus de 64 bits ; trois modules génériques s'ajoutent (`call_evidence.p
 | Décodage RDNA 2 | VOP3P décodé, corrections EXP, VINTRP, SMEM, MIMG et littéraux | à confronter à notre désassembleur (oracle LLVM, règle 4) |
 | Recompilation CPU | FMA3, AES-NI, PCLMULQDQ, SSE4.1, AVX2, x87 abaissés en C++ | utile seulement si l'exécution native échoue (#71) |
 
+## Mise à jour du 22 novembre au soir
+
+- **TomBox a réécrit son historique** : `51f5319`, épinglé le matin, n'a plus d'ancêtre commun avec
+  leur `main` et pourrait disparaître de GitHub. Le sous-module passe à `99f48e3`, qui reprend les
+  PR de contributeurs (`d3d12_xs` : plus de fausse réponse « Xbox One » mise en cache avant le
+  chargement de `d3d12_x.dll`, files Direct enregistrées ; formats MTBUF gfx7 traduits en formats
+  unifiés RDNA 2 ; crédits regroupés dans `THIRD_PARTY/`). Le workspace Rust, les 7 DLL et la
+  suite de tests passent sans changement.
+- **Leonida** : copie à `a0acd33d77` (9 722 → 10 704 lignes : `ds_wrxchg*_rtn_b64`, tampons typés
+  SINT et `32_32_32_UINT`, analyse wave64 des shaders graphiques dans le nouveau `wave64_halves.py`).
+- **Xbox2Windows** (17 commits) : recompilation CPU (SSE2 à SSE4.2, x87), DPP et SDWA dans leur
+  recompilateur de pixel shaders ; rien de nouveau à copier pour AnyXboxX.
+
 ## Ce qui n'est pas repris
 
 Tout ce qui est propre à un jeu : formats d'archives et de ressources (RPF, AWC, TTPF, XBCH,
