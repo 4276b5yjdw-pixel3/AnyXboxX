@@ -67,7 +67,7 @@ def _has_literal(family, word, second):
         return word & 0x1FF == LITERAL
     if family == "VOP2":
         return word & 0x1FF == LITERAL or (word >> 25) & 0x3F in VOP2_WITH_LITERAL
-    if family == "VOP3" and second is not None:
+    if family in ("VOP3", "VOP3P") and second is not None:        # src0, src1, src2 dans le second mot
         return LITERAL in (second & 0x1FF, (second >> 9) & 0x1FF, (second >> 18) & 0x1FF)
     return False
 

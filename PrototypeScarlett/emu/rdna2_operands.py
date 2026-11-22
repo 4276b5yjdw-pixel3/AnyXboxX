@@ -9,7 +9,7 @@ largeur de registre) vient de rdna2_shapes.SHAPES, apprise sur les tests de LLVM
 import re
 import struct
 
-from emu import rdna2, rdna2_exp, rdna2_operands_mimg, rdna2_operands_vmem as vmem, rdna2_swizzle
+from emu import rdna2, rdna2_exp, rdna2_operands_mimg, rdna2_operands_vmem as vmem, rdna2_operands_vop3p, rdna2_swizzle
 
 LITERAL = 255
 INLINE_FLOATS = {240: "0.5", 241: "-0.5", 242: "1.0", 243: "-1.0", 244: "2.0", 245: "-2.0",
@@ -52,7 +52,16 @@ FIELDS = {
 }
 FAMILIES = frozenset(FIELDS) - {"VOP3B"}
 # Familles au texte fixe, sans forme apprise : fonction (data, offset) → texte.
-FIXED_FORMAT = {"EXP": rdna2_exp.text, "VINTRP": rdna2_exp.vintrp_text, "MIMG": rdna2_operands_mimg.text}
+FIXED_FORMAT = {"EXP": rdna2_exp.text, "VINTRP": rdna2_exp.vintrp_text, "MIMG": rdna2_operands_mimg.text,
+                "VOP3P": rdna2_operands_vop3p.text}
+# Encodages vectoriels 32 bits : LLVM écrit « _e32 », sauf les formes à littéral obligatoire, v_pk_fmac_f16
+# et les VOP1 sans forme VOP3 (tests gfx10_vop1.txt et gfx10_vop2.txt du désassembleur de LLVM).
+E32_FAMILIES = frozenset({"VOP1", "VOP2", "VOPC"})
+WITHOUT_E32 = frozenset({"v_madmk_f32", "v_madak_f32", "v_fmamk_f32", "v_fmaak_f32", "v_madmk_f16",
+                         "v_madak_f16", "v_fmamk_f16", "v_fmaak_f16", "v_pk_fmac_f16",
+                         "v_readfirstlane_b32", "v_swap_b32", "v_swaprel_b32", "v_clrexcp", "v_nop",
+                         "v_pipeflush"})
+SRC0_MASK = 0x1FF
 TWO_WORD_FAMILIES = frozenset({"VOP3", "SMEM", "DS"}) | vmem.FAMILIES
 DS_TWO_OFFSETS = re.compile(r"^ds_(?:read|write|wrxchg)2(?:st64)?_")
 DS_SWIZZLE = "ds_swizzle_b32"
@@ -252,6 +261,10 @@ def text(data, offset=0):
     word, literal = _words(data, offset, family, size)
     if word is None:
         return None
+    if family in E32_FAMILIES:
+        if word & SRC0_MASK in rdna2.VOP_EXTENSIONS:       # SDWA, DPP : mot de contrôle non décodé
+            return None
+        name = name if name in WITHOUT_E32 else f"{name}_e32"
     shape = SHAPES.get((family, opcode), default_shape(family))
     if shape[:1] == (VOP3B_MARK,):
         family, shape = "VOP3B", shape[1:]
