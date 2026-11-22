@@ -86,6 +86,15 @@ VBR de plus de 64 bits ; trois modules génériques s'ajoutent (`call_evidence.p
 - **Xbox2Windows** (17 commits) : recompilation CPU (SSE2 à SSE4.2, x87), DPP et SDWA dans leur
   recompilateur de pixel shaders ; rien de nouveau à copier pour AnyXboxX.
 
+## Mise à jour du 22 novembre, 18 h
+
+- **TomBox** `99f48e3` → `dbe89c8` (61 commits, historique intact) : `d3d12_xs` (diagnostics DRED,
+  capture des blocages, fermer la fenêtre arrête le jeu, lectures protégées des textures en option),
+  `tombox-xshader` (atomiques d'image avec `glc`, transcendantes f16 exactes au bit près, index de
+  viewport). Rust, les 7 DLL et la suite de tests passent sans changement.
+- **Leonida** `a0acd33d77` → `49475796c2` : accès image cohérents (`glc`), offsets scalaires constants.
+- **Xbox2Windows** `0f8e7fa` → `a97ba9f` : le retarget DXIL signale les intrinsèques `xbox.*`.
+
 ## Ce qui n'est pas repris
 
 Tout ce qui est propre à un jeu : formats d'archives et de ressources (RPF, AWC, TTPF, XBCH,
