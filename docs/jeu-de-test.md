@@ -103,6 +103,37 @@ La file de tâches est demandée des milliers de fois par seconde : ce chemin do
 
 Compilation : `VisualC-GDK` de SDL3 vise encore `Gaming.Desktop.x64`, absente du GDK 2610. Il faut remplacer cette plateforme par `x64` dans les projets, ajouter `_GAMING_DESKTOP` et les dossiers `include`/`lib` du GDK (`windows\include`, `windows\lib\x64`), puis compiler `tests\testgdk\testgdk.vcxproj` en `Release|x64` avec `-p:PlatformToolset=v145` et `-p:SolutionDir=<…>\VisualC-GDK\`.
 
+## Troisième jeu de test : `Live/Fundamentals_Desktop`
+
+Mesures du 22 novembre 2026. `Fundamentals_Desktop` est l'exemple Xbox Live de [microsoft/Xbox-GDK-Samples](https://github.com/microsoft/Xbox-GDK-Samples) (licence MIT) : connexion de l'utilisateur, gamertag et photo de profil, licence du Store, connectivité réseau et Xbox Live (`Xbl*`). C'est l'exemple PC qui sollicite le plus le runtime GDK.
+
+| Étape | Avant | Après |
+|---|---|---|
+| Interfaces GDK demandées | 9, dont 8 servies (`XStore` non servie) | identique |
+| `XNetworkingRegisterConnectivityHintChanged` (sous `ThrowIfFailed`) | servie depuis #86 | servie |
+| Profil local, gamertag | ✅ | ✅ |
+| `XUserGetGamerPictureAsync` (sous `ThrowIfFailed`) | `E_NOTIMPL` → exception C++ `0xe06d7363`, arrêt | PNG généré à la taille demandée, l'exemple continue |
+| Mode isolé (`--rapport`) | 283 imports, 74,6 % résolus | identique |
+
+Ce que le test a appris :
+
+1. **Un `E_NOTIMPL` peut être fatal.** Les exemples Microsoft enveloppent beaucoup d'appels dans `DX::ThrowIfFailed`. Un jeu réel fera de même : il vaut mieux une réponse hors ligne honnête (image générée, abonnement sans événement) qu'un échec.
+2. **`XStore` est la prochaine interface à servir** : l'exemple la demande dès le démarrage (licence du jeu, mises à jour).
+3. Deux méthodes de `XNetworking` non écrites sont appelées, sans doute par `libHttpClient` ou `XCurl` pour la sécurité HTTPS ; l'exemple les tolère.
+
+Reproduire (GDK public installé, Visual Studio 2026) :
+
+```powershell
+git clone --filter=blob:none --sparse --depth 1 https://github.com/microsoft/Xbox-GDK-Samples.git
+cd Xbox-GDK-Samples
+git sparse-checkout set --no-cone /Samples/Live/Fundamentals_Desktop/ /Kits/ATGTK/ /Kits/ATGTelemetry/ /Kits/DirectXTK12/ /Kits/LiveTK/ /Media/Fonts/ /Media/Textures/
+Kits\DirectXTK12\Src\Shaders\CompileShaders.cmd dxil          # avec dxc dans le PATH
+$env:GameDKCoreLatest = "C:\Program Files (x86)\Microsoft GDK\261000\"
+MSBuild Samples\Live\Fundamentals_Desktop\Fundamentals_Desktop.sln /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v145
+$env:ANYXBOXX_SYSTEM_RUNTIME = "0"; $env:ANYXBOXX_TRACE = "1"
+python PrototypeScarlett\scarlett.py --natif <...>\x64\Release\Fundamentals_Desktop.exe "<dossier Microsoft.VC145.CRT>"
+```
+
 ## Instructions processeur et shaders
 
 - **Processeur** : la Series X utilise un AMD Zen 2 en x86-64, le même jeu d'instructions qu'un PC. Rien n'est à traduire. Seules les extensions AVX/AVX2 manquent dans Unicorn ; l'exécution native les apportera.
