@@ -45,3 +45,46 @@ def test_refusals_are_named():
 @pytest.mark.parametrize("data, stage", [(PIXEL_SHADER, "ps"), (VERTEX_SHADER, "vs")])
 def test_spirv_is_valid(data, stage):
     assert rdna2_spirv.validate(rdna2_spirv.translate(data, stage))[:4] == b"\x03\x02\x23\x07"
+
+
+COMPUTE_SHADER = program(vop1("v_mov_b32", 1, 0xF2))            # v_mov_b32 v1, 1.0 puis s_endpgm
+GROUP = (64, 1, 1)
+
+
+def test_compute_shader_takes_its_dispatch_state():
+    """Leonida lit rsrc2 et la taille du groupe dans l'en-tête FSSM ; sans FSSM, on la lui donne."""
+    asm = rdna2_spirv.translate(COMPUTE_SHADER, "cs", dispatch=(0, *GROUP))
+    assert "OpEntryPoint GLCompute" in asm and "LocalSize 64 1 1" in asm
+
+
+def test_compute_shader_reads_a_real_fssm_header():
+    header = bytearray(0x148)
+    header[0x138:0x148] = (0).to_bytes(4, "little") + b"".join(n.to_bytes(4, "little") for n in (8, 8, 1))
+    assert "LocalSize 8 8 1" in rdna2_spirv.translate(COMPUTE_SHADER, "cs", fssm=bytes(header))
+
+
+def test_compute_shader_without_dispatch_state_is_refused():
+    with pytest.raises(Untranslatable, match="état de dispatch"):
+        rdna2_spirv.translate(COMPUTE_SHADER, "cs")
+
+
+DATA_WORD = b"\x00\x00\x00\x00"                                   # mot de données entre deux programmes
+
+
+def test_data_words_are_skipped_like_llvm_mc_when_the_fssm_is_known():
+    """Avec la position du code dans le FSSM, un mot sans texte est sauté et signalé, comme llvm-mc."""
+    code = COMPUTE_SHADER[:4] + DATA_WORD + COMPUTE_SHADER[4:]
+    listing = rdna2_spirv.disassembly(code, code_start=0x200).splitlines()
+    assert listing[0] == "; programme  code 0x200..0x20c"
+    assert [line.split(" ;")[0].strip() for line in listing[1:3]] == ["v_mov_b32_e32 v1, 1.0", "s_endpgm"]
+    assert listing[3:] == ["; --- llvm-mc messages ---", "; invalid instruction encoding"]
+    with pytest.raises(Untranslatable, match="pas de texte LLVM"):
+        rdna2_spirv.disassembly(code)                                 # sans FSSM : refus, comme avant
+
+
+def test_leonida_reanchors_on_the_fssm_past_data_words():
+    code = COMPUTE_SHADER[:4] + DATA_WORD + COMPUTE_SHADER[4:]
+    header = bytearray(0x200)
+    header[0x138:0x148] = b"".join(n.to_bytes(4, "little") for n in (0, 64, 1, 1))
+    asm = rdna2_spirv.translate(code, "cs", fssm=bytes(header) + code, code_start=0x200)
+    assert "OpEntryPoint GLCompute" in asm
