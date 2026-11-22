@@ -1,0 +1,65 @@
+name: voisins
+# Toutes les heures : TomBox, Leonida et Xbox2Windows ont-ils avancé ? Si oui, une seule pull request
+# « auto/voisins » est ouverte (ou mise à jour) avec le sous-module avancé et les copies recopiées sans
+# modification ; la CI (tests.yml) la teste. Rien n'est fusionné automatiquement : main reste protégée.
+on:
+  schedule:
+    - cron: "17 * * * *"            # minute 17 : hors du pic de début d'heure de GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: write                  # pousser la branche auto/voisins
+  pull-requests: write             # ouvrir ou mettre à jour la pull request
+  actions: write                   # lancer tests.yml (un push du GITHUB_TOKEN ne le déclenche pas)
+
+concurrency:
+  group: voisins
+  cancel-in-progress: false
+
+env:
+  BRANCHE: auto/voisins
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Nouveautés des voisins
+        id: sync
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -I tools/sync_voisins.py --appliquer --rapport "$RUNNER_TEMP/rapport.md" --message "$RUNNER_TEMP/message.txt"
+      - name: Résumé du passage
+        if: always()
+        run: cat "$RUNNER_TEMP/rapport.md" >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Pull request auto/voisins
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCHE"
+          git add -A third_party THIRD_PARTY.md
+          git commit -q -F "$RUNNER_TEMP/message.txt"
+          # Même contenu que la branche déjà poussée : rien à faire (pas de CI relancée toutes les heures).
+          if git fetch -q origin "$BRANCHE" 2>/dev/null && git diff --quiet FETCH_HEAD HEAD; then
+            echo "Branche $BRANCHE déjà à jour."
+            exit 0
+          fi
+          git push -q --force origin "$BRANCHE"
+          if gh pr view "$BRANCHE" --json state --jq .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$BRANCHE" --body-file "$RUNNER_TEMP/rapport.md"
+          elif ! gh pr create --base main --head "$BRANCHE" --title "$(head -n1 "$RUNNER_TEMP/message.txt")" \
+              --body-file "$RUNNER_TEMP/rapport.md"; then
+            # Réglage « Allow GitHub Actions to create and approve pull requests » désactivé : la branche est
+            # poussée quand même, la pull request s'ouvre d'un clic.
+            echo "::warning::Pull request non créée : https://github.com/${GITHUB_REPOSITORY}/compare/main...${BRANCHE}"
+          fi
+          gh workflow run tests.yml --ref "$BRANCHE"
