@@ -50,6 +50,9 @@ bool RemoveSubscription(uint64_t token);
 void* HdrDisplayInterface();
 void* NetworkingInterface();
 
+// XStore : Microsoft Store hors ligne (store_interface.cpp) : licence locale, produits vides.
+void* StoreInterface();
+
 // Renvoie l'objet qui sert (fournisseur, interface), ou nullptr.
 void* ServedInterface(const GUID& provider, const GUID& iid);
 
