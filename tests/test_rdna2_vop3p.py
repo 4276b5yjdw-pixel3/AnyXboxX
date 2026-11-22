@@ -95,9 +95,3 @@ def test_32_bit_vector_encodings_carry_the_e32_suffix(encoding, expected):
 def test_vintrp_carries_the_e32_suffix():                           # gfx9_vintrp.txt (même nom en gfx10)
     assert rdna2_operands.text(bytes.fromhex("000108c8")) == "v_interp_p1_f32_e32 v2, v0, attr0.y"
 
-
-@pytest.mark.parametrize("encoding", ["f9700a7e7f068600", "fa020a7e01e40000", "e9020a7e01887d3f",
-                                      "f9040a0201060606"])
-def test_sdwa_and_dpp_forms_have_no_text_yet(encoding):
-    """SDWA (src0 = 0xF9) et DPP (0xFA, 0xE9) : non décodés, donc pas de faux texte."""
-    assert rdna2_operands.text(bytes.fromhex(encoding)) is None

@@ -11,7 +11,7 @@
 <rect x="300" y="122" width="220" height="18" rx="3" fill="#e3e6ee"/>
 <rect x="300" y="122" width="220" height="18" rx="3" fill="#107c10"/>
 <text x="532" y="136" fill="#1d2230">1487/1487 (100%)</text>
-<text x="300" y="156" font-size="11" fill="#4b5263">operands checked against LLVM's public encoding tests; SDWA and DPP forms not decoded yet</text>
+<text x="300" y="156" font-size="11" fill="#4b5263">operands checked against LLVM's public encoding tests, SDWA and DPP forms included</text>
 <text x="270" y="182" text-anchor="end" fill="#1d2230">GPU instructions (RDNA 2, console shaders)</text>
 <rect x="300" y="168" width="220" height="18" rx="3" fill="#e3e6ee"/>
 <rect x="300" y="168" width="77" height="18" rx="3" fill="#e8890c"/>
