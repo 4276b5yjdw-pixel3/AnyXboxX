@@ -36,7 +36,7 @@ def test_leonida_translates_our_shaders(data, stage, entry, interface):
 
 def test_refusals_are_named():
     with pytest.raises(Untranslatable, match="pas de texte LLVM"):
-        rdna2_spirv.disassembly(program(0x7E0A02F9, 0x00060606))         # SDWA : contrôle non décodé
+        rdna2_spirv.disassembly(program(0x7E0A02FA, 0x00013001))         # DPP : dpp_ctrl 0x130 réservé
     with pytest.raises(ValueError, match="étage inconnu"):
         rdna2_spirv.translate(PIXEL_SHADER, "hs")
 

@@ -60,7 +60,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 404 test automatizzati | ✅ fatto |
+| 427 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
 | Librerie console di TomBox (Rust, MIT) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
@@ -75,7 +75,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | `kernelx.dll` (kernel della console): 2 661 funzioni reindirizzate a `kernel32`/`kernelbase` di Windows | ✅ fatto |
 | TLS implicito (`thread_local`) dei giochi in modalità nativa: DLL portante `anyxboxx_tls.dll`, ogni thread riceve la sua copia (fino a 256 KiB) | ✅ fatto |
 | Launcher nativo in C++ senza Python (`runtime/build/bin/anyxboxx.exe <gioco.exe \| cartella> [--fps]`): SimpleTriangle e testgdk a ~12 000 fps | ✅ fatto |
-| Disassembler GPU RDNA 2: 1.487 mnemonici e operandi in sintassi LLVM (scalari, VOP1/VOP2/VOPC/VOP3/VOP3P/SMEM/DS/EXP/MUBUF/MTBUF/MIMG/FLAT con modificatori), verificato su 35.088 codifiche pubbliche di LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in corso |
+| Disassembler GPU RDNA 2: 1.487 mnemonici e operandi in sintassi LLVM (scalari, VOP1/VOP2/VOPC/VOP3/VOP3P/SDWA/DPP/SMEM/DS/EXP/MUBUF/MTBUF/MIMG/FLAT con modificatori), verificato su 35.088 codifiche pubbliche di LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in corso |
 | Operandi del disassembler RDNA 2 identici al testo di LLVM: scalari e VOP1/VOPC 100%, DS 100%, EXP 100%, SMEM 96,5% (il massimo: LLVM scrive le altre codifiche in due modi) | ✅ fatto |
 | Primi vertex e pixel shader RDNA 2 disegnati con D3D12 (`anyxboxx_gpu_run.exe --draw`): ogni vertice e ogni pixel identici all'interprete di riferimento, sulla GPU e con WARP | ✅ fatto |
 | Texture negli shader RDNA 2 ricompilati: descrittori T#/S# e `image_sample` (2D, texel più vicino, wrap o clamp-to-edge, 8_8_8_8_UNORM e 32_32_32_32_FLOAT), identici all'interprete di riferimento sulla GPU e con WARP, compreso un pixel shader con texture; layout dei descrittori da Leonida e Mesa | ✅ fatto |

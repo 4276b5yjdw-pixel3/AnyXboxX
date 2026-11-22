@@ -9,7 +9,8 @@ largeur de registre) vient de rdna2_shapes.SHAPES, apprise sur les tests de LLVM
 import re
 import struct
 
-from emu import rdna2, rdna2_exp, rdna2_operands_mimg, rdna2_operands_vmem as vmem, rdna2_operands_vop3p, rdna2_swizzle
+from emu import (rdna2, rdna2_exp, rdna2_operands_ext, rdna2_operands_mimg, rdna2_operands_vmem as vmem,
+                 rdna2_operands_vop3p, rdna2_swizzle)
 
 LITERAL = 255
 INLINE_FLOATS = {240: "0.5", 241: "-0.5", 242: "1.0", 243: "-1.0", 244: "2.0", 245: "-2.0",
@@ -232,6 +233,17 @@ def default_shape(family):
                  if (family, name) not in ALIASES)
 
 
+VCC_DESTINATION = ("=", "vcc_lo")
+
+
+def fallback_shape(family, name):
+    """Forme d'un opcode absent des tests de LLVM : les VOPC hors v_cmpx écrivent vcc (wave32)."""
+    shape = default_shape(family)
+    if family == "VOPC" and not name.startswith("v_cmpx"):
+        return (VCC_DESTINATION, *shape)
+    return shape
+
+
 def vop3_name(name, opcode):
     return f"{name}_e64" if any(low <= opcode < high for low, high in E64_RANGES) else name
 
@@ -261,11 +273,11 @@ def text(data, offset=0):
     word, literal = _words(data, offset, family, size)
     if word is None:
         return None
+    shape = SHAPES[(family, opcode)] if (family, opcode) in SHAPES else fallback_shape(family, name)
     if family in E32_FAMILIES:
-        if word & SRC0_MASK in rdna2.VOP_EXTENSIONS:       # SDWA, DPP : mot de contrôle non décodé
-            return None
+        if word & SRC0_MASK in rdna2.VOP_EXTENSIONS:       # SDWA, DPP : second mot de contrôle
+            return rdna2_operands_ext.text(family, name, data, offset, shape)
         name = name if name in WITHOUT_E32 else f"{name}_e32"
-    shape = SHAPES.get((family, opcode), default_shape(family))
     if shape[:1] == (VOP3B_MARK,):
         family, shape = "VOP3B", shape[1:]
     if family in vmem.FAMILIES:

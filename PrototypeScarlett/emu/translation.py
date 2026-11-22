@@ -59,7 +59,7 @@ def gpu_disassembly_area():
 
     done, total = coverage()
     return Area("GPU instructions disassembled (RDNA 2, LLVM syntax)", done, total,
-                "operands checked against LLVM's public encoding tests; SDWA and DPP forms not decoded yet")
+                "operands checked against LLVM's public encoding tests, SDWA and DPP forms included")
 
 STATIC_AREAS = (
     Area("D3D12.X: device and ID3D12* interfaces", 1, 1,

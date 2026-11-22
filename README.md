@@ -60,7 +60,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 404 automated tests | ✅ done |
+| 427 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice`, console `ID3D12*` interfaces and `DXGIXPresentArray`, served by TomBox's Rust `d3d12_xs.dll` (MIT, 48 implemented exports, built by `tools/build_tombox.py d3d12_xs`, loaded with `ANYXBOXX_D3D12_XS=<path>`); untestable here without a console executable | 🟡 in progress |
 | Console libraries from TomBox (Rust, MIT) for what AnyXboxX lacks: `xg_xs` (texture layouts, 23 exports) and full `xmem` (38 exports), with `ANYXBOXX_TOMBOX_DIR=<folder>`; built by `tools/build_tombox.py xg_xs xmem` | 🟡 in progress |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
@@ -75,7 +75,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | `kernelx.dll` (console kernel): 2,661 functions forwarded to Windows `kernel32`/`kernelbase` | ✅ done |
 | Implicit TLS (`thread_local`) for games in native mode: carrier DLL `anyxboxx_tls.dll`, every thread gets its own copy (up to 256 KiB) | ✅ done |
 | Native C++ launcher without Python (`runtime/build/bin/anyxboxx.exe <game.exe \| folder> [--fps]`): SimpleTriangle and testgdk at ~12,000 fps | ✅ done |
-| RDNA 2 GPU disassembler: 1,487 mnemonics and LLVM-syntax operands (scalar, VOP1/VOP2/VOPC/VOP3/VOP3P/SMEM/DS/EXP/MUBUF/MTBUF/MIMG/FLAT with modifiers), checked against 35,088 public LLVM encodings: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in progress |
+| RDNA 2 GPU disassembler: 1,487 mnemonics and LLVM-syntax operands (scalar, VOP1/VOP2/VOPC/VOP3/VOP3P/SDWA/DPP/SMEM/DS/EXP/MUBUF/MTBUF/MIMG/FLAT with modifiers), checked against 35,088 public LLVM encodings: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 in progress |
 | RDNA 2 disassembler operands identical to LLVM's text: scalar and VOP1/VOPC 100%, DS 100%, EXP 100%, SMEM 96.5% (the maximum: LLVM writes the other encodings two ways) | ✅ done |
 | First RDNA 2 vertex and pixel shaders drawn with D3D12 (`anyxboxx_gpu_run.exe --draw`): every vertex and every pixel identical to the reference interpreter, on the GPU and on WARP | ✅ done |
 | Textures in recompiled RDNA 2 shaders: T#/S# descriptors and `image_sample` (2D, nearest texel, wrap or clamp-to-edge, 8_8_8_8_UNORM and 32_32_32_32_FLOAT), identical to the reference interpreter on the GPU and on WARP, including a textured pixel shader; descriptor layout from Leonida and Mesa | ✅ done |
