@@ -1,3 +1,5 @@
+> English: [leonida-gta6.md](../../research/leonida-gta6.md)
+
 # Leonida et le build Xbox Series 1.0.2.1
 
 État au 23 novembre 2026, commit amont `561b65a832`. Leonida ([ItsNotRexed/Leonida](https://github.com/ItsNotRexed/Leonida), GPL-3.0) recompile statiquement le build Xbox Series 1.0.2.1 pour Windows : le code x86-64 du jeu tourne nativement, le logiciel système de la console est réimplémenté, les shaders RDNA 2 sont traduits en SPIR-V pour Vulkan. Le dépôt ne contient ni le jeu, ni clé, ni exécutable.

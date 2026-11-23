@@ -1,3 +1,5 @@
+> English: [RPF_RESEARCH.md](../../../research/package/RPF_RESEARCH.md)
+
 # Relevé des en-têtes RPF
 
 Les 22 fichiers RPF déclarés dans le layout commencent par les octets ASCII `9FPR`. Leur lecture comme entier 32 bits little-endian donne `0x52504639`. Les valeurs ci-dessous décrivent les octets observés et ne définissent pas encore un lecteur du répertoire interne.

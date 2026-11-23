@@ -1,3 +1,5 @@
+> English: [package-compatibility-plan.md](../../research/package-compatibility-plan.md)
+
 # Préparer la compatibilité du paquet Scarlett étudié
 
 Cette note sert aux agents qui poursuivent AnyXboxX. Elle décrit une stratégie de recherche et de tests, pas une recette permettant actuellement de lancer le jeu. Elle s'appuie sur la copie locale et sur les [notes d'analyse du paquet](paquet/README.md).

@@ -1,3 +1,5 @@
+> English: [test-game.md](../test-game.md)
+
 # Jeu de test : SimpleTriangle
 
 Un jeu de test légal qui tourne déjà à 100 % sur PC, pour comparer le comportement natif et celui d'AnyXboxX. Mesures du 21 novembre 2026.
@@ -11,11 +13,11 @@ Un jeu de test légal qui tourne déjà à 100 % sur PC, pour comparer le compor
 
 ## Référence native
 
-![SimpleTriangleDesktop exécuté nativement sur PC](images/simpletriangle-natif.png)
+![SimpleTriangleDesktop exécuté nativement sur PC](../images/simpletriangle-natif.png)
 
 ## Dans AnyXboxX, mode natif : le triangle s'affiche
 
-![SimpleTriangleDesktop chargé et lancé par AnyXboxX en mode natif](images/simpletriangle-anyxboxx.png)
+![SimpleTriangleDesktop chargé et lancé par AnyXboxX en mode natif](../images/simpletriangle-anyxboxx.png)
 
 ```powershell
 python PrototypeScarlett\scarlett.py --natif <...>\x64\Release\SimpleTriangleDesktop.exe
@@ -75,7 +77,7 @@ python PrototypeScarlett\scarlett.py --rapport <...>\x64\Release\SimpleTriangleD
 
 Mesures du 21 novembre 2026. `testgdk` est le programme de démonstration GDK de [SDL3](https://github.com/libsdl-org/SDL) (licence zlib) : des sprites, du son, la manette et la connexion `XUser`. Il passe par `SDL3.dll`, qui charge `xgameruntime.dll` lui-même par `LoadLibrary`.
 
-![testgdk lancé par AnyXboxX en mode natif](images/testgdk-natif.png)
+![testgdk lancé par AnyXboxX en mode natif](../images/testgdk-natif.png)
 
 | Mode | Résultat |
 |---|---|

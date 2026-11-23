@@ -1,3 +1,5 @@
+> English: [progress.md](../progress.md)
+
 # Avancée et banc d'essai
 
 Mesures du 21 novembre 2026. Pour les reproduire : `python PrototypeScarlett/scarlett.py --banc <dossier>`.
@@ -13,7 +15,7 @@ Cas de test utilisés :
 
 ## Résultats sur les 16 DLL
 
-![Part des imports résolus par module](images/banc-dll.svg)
+![Part des imports résolus par module](../images/banc-dll.svg)
 
 | Version | Modules chargés | `DllMain` réussi | Imports résolus | Appels non émulés |
 |---|---|---|---|---|
@@ -41,7 +43,7 @@ Plus aucun appel non émulé pendant l'initialisation des 16 DLL. Les prochains 
 
 ## Traduction des DLL console
 
-![Avancée de la traduction Xbox Series X](images/traduction.svg)
+![Avancée de la traduction Xbox Series X](../images/traduction.svg)
 
 Mesure : `python PrototypeScarlett/scarlett.py --traduction <dossier du paquet> docs/images/traduction.svg`. Les DLL du paquet n'importent que deux bibliothèques propres à la console :
 

@@ -1,3 +1,5 @@
+> English: [day-one.md](../day-one.md)
+
 # Premier lancement d'un exécutable console
 
 Marche à suivre quand l'exécutable du paquet (par exemple `game_scarlett_master.exe`) est disponible. Tout se lance depuis la racine d'AnyXboxX.

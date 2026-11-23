@@ -1,3 +1,5 @@
+> English: [README.md](../../../research/package/README.md)
+
 # Notes de rétro-ingénierie du paquet Scarlett étudié
 
 Notes rédigées par Codex pendant l'analyse statique du paquet Xbox Series X placé à côté du dépôt. Elles décrivent des formats observés sur cette copie (tables RDS5 et ETPF, en-têtes RPF, configuration du paquet). Elles ne contiennent aucun fichier du jeu.

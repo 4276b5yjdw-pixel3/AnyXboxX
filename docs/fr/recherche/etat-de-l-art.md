@@ -1,3 +1,5 @@
+> English: [state-of-the-art.md](../../research/state-of-the-art.md)
+
 # Émulateurs et couches de compatibilité Xbox
 
 Recherche faite le 21 novembre 2026 sur le web et GitHub. **Vérifié** : page lue. **À confirmer** : source secondaire ou extrait.

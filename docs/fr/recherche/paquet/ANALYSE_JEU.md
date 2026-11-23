@@ -1,3 +1,5 @@
+> English: [GAME_ANALYSIS.md](../../../research/package/GAME_ANALYSIS.md)
+
 # GTA VI sur Xbox Scarlett — ce que révèle le paquet 1.0.2.1
 
 Le paquet sépare les ressources communes, les données du mode histoire et celles d’un mini-jeu. On peut retrouver les limites des blocs de ressources et en décompresser une partie. La logique des missions reste inconnue. Le layout désigne un exécutable principal absent à sa destination, et aucun script de mission lisible n’a été reconstruit à partir des deux archives de scripts.

@@ -1,3 +1,5 @@
+> English: [first-executable-leads.md](../../research/first-executable-leads.md)
+
 # Pistes pour le premier exécutable Scarlett
 
 État au 22 novembre 2026. Cette note accompagne le [plan de compatibilité](plan-compatibilite-paquet.md). Elle ne contient ni binaire ni extrait de ressource du jeu. La provenance du paquet étudié n'est pas authentifiée.
