@@ -11,6 +11,8 @@ AnyXboxX está especializado en una sola versión: **Grand Theft Auto VI para Xb
 > [!IMPORTANT]
 > **El juego no es jugable.** Su ejecutable (`game_scarlett_master.exe`) falta en el paquete estudiado, así que el juego en sí nunca se ha iniciado. Cuando haya un ejecutable disponible, harán falta al menos unas semanas de trabajo antes de que el juego sea mínimamente jugable. Este repositorio no contiene archivos del juego, claves ni ejecutables, y no explica cómo obtenerlos.
 
+Página de estado en línea, con el espacio en disco necesario: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
+
 ## Avance de la traducción
 
 ![Mapa del avance: una casilla por función, verde si está traducida](../images/carte-avancee.svg)
@@ -67,7 +69,7 @@ Los dos juegos de prueba funcionan sin sincronización vertical: unos 11 700 f/s
 | Tabla de las 396 funciones GDK: interfaz y número de método, extraídos de `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ hecho |
 | `XTaskQueue`, `XAsync`, `XThread` servidas por AnyXboxX: testgdk funciona sin el runtime de Windows | ✅ hecho |
 | Otras interfaces GDK: delegadas al runtime GDK de Windows, nombradas por la traza | 🟡 en curso |
-| 475 pruebas automatizadas | ✅ hecho |
+| 478 pruebas automatizadas | ✅ hecho |
 | D3D12.X: `D3D12XboxCreateDevice`, interfaces `ID3D12*` de la consola y `DXGIXPresentArray`, servidos por la `d3d12_xs.dll` en Rust de TomBox (MIT, 48 exportaciones implementadas, compilada con `tools/build_tombox.py d3d12_xs`, cargada con `ANYXBOXX_D3D12_XS=<ruta>`); no se puede probar aquí sin un ejecutable de consola | 🟡 en curso |
 | Bibliotecas de consola de TomBox (Rust, GPL-3.0) para lo que falta en AnyXboxX: `xg_xs` (disposición de texturas, 23 exportaciones) y `xmem` completo (38 exportaciones), con `ANYXBOXX_TOMBOX_DIR=<carpeta>`; compiladas con `tools/build_tombox.py xg_xs xmem` | 🟡 en curso |
 | `XUser` sin conexión: perfil local siempre conectado, gamertag configurable (`ANYXBOXX_GAMERTAG`), inicio de sesión de testgdk correcto | ✅ hecho |

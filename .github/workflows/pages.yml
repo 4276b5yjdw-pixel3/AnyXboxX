@@ -1,0 +1,52 @@
+name: site
+# Site GitHub Pages : site/index.html (peut-on lancer GTA VI ? espace disque) et le tableau de progression de
+# Leonida, régénéré par leur propre tools/progress_dashboard.py depuis le sous-module third_party/leonida-src.
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/pages.yml", "third_party/leonida-src"]
+  schedule:
+    - cron: "41 */6 * * *"          # toutes les 6 h : les PR et la CI de Leonida bougent vite
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sous-module Leonida
+        run: git submodule update --init third_party/leonida-src
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tableau de progression de Leonida
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -I third_party/leonida-src/tools/progress_dashboard.py --out "$RUNNER_TEMP/leonida" --github
+          mkdir -p _site/leonida
+          cp -r site/. _site/
+          cp "$RUNNER_TEMP/leonida/progress.html" _site/leonida/progress.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - id: deploiement
+        uses: actions/deploy-pages@v4

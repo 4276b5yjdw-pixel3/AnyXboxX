@@ -11,6 +11,8 @@ AnyXboxX è specializzato in una sola build: **Grand Theft Auto VI per Xbox Seri
 > [!IMPORTANT]
 > **Il gioco non è giocabile.** Il suo eseguibile (`game_scarlett_master.exe`) manca dal pacchetto studiato, quindi il gioco vero e proprio non è mai stato avviato. Una volta disponibile un eseguibile, serviranno ancora almeno alcune settimane di lavoro prima che il gioco sia minimamente giocabile. Questo repository non contiene file del gioco, chiavi o eseguibili e non spiega come ottenerli.
 
+Pagina di stato online, con lo spazio su disco da prevedere: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
+
 ## Avanzamento della traduzione
 
 ![Mappa dell'avanzamento: una casella per funzione, verde se tradotta](../images/carte-avancee.svg)
@@ -67,7 +69,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 475 test automatizzati | ✅ fatto |
+| 478 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
 | Librerie console di TomBox (Rust, GPL-3.0) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
