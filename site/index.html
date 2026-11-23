@@ -66,10 +66,12 @@ h2 { font-weight: 800; font-size: clamp(1.6rem, 3.6vw, 2.3rem); line-height: 1.1
   background: var(--violet); border-radius: 18px; padding: 26px; }
 .estimator label { display: block; font-weight: 600; margin: 14px 0 6px; }
 .estimator label:first-of-type { margin-top: 0; }
-.estimator select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line);
+.estimator select, .estimator input[type="text"] { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line);
   background: var(--night); color: var(--foam); font: inherit; }
 .estimator .check { display: flex; gap: 10px; align-items: center; font-weight: 400; }
 .estimator .check input { width: 18px; height: 18px; accent-color: var(--flamingo); }
+.hint { min-height: 1.2em; margin: 4px 0 0; color: var(--haze); font-size: .85rem; }
+.hint.miss { color: var(--no); }
 #detected { list-style: none; padding: 0; margin: 0 0 18px; color: var(--haze); font-size: .92rem; }
 #result { border-radius: 14px; padding: 22px; background: var(--night); }
 #fps { font-weight: 800; font-size: clamp(2.6rem, 6vw, 3.6rem); line-height: 1; color: var(--mango);
@@ -195,13 +197,17 @@ footer p { max-width: 80ch; margin: 0 0 6px; }
     <div class="estimator">
       <div>
         <ul id="detected"><li>Detecting your hardware…</li></ul>
-        <label for="gpu">Graphics card</label><select id="gpu"></select>
+        <label for="gpu">Graphics card</label>
+        <input id="gpu" type="text" list="gpu-list" autocomplete="off" spellcheck="false" placeholder="Type to search, for example 4070 or 6700 XT">
+        <datalist id="gpu-list"></datalist><p class="hint" id="gpu-hint"></p>
         <label class="check"><input type="checkbox" id="laptop"> Laptop version of this card</label>
-        <label for="cpu">Processor</label><select id="cpu"></select>
+        <label for="cpu">Processor</label>
+        <input id="cpu" type="text" list="cpu-list" autocomplete="off" spellcheck="false" placeholder="Type to search, for example 13700K or 7800X3D">
+        <datalist id="cpu-list"></datalist><p class="hint" id="cpu-hint"></p>
         <label for="ram">Memory (RAM)</label><select id="ram"></select>
       </div>
       <div id="result" aria-live="polite">
-        <p class="empty" id="empty">Choose your graphics card to see an estimate.</p>
+        <p class="empty" id="empty">Type your graphics card to see an estimate.</p>
         <div id="answer" hidden>
           <div id="fps"></div>
           <p id="quality"></p>

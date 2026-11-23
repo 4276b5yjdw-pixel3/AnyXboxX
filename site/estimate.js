@@ -128,3 +128,30 @@ export function estimate({ gpuKey, cpuLabel = null, threads = null, ramGb = null
     notes,
   };
 }
+
+const compact = (texte) => String(texte).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Find the entry a typed text names. An exact name wins; otherwise the only name containing the text, or, among
+ * several, the one that ends with it (« 4070 » finds the RTX 4070, not the 4070 Ti). Returns { match, candidates }.
+ */
+function matchTyped(texte, entries, label) {
+  const cherche = compact(texte);
+  if (!cherche) return { match: null, candidates: [] };
+  const exact = entries.find((entry) => compact(label(entry)) === cherche);
+  if (exact) return { match: exact, candidates: [exact] };
+  const candidates = entries.filter((entry) => compact(label(entry)).includes(cherche));
+  const finissent = candidates.filter((entry) => compact(label(entry)).endsWith(cherche));
+  if (candidates.length === 1) return { match: candidates[0], candidates };
+  return { match: finissent.length === 1 ? finissent[0] : null, candidates };
+}
+
+export function matchGpu(texte) {
+  const { match, candidates } = matchTyped(texte, GPUS, (gpu) => gpu[1]);
+  return { key: match ? match[0] : null, label: match ? match[1] : null, candidates: candidates.length };
+}
+
+export function matchCpu(texte) {
+  const { match, candidates } = matchTyped(texte, CPUS, (cpu) => cpu[0]);
+  return { label: match ? match[0] : null, candidates: candidates.length };
+}
