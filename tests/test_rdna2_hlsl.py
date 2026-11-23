@@ -39,7 +39,7 @@ def compare(data, sgprs=None, memory=b""):
 
 def test_translation_is_a_plain_compute_shader():
     hlsl = rdna2_hlsl.translate(program(vop1("v_mov_b32", 1, ONE)))
-    assert "[numthreads(32, 1, 1)]" in hlsl and "case 0u:" in hlsl and "v[1] = 0x3F800000u" in hlsl
+    assert "[numthreads(32, 1, 1)]" in hlsl and "switch (pc)" not in hlsl and "v[1] = 0x3F800000u" in hlsl
 
 
 def test_untranslatable_instruction_is_named():
