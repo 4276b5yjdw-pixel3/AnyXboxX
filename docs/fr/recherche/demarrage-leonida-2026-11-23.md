@@ -135,10 +135,10 @@ titre dessine sur le `main` de la forge ; les images restent noires (rapport du 
 
 ### 3.1 Compilation des pipelines
 
-Le mainteneur rapporte que la compilation des pipelines du titre prend environ 25 s à froid et moins de 1 s quand le
-cache de pipelines du pilote est chaud, sur cette machine. Le journal de ces lancements ne fait pas partie des
-fichiers lus pour cette note : les deux chiffres sont donc **rapportés, non revérifiés ici**. Pour l'échelle, le
-nombre de shaders et les 31,9 s de l'arrêt 18 (52 programmes de calcul créés, 1 091 Mo) sont mesurés. Les 26 503
+**Mesuré** ([notre commentaire sur Leonida #7231](https://github.com/ItsNotRexed/Leonida/issues/7231#issuecomment-7107629416)) : les 52 pipelines du constructeur BVH du paquet
+prennent de 2,41 s à 27,69 s au premier lancement (à froid, environ 25 s), pic 1 091 Mo, puis de 0,3 à 0,7 s ensuite
+(moins de 1 s avec le cache de pipelines du pilote chaud), pic 686 à 687 Mo. RTX 4070 SUPER, pilote 610.88. Les 31,9 s
+de l'arrêt 18 en section 2 sont le même cas à froid en mode stop. Les 26 503
 shaders traduits et les 53 830 pipelines du lancement de 300 s viennent de lancements différents et ne se divisent
 pas l'un par l'autre.
 

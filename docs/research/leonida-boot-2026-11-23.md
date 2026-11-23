@@ -132,10 +132,10 @@ black (maintainer's report and issue #8851).
 
 ### 3.1 Pipeline compilation
 
-The maintainer reports that compiling the title's pipelines takes about 25 s on a cold run and under 1 s when the
-driver's pipeline cache is warm, on this machine. The log of those runs is not among the files read for this note,
-so the two figures are **reported, not re-checked here**. For scale, the shader count and the 31.9 s of stop 18
-(52 compute programs created, 1,091 MB) are measured. The 26,503 translated shaders and the 53,830 pipelines of the
+**Measured** ([our comment on Leonida #7231](https://github.com/ItsNotRexed/Leonida/issues/7231#issuecomment-7107629416)): the 52 pipelines of the package's BVH builder take 2.41 s to
+27.69 s on the first run (cold, about 25 s), peak 1,091 MB, then 0.3 to 0.7 s afterwards (under 1 s with the driver's
+pipeline cache warm), peak 686 to 687 MB. RTX 4070 SUPER, driver 610.88. The 31.9 s of stop 18 in section 2 is the
+same cold case in stop mode. The 26,503 translated shaders and the 53,830 pipelines of the
 300 s run above come from different runs and must not be divided into each other.
 
 ## 4. The four measured causes of the black frames
