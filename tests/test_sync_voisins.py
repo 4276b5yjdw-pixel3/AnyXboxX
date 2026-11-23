@@ -99,3 +99,14 @@ def test_report_and_commit_message():
     message = sv.message_commit([a_jour, applique, erreur])
     assert message.startswith("chore: voisins à jour automatiquement (Leonida aa2988c)")
     assert "TomBox" not in message
+
+
+def test_every_tracked_submodule_is_declared_in_gitmodules_with_its_upstream_url():
+    import configparser
+    declares = configparser.ConfigParser()
+    declares.read(sv.RACINE / ".gitmodules", encoding="utf-8")
+    urls = {declares[s]["path"]: declares[s]["url"] for s in declares.sections()}
+    sous_modules = [v for v in sv.VOISINS if v.sous_module]
+    assert {v.dossier for v in sous_modules} >= {"third_party/tombox", "third_party/leonida-src"}
+    for voisin in sous_modules:
+        assert urls.get(voisin.dossier, "").removesuffix(".git").endswith(voisin.depot), voisin.nom

@@ -2,3 +2,7 @@
 	path = third_party/tombox
 	url = https://github.com/omonkeyz/xbox-emulator.git
 	ignore = dirty
+[submodule "third_party/leonida-src"]
+	path = third_party/leonida-src
+	url = https://github.com/ItsNotRexed/Leonida.git
+	ignore = dirty
