@@ -108,9 +108,11 @@ VBR de plus de 64 bits ; trois modules génériques s'ajoutent (`call_evidence.p
 - **Suivi automatique** : le workflow `.github/workflows/voisins.yml` lance `tools/sync_voisins.py` toutes les
   heures. Il avance le sous-module TomBox, recopie sans modification les fichiers de `third_party/leonida` et
   `third_party/xbox2windows` (et les modules qu'ils se mettent à importer), change les numéros de commit, puis
-  ouvre ou met à jour une seule pull request `auto/voisins` que la CI teste. Il ne fusionne rien et s'arrête
+  force-pousse la seule branche `auto/voisins`, que la CI teste. Il n'ouvre pas de pull request (le réglage
+  qui autoriserait Actions à créer et approuver des PR reste désactivé) : un mainteneur relit la branche, la
+  complète si besoin sur une branche `chore/voisins-<date>` et ouvre la PR. Il ne fusionne rien et s'arrête
   si une licence change ou si un fichier copié disparaît. Les commits qui touchent du code porté à la main
-  (BC7, tuiles, `era_heap`, descripteurs GFX10) sont seulement signalés dans la pull request.
+  (BC7, tuiles, `era_heap`, descripteurs GFX10) sont seulement signalés dans le rapport du passage.
 - **TomBox** `a541bbb` → `30a1b53` : flux de PSO Scarlett (sous-objets 23 à 30 renumérotés), protection contre
   un périphérique retiré, préchauffage des PSO, course corrigée dans le balayage de `xmem`, service audio XVM.
 - **Leonida** `162821017e` → `aa2988cc55` (2 531 commits en quatre heures) : chargements de tampons typés
