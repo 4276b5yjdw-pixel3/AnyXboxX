@@ -4,6 +4,13 @@
 
 AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込み、そのコードを Unicorn で実行します。コンソールのシステム関数は、ネイティブモードでは C++ ランタイムに、隔離されたマシンでは Python のコードに置き換えられます（WinDurango や Wine と同じ高レベルエミュレーション）。このプログラムは Xbox Series X として振る舞い、`XSystemGetDeviceType` は `XboxScarlettAnaconda` を返します。
 
+## 対象と現状
+
+AnyXboxX は 1 つのビルドに特化しています: **Xbox Series 版 Grand Theft Auto VI、バージョン 1.0.2.1**。このゲームが必要とするもの（インポートするシステム関数、使用するシェーダーと Direct3D 12.x メソッド）だけを変換します。ほかのゲームは、この変換が完了してから試します。本プロジェクトは同じビルドを対象とする [Leonida](https://github.com/ItsNotRexed/Leonida) と協力しています。
+
+> [!IMPORTANT]
+> **ゲームはプレイできません。** 調査したパッケージには実行ファイル（`game_scarlett_master.exe`）が含まれていないため、ゲーム本体は一度も起動していません。実行ファイルが入手できても、最低限プレイできるようになるまで少なくとも数週間の作業が必要です。このリポジトリにはゲームファイル、鍵、実行ファイルは含まれず、その入手方法も説明しません。
+
 ## 変換の進捗
 
 ![進捗マップ：関数ごとに 1 マス、変換済みなら緑](../images/carte-avancee.svg)

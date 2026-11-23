@@ -4,6 +4,13 @@
 
 O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o código deles com o Unicorn. As funções de sistema do console são substituídas por um runtime C++ em modo nativo e por código Python na máquina isolada (emulação de alto nível, como o WinDurango ou o Wine). O programa se apresenta como um Xbox Series X: `XSystemGetDeviceType` retorna `XboxScarlettAnaconda`.
 
+## Foco e estado
+
+O AnyXboxX é especializado em um único build: **Grand Theft Auto VI para Xbox Series, versão 1.0.2.1**. Só é traduzido o que este jogo precisa (as funções de sistema que ele importa, os shaders e os métodos do Direct3D 12.x que ele usa). Outros jogos serão testados quando essa tradução estiver completa. O projeto trabalha com o [Leonida](https://github.com/ItsNotRexed/Leonida), que mira o mesmo build.
+
+> [!IMPORTANT]
+> **O jogo não é jogável.** O executável (`game_scarlett_master.exe`) está ausente do pacote estudado, então o jogo em si nunca foi iniciado. Quando houver um executável disponível, serão necessárias pelo menos algumas semanas de trabalho antes que o jogo seja minimamente jogável. Este repositório não contém arquivos do jogo, chaves nem executáveis, e não explica como obtê-los.
+
 ## Andamento da tradução
 
 ![Mapa do andamento: uma célula por função, verde se traduzida](../images/carte-avancee.svg)
