@@ -103,9 +103,22 @@ def test_graphics_memory_gets_its_own_committed_region(xmem):
     assert windows_query(block).state == MEM_FREE
 
 
+def test_physical_memory_request_of_the_title_is_served(xmem):
+    # XMemAlloc(0x60000, 0xf0814000) du titre : type physique 7, pages de 64 Kio, alignement 64 Kio.
+    # Un NULL ici fait prendre au titre sa branche d'erreur.
+    word = 0xF081_4000
+    block = xmem.XMemAlloc(0x6_0000, word)
+    try:
+        assert block and block % (64 * 1024) == 0
+        assert ctypes.string_at(block, 0x6_0000) == bytes(0x6_0000)
+        ctypes.memset(block, 0x51, 0x6_0000)
+    finally:
+        xmem.XMemFree(block, word)
+
+
 @pytest.mark.parametrize("word, error", [
-    (era_word(memory_type=7), ERROR_NOT_SUPPORTED),               # mémoire physique : non émulée
-    (era_word(memory_type=9, alignment_log2=8), ERROR_NOT_SUPPORTED),
+    (era_word(memory_type=7, alignment_log2=17), ERROR_NOT_SUPPORTED),   # physique, alignement > 64 Kio
+    (era_word(memory_type=9, alignment_log2=20), ERROR_NOT_SUPPORTED),
     (era_word(memory_type=12), ERROR_INVALID_PARAMETER),          # type non défini
     (era_word(page_size=3), ERROR_INVALID_PARAMETER),             # taille de page non définie
     (BINK_WORD | 1 << 40, ERROR_INVALID_PARAMETER),               # bit réservé
