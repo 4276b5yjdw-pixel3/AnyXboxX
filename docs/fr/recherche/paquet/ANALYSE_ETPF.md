@@ -1,3 +1,5 @@
+> English: [ETPF_ANALYSIS.md](../../../research/package/ETPF_ANALYSIS.md)
+
 # Tables ETPF et blocs TTPF
 
 L'intervalle initial de chaque TTPF examiné commence par un en-tête ETPF. Sur les 57 fichiers du layout, les quatre premiers mots de 32 bits little-endian suivent les mêmes contraintes.

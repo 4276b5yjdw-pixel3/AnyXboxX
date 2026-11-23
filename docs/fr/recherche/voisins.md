@@ -1,7 +1,9 @@
+> English: [neighbors.md](../../research/neighbors.md)
+
 # Projets voisins : où ils sont en avance et comment les rattraper
 
 État au 21 novembre 2026. AnyXboxX est en GPL-3.0 ou ultérieure : le code des trois projets peut
-être repris avec crédit dans [THIRD_PARTY.md](../../THIRD_PARTY.md). Aucun des trois ne démarre
+être repris avec crédit dans [THIRD_PARTY.md](../../../THIRD_PARTY.md). Aucun des trois ne démarre
 encore un jeu commercial Series X (TomBox atteint le salon de Fortnite, d'après leurs notes).
 Détails par projet : [tombox.md](tombox.md), [xbox2windows.md](xbox2windows.md).
 

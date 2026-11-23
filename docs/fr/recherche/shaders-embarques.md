@@ -1,3 +1,5 @@
+> English: [embedded-shaders.md](../../research/embedded-shaders.md)
+
 # Shaders embarqués du paquet : mesure sans llvm-mc
 
 Mesure du 22 novembre 2026, faite localement ; seuls des comptes figurent ici (aucun shader, désassemblage ni

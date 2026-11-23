@@ -1,3 +1,5 @@
+> English: [xbox-series-x-architecture.md](../../research/xbox-series-x-architecture.md)
+
 # Architecture de la Xbox Series X
 
 Recherche faite le 21 novembre 2026 pour guider le développement d'AnyXboxX. Chaque fait porte sa source. La mention **vérifié** signifie que la page a été lue ; **à confirmer** signifie que le fait vient d'un extrait de recherche ou d'une source secondaire.

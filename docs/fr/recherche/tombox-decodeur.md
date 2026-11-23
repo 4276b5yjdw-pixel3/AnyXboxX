@@ -1,3 +1,5 @@
+> English: [tombox-decoder.md](../../research/tombox-decoder.md)
+
 # Décodeur RDNA 2 de TomBox confronté aux tests LLVM
 
 Rapport produit par `tools/compare_tombox.py` (passerelle Rust `rust/anyxboxx-rdna2`) sur les encodages uniques des tests publics de LLVM (gfx10, gfx1030), avec `tombox-xshader` au commit `fef9a6e` de omonkeyz/xbox-emulator. « Inconnu de TomBox » : opcode absent de leur table de mnémoniques (affiché `famille<0x…>`). Les écarts de nom `v_mad_legacy`/`v_mac_legacy` et `v_mac_f16` viennent des noms gfx1010 (RDNA 1) ; LLVM gfx1030 (RDNA 2) utilise les noms `fma`/`fmac`. Les écarts FLAT/GLOBAL/SCRATCH viennent du segment (bits 15-14), non pris en compte dans le nom.

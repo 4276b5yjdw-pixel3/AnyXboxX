@@ -1,3 +1,5 @@
+> English: [REA_RESEARCH.md](../../../research/package/REA_RESEARCH.md)
+
 # Inspection avec REA
 
 REA 6.10.1 a été installé temporairement depuis le paquet npm officiel et exécuté avec Node.js 24.22.1. L’inspection est statique et ne démarre aucun exécutable du jeu. Le dépôt source consulté était au commit `a125d37bfad92fc3b5e472c6c18ee71654037221`.

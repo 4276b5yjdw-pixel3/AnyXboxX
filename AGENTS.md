@@ -20,7 +20,7 @@ AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett
 | `third_party/leonida-src/` | Git submodule: the whole [ItsNotRexed/Leonida](https://github.com/ItsNotRexed/Leonida) repository (GPL-3.0; static recompilation of the Xbox Series 1.0.2.1 build: `gta6rt` runtime, GDK shims, D3D12 → Vulkan, asset tools), pinned commit, advanced hourly by the `voisins` workflow. Do not edit; propose changes upstream. `third_party/leonida/` keeps the unchanged translator copies that `PrototypeScarlett` calls. |
 | `tools/` | Generators and comparison tools (GDK interface table, kernelx exports, RDNA 2 tables, TomBox comparison) |
 | `tests/` | pytest suite (about 220 tests) |
-| `docs/` | Research notes and logs, in French. `docs/i18n/` holds the 7 README translations. |
+| `docs/` | Research notes and logs, in English. `docs/fr/` holds the French version of each document (same tree). `docs/i18n/` holds the 7 README translations. |
 
 ## Setup and commands
 
@@ -54,6 +54,6 @@ cargo build --release --manifest-path rust/Cargo.toml
 
 ## Where to start
 
-When a console executable becomes available, start with `python tools/jour_j.py <package folder>` ([docs/jour-j.md](docs/jour-j.md)): its report stays outside the repository.
+When a console executable becomes available, start with `python tools/jour_j.py <package folder>` ([docs/day-one.md](docs/day-one.md)): its report stays outside the repository.
 
 Open issues list what remains, each with a "done when" checklist. Most console-library and Direct3D 12.x work is blocked on a legally usable Scarlett executable; RDNA 2 shader work (`emu/rdna2*`) and GDK runtime functions (`runtime/xgameruntime`) can progress from public documentation.
