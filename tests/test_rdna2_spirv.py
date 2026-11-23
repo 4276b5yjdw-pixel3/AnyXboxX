@@ -3,7 +3,7 @@ import pytest
 
 from emu import rdna2_operands, rdna2_spirv
 from emu.rdna2_hlsl_ops import Untranslatable
-from test_rdna2_exec import program, vop1
+from test_rdna2_exec import program, sopp, vop1
 from test_rdna2_graphics import PIXEL_SHADER, exp, vintrp
 
 VERTEX_SHADER = program(vop1("v_cvt_f32_u32", 1, 256), vop1("v_mov_b32", 2, 0xF0), vop1("v_mov_b32", 3, 128),
@@ -69,6 +69,8 @@ def test_compute_shader_without_dispatch_state_is_refused():
 
 
 DATA_WORD = b"\x00\x00\x00\x00"                                   # mot de données entre deux programmes
+# Données intégrées au code, sautées par un s_branch : le chemin exécuté ne les traverse jamais.
+CODE_WITH_DATA = program(sopp("s_branch", 1), 0, vop1("v_mov_b32", 1, 0xF2))
 
 
 def test_data_words_are_skipped_like_llvm_mc_when_the_fssm_is_known():
@@ -83,8 +85,17 @@ def test_data_words_are_skipped_like_llvm_mc_when_the_fssm_is_known():
 
 
 def test_leonida_reanchors_on_the_fssm_past_data_words():
-    code = COMPUTE_SHADER[:4] + DATA_WORD + COMPUTE_SHADER[4:]
+    code = CODE_WITH_DATA
     header = bytearray(0x200)
     header[0x138:0x148] = b"".join(n.to_bytes(4, "little") for n in (0, 64, 1, 1))
     asm = rdna2_spirv.translate(code, "cs", fssm=bytes(header) + code, code_start=0x200)
     assert "OpEntryPoint GLCompute" in asm
+
+
+def test_leonida_refuses_to_run_into_data_words():
+    """Un chemin qui tombe sur un mot sans texte est refusé et nommé, pas tronqué (règle 3)."""
+    code = COMPUTE_SHADER[:4] + DATA_WORD + COMPUTE_SHADER[4:]
+    header = bytearray(0x200)
+    header[0x138:0x148] = b"".join(n.to_bytes(4, "little") for n in (0, 64, 1, 1))
+    with pytest.raises(Untranslatable, match="fall-through into undecodable words"):
+        rdna2_spirv.translate(code, "cs", fssm=bytes(header) + code, code_start=0x200)
