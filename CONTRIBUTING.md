@@ -34,9 +34,16 @@ Avant d'écrire du code, tu peux ouvrir une issue :
 
 Pour un changement important, ouvre d'abord une issue pour en discuter.
 
+## Sources et constats d'interopérabilité
+
+L'implémentation s'appuie sur des sources publiques : documentation ISA RDNA 2 d'AMD, Microsoft Learn (GDK, Win32, D3D12), tests de LLVM, et code libre sous licence compatible, crédité dans [THIRD_PARTY.md](THIRD_PARTY.md).
+
+Les constats d'interopérabilité obtenus sur une copie d'un titre que tu possèdes légalement, mesurés à l'exécution ou lus statiquement, peuvent être documentés dans `docs/research/` (version française dans `docs/fr/recherche/`) et servir à écrire des tests, dans ces limites : noms d'exports et d'imports, noms publics de types et d'interfaces du SDK, numéros de slots de vtable, formes d'arguments et dispositions de structures, valeurs de flags, de HRESULT et d'IID, et comptes. Chaque constat dit comment il a été obtenu (mesuré, lu statiquement, supposé). Ne jamais ajouter de code, d'octets, d'adresses ou de RVA, de chaînes, de noms ou d'empreintes de shaders, de journaux ou de dumps d'un titre, ni d'implémentation qui ne marche que parce qu'elle copie un comportement privé d'un titre sans base publique ou mesurée.
+
 ## Ce qui est refusé
 
 - Tout contenu protégé : jeux, fichiers système ou clés de la console, exécutables commerciaux, même partiels.
+- Des adresses, RVA, chaînes, noms ou empreintes de shaders, journaux ou dumps tirés d'un jeu, même relevés sur une copie légitime.
 - Les liens vers des copies illégales de jeux.
 - Le code sans test pour une nouvelle fonction émulée.
 

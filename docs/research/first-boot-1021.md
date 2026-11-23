@@ -6,9 +6,9 @@ State as of 23 November 2026. This note files the research of that day on `game_
 (build 1.0.2.1) and on the first launches of that executable under Leonida's `gta6rt`. It supersedes the
 "executable absent" state of [first-executable-leads.md](first-executable-leads.md) (22 November).
 
-**Rule 1 of [AGENTS.md](../../AGENTS.md) applies.** The note holds only function names, vtable slots, RVAs,
-HRESULTs, IIDs and argument shapes. No disassembled code, no data and no file of the game is reproduced.
-RVAs are relative to the preferred base `0x140000000` and only valid for the hash below.
+**Rules 1 and 2 of [AGENTS.md](../../AGENTS.md) apply.** The note holds only function names, vtable slots,
+HRESULTs, IIDs, flag values, counts and argument shapes, gathered on a lawfully owned copy (interoperability
+findings). No disassembled code, no data, no address or RVA and no file of the game is reproduced.
 
 **Measured and assumed.** Every row says which it is. *Measured* means observed on a run or read from the
 file by a reproducible method. *Assumed* means deduced, or true only on one configuration. The local reports
@@ -21,14 +21,14 @@ the repository.
 | --- | --- | --- |
 | SHA-256 | `e95020b2fa4a721db3df59fdecf75621730ac559d8835252f6c3b658d5a08993` | measured |
 | Size, format | 120,181,760 bytes, PE32+ AMD64, subsystem 2 (GUI), image 184,995,840 bytes, relocations present | measured |
-| Entry point | RVA `0x56a1ec8` (MSVC startup stub), `WinMain` at RVA `0x5a91bd0` | measured |
+| Entry point | MSVC startup stub, then `WinMain` | measured |
 | Functions | 299,257 `.pdata` entries | measured |
 | Imports | 587 named imports in 68 DLLs, 0 delay-loaded, no ordinal import except `GameInput.dll!#1` and WS2_32 | measured |
 | Console-side imports | 7 DLLs: `xmem` (12), `d3d12_xs` (3), `xg_xs` (2), `XCRDAPI` (1), `chad` (5), `xapu` (5), `AcpHal` (9) = 37 | measured |
-| Exports | one: `__XMemAllocationHooks__` (RVA `0x6844380`, data) | measured |
+| Exports | one: `__XMemAllocationHooks__` (a data export) | measured |
 | Packer | none seen: entry point disassembles as the standard MSVC stub, CRT initialiser tables are readable, `.text` entropy 6.754, and the launches below run game code up to in-image `int3` | measured; entropy alone does not prove there is no compressed region |
 | Toolchain | two `.xbld` sections name two GDK editions (April 2025 Update 2 and October 2025); debug path of a Scarlett master build | measured |
-| TLS | two callbacks: RVA `0x55dd4f4` (acts on `reason == 2` only) and RVA `0x55e2ebc` (reasons 3 and 0) | measured |
+| TLS | two callbacks: the first (acts on `reason == 2` only) and the second (reasons 3 and 0) | measured |
 | Control Flow Guard | `GuardFlags = 0`; the three CFG pointers are initialised in the file to stubs of the image | measured |
 | Package DLLs | `XboxBvhBuilder` (7 imports), `amd_fidelityfx_loader_xbox` (4), `libHttpClient.GDK` (38), `Bink2Scarlett` (23), plus the MSVC runtime copies. Leonida's `make_game.py --check` reports every expected package file present | measured; presence, not authenticity |
 
@@ -80,25 +80,25 @@ through indirect paths (vtables, callback tables), so "reached from `WinMain`" i
 
 | Step | Where | What |
 | --- | --- | --- |
-| 1 | entry RVA `0x56a1ec8` | `__security_init_cookie`, then `__scrt_common_main_seh` |
+| 1 | entry point | `__security_init_cookie`, then `__scrt_common_main_seh` |
 | 2 | C initialisers | table of 4 entries (`_initterm_e`) |
 | 3 | C++ initialisers | table of 1,115 entries (1,114 non-null), almost only `VCRUNTIME140`, `malloc` and `atexit`. None calls a console import directly |
-| 4 | dynamic TLS | `__dyn_tls_init`; callback 1 runs 15 `thread_local` initialisers only for `DLL_THREAD_ATTACH`, so the runtime must call it with reason 2 for each guest thread. The TLS index in the file (RVA `0x6e08b2c`) must be overwritten; the block is 5,248 bytes |
-| 5 | `WinMain` | first action: `XGameRuntimeInitialize` of the statically linked GDK library (RVA `0x55dcf74`). A negative HRESULT leads to `int3` |
-| 6 | GDK loader (RVA `0x55e29dc`) | `GetModuleFileNameW(NULL)` with the file name replaced by `xgameruntime.dll`, `GetFileAttributesW`, registry value `ForceUseLocalServices` under `GamingServices`, `GetPackagesByPackageFamily`, then `LoadLibraryExW("xgameruntime.dll", NULL, 0x800)` (`0xA00` in local mode) |
+| 4 | dynamic TLS | `__dyn_tls_init`; callback 1 runs 15 `thread_local` initialisers only for `DLL_THREAD_ATTACH`, so the runtime must call it with reason 2 for each guest thread. The TLS index in the file must be overwritten; the block is 5,248 bytes |
+| 5 | `WinMain` | first action: `XGameRuntimeInitialize` of the statically linked GDK library. A negative HRESULT leads to `int3` |
+| 6 | GDK loader | `GetModuleFileNameW(NULL)` with the file name replaced by `xgameruntime.dll`, `GetFileAttributesW`, registry value `ForceUseLocalServices` under `GamingServices`, `GetPackagesByPackageFamily`, then `LoadLibraryExW("xgameruntime.dll", NULL, 0x800)` (`0xA00` in local mode) |
 | 7 | six `GetProcAddress` | `QueryApiImpl`, `InitializeApiImpl`, `InitializeApiImplEx`, `InitializeApiImplEx2`, `XErrorReport`, `UninitializeApiImpl`. `QueryApiImpl`, `XErrorReport`, `UninitializeApiImpl` and one `Initialize*` must be non-null, else HRESULT `0x89240101` then `int3` |
 | 8 | initialiser call | two 64-bit constants (`0x633600002712`, `0x65f400001edd`) and an options word with bits `2`, `4`, `8` added. Meaning of the constants: assumed |
-| 9 | console test | function RVA `0x55deb88` reads `HKLM\Software\Microsoft\Windows NT\CurrentVersion\OEM`, DWORD `ConsoleMode`. Absent returns 1. Only converted values 1, 6, 7, 8 pass, else `int3`. Raw `0x64` converts to 7, `0x60` to 6, `0x68` to 8 |
-| 10 | after the GDK | six `CreateSemaphoreExW` wrappers, `RegisterAppStateChangeNotification` and `RegisterAppConstrainedChangeNotification`, then game init (RVA `0x221edc0`) and the main loop |
-| 11 | graphics init (RVA `0x19f4df0`) | calls `0x2478440` (device and window) then, later, `0x1e6c110` (second memory family) |
-| 12 | `0x2478440` | `RegisterClassExA`, `CreateWindowExA`, `ShowWindow`, `D3D12XboxCreateDevice(NULL, &params, riid, &device)`, then a long run of device methods, then the memory front of section 4 |
+| 9 | console test | the console-mode function reads `HKLM\Software\Microsoft\Windows NT\CurrentVersion\OEM`, DWORD `ConsoleMode`. Absent returns 1. Only converted values 1, 6, 7, 8 pass, else `int3`. Raw `0x64` converts to 7, `0x60` to 6, `0x68` to 8 |
+| 10 | after the GDK | six `CreateSemaphoreExW` wrappers, `RegisterAppStateChangeNotification` and `RegisterAppConstrainedChangeNotification`, then game init and the main loop |
+| 11 | graphics init | calls the device-and-window init then, later, the second memory family init |
+| 12 | device-and-window init | `RegisterClassExA`, `CreateWindowExA`, `ShowWindow`, `D3D12XboxCreateDevice(NULL, &params, riid, &device)`, then a long run of device methods, then the memory front of section 4 |
 
 `D3D12XboxCreateDevice` is called with a 0x40-byte parameter block whose first two fields are `0x20004` and
-`0x100000`, and `riid` at RVA `0x61e0638`. The HRESULT is tested for sign.
+`0x100000`, and a `riid` taken from read-only data. The HRESULT is tested for sign.
 
-Other static facts for later: `DStorageGetFactory` is used lazily by a file device (function RVA `0x1d8e4d0`).
+Other static facts for later: `DStorageGetFactory` is used lazily by a file device .
 It needs the output pointer non-null and HRESULT 0, else `int3`, then calls method at vtable offset `+0x40`
-with `0x2000000` (a staging size: assumed), tested for sign. `GameInput.dll!#1` (function RVA `0x59258a0`)
+with `0x2000000` (a staging size: assumed), tested for sign. `GameInput.dll!#1`
 binds to the host's `GameInput.dll`, because Leonida registers its shim under `GameInputCreate`, not `#1`.
 
 ## 4. Stops measured under `gta6rt`
@@ -111,12 +111,12 @@ patch, never published, used to find the next stop.
 | # | Stop | Cause | Status | Pull request that treats it |
 | --- | --- | --- | --- | --- |
 | 0 | exit code 127 or 3 in under a second, no import called, 12 trace events (maps, `DllMain`, TLS callbacks), no exception traced | an `int3` is not an event in the trace; explained by the later stops | measured; explanation assumed | none: lesson for tooling (section 5) |
-| 1 | `UNIMPLEMENTED d3d12_xs.dll!D3D12ConfigureVirtualMemoryX`, exit 3, called from `game+0x1e1cfe5` | import absent. Same stop on the reference build, 3 runs in `stop` mode and 3 in `log` mode | measured | #6792 by undeadhuman37 (merged 2026-11-23) |
-| 2 | `int3` `0x80000003` at `game+0x1e1d01b`, right after `Configure...` returned `S_OK` | third `XMemVirtualAlloc` of the init (size `0x49400000`, attributes `0x20003000`, `r9 = 0x183`, protection `0x22004`) fails with `ERROR_NOT_SUPPORTED` | measured with a local stand-in that ignores the attribute word and keeps `protect & 0xff` | #6709 by Stalkerino (64 KiB reservation forms), #4531 by labj1987 (2 and 4 MiB pages), #6878 by mrp1no (closed; non-zero attribute word, console protection bits), #6919 by NiiRoZz (open; 2 MiB pages and placeholders). Added in turn on top of #6792, #6709, #4531 and #5253 (maxxgabriel) left the same `int3` (bisect) |
-| 3 | `int3` at `game+0x5eb27be` (called through `game+0x1d488c4`) after `XMemAllocatePhysicalPages(rcx = 0x280, ...)` | physical pages not served. A stand-in returning `rcx * 64 KiB` of `VirtualAlloc` gives the same stop; `XMemMapPhysicalPages` is not called before it. The real handle shape is not established | measured; cause assumed | #6919 (the seven missing `xmem` imports); the coordination issue lists #6878 as covering the same ground |
-| 4 | `int3` at `game+0x2478866`: device slot 48 (`CreateCommandQueueX`), second and third queue | queue descriptions `{Type 2, Priority 0, Flags 0x1 / 0x2 / 0x3, NodeMask 0}`. PC accepts only `0x1`, so `0x2` gives `E_INVALIDARG` | measured | routing in #6935 by Kam471 (merged); the `Flags` measurement is our review comment on it; #6954 by Pipodi and #7037 by sneylol (open) |
-| 5 | `int3` at `game+0x2478b7b`: device slot 73 (`CreateCommandListX`) | `riid = c3827890-4024-474c-98cf-645b51dc4874`, the only GUID of that form in `.rdata`. The PC device answers `E_NOINTERFACE` (`0x80004002`). The same device and DIRECT allocator create the list for the PC IID `c3827890-e548-4cfa-96cf-5689a9370f80` (independent synthetic test, Codex) | measured. That the console IID is the PC `ID3D12GraphicsCommandList6` is assumed: only the first 32 bits match | #7076 by NiiRoZz (open; console list proxy, depends on #6935 and #2490 by NolanCotter). Our #7124 was closed in its favour, measurements added there |
-| 6 | `int3` at `game+0x2478bd4`: list slot 9 (`+0x48`, `Close` in the PC table) returns a negative HRESULT | right after creation the title calls list slots 132 (`+0x420`) and 131 (`+0x418`), results unused, then slot 9, tested. The PC list has 80 slots, so a raw PC list cannot serve `+0x420`. Meaning of 131 and 132: unknown | measured; nature of the slots not established | none yet; #2490 (console-ABI command lists) is the nearest |
+| 1 | `UNIMPLEMENTED d3d12_xs.dll!D3D12ConfigureVirtualMemoryX`, exit 3, called from the memory init of the title | import absent. Same stop on the reference build, 3 runs in `stop` mode and 3 in `log` mode | measured | #6792 by undeadhuman37 (merged 2026-11-23) |
+| 2 | `int3` `0x80000003` in the same init, right after `Configure...` returned `S_OK` | third `XMemVirtualAlloc` of the init (size `0x49400000`, attributes `0x20003000`, `r9 = 0x183`, protection `0x22004`) fails with `ERROR_NOT_SUPPORTED` | measured with a local stand-in that ignores the attribute word and keeps `protect & 0xff` | #6709 by Stalkerino (64 KiB reservation forms), #4531 by labj1987 (2 and 4 MiB pages), #6878 by mrp1no (closed; non-zero attribute word, console protection bits), #6919 by NiiRoZz (open; 2 MiB pages and placeholders). Added in turn on top of #6792, #6709, #4531 and #5253 (maxxgabriel) left the same `int3` (bisect) |
+| 3 | `int3` in the physical-memory allocation wrapper after `XMemAllocatePhysicalPages(rcx = 0x280, ...)` | physical pages not served. A stand-in returning `rcx * 64 KiB` of `VirtualAlloc` gives the same stop; `XMemMapPhysicalPages` is not called before it. The real handle shape is not established | measured; cause assumed | #6919 (the seven missing `xmem` imports); the coordination issue lists #6878 as covering the same ground |
+| 4 | `int3` in the device init: device slot 48 (`CreateCommandQueueX`), second and third queue | queue descriptions `{Type 2, Priority 0, Flags 0x1 / 0x2 / 0x3, NodeMask 0}`. PC accepts only `0x1`, so `0x2` gives `E_INVALIDARG` | measured | routing in #6935 by Kam471 (merged); the `Flags` measurement is our review comment on it; #6954 by Pipodi and #7037 by sneylol (open) |
+| 5 | `int3` in the device init: device slot 73 (`CreateCommandListX`) | `riid = c3827890-4024-474c-98cf-645b51dc4874`, the only GUID of that form in `.rdata`. The PC device answers `E_NOINTERFACE` (`0x80004002`). The same device and DIRECT allocator create the list for the PC IID `c3827890-e548-4cfa-96cf-5689a9370f80` (independent synthetic test, Codex) | measured. That the console IID is the PC `ID3D12GraphicsCommandList6` is assumed: only the first 32 bits match | #7076 by NiiRoZz (open; console list proxy, depends on #6935 and #2490 by NolanCotter). Our #7124 was closed in its favour, measurements added there |
+| 6 | `int3` in the device init: list slot 9 (`+0x48`, `Close` in the PC table) returns a negative HRESULT | right after creation the title calls list slots 132 (`+0x420`) and 131 (`+0x418`), results unused, then slot 9, tested. The PC list has 80 slots, so a raw PC list cannot serve `+0x420`. Meaning of 131 and 132: unknown | measured; nature of the slots not established | none yet; #2490 (console-ABI command lists) is the nearest |
 
 Argument shapes of list slots 132 and 131 (static, Codex). First list: slot 132 `(0x700000, 0, 0, 0xffffffffff00)`,
 slot 131 `(0xc3c0, 0x80020000, 0, 0xffffffffff00)`. Second list, in a loop: slot 132 `(0x100000, 0, 0, 0xffffffffff00)`,
@@ -146,7 +146,7 @@ stops 13 to 26. Their numbering is not ours. We only list what bears on AnyXboxX
 | 24 | DirectStorage opens its queue; #4348 by mariuslozo-boop answers zlib, BCPack and swizzle requests with `E_NOTIMPL` and the run goes on | `XCRDAPI` |
 | 26 | device slot 57, once per pipeline, then slot 108 | pipelines |
 
-Static analysis by Codex on slot 57 (function RVA `0x24774c0`, call site `0x2477578`): `rdx` points at a block
+Static analysis by Codex on slot 57 : `rdx` points at a block
 whose first 8 bytes are an object reference, `riid` is the PC `ID3D12PipelineState`
 (`765a30f3-f624-4c6f-a828-ace948622445`), the output pointer is the fourth argument, and the result is tested for sign.
 The first field is very likely a root signature: it comes from device slot 16 (`+0x80`, `CreateRootSignature`
@@ -156,7 +156,7 @@ first field is not reconstructed. The fence of the queue setup comes from device
 
 ### Memory front, in call order (static)
 
-Inside `0x2478440`, after `D3D12XboxCreateDevice`. Arguments are shapes only.
+Inside the device-and-window init, after `D3D12XboxCreateDevice`. Arguments are shapes only.
 
 | Call | Shape | Failure branch |
 | --- | --- | --- |
@@ -167,7 +167,7 @@ Inside `0x2478440`, after `D3D12XboxCreateDevice`. Arguments are shapes only.
 | `XMemAllocatePhysicalPages` | `(0x280, &count in/out, pfn array of count * 8 bytes)`, returns BOOL | 0: cleanup |
 | `XMemMapPhysicalPages` | `(reserved address, count, pfn array)`, returns a pointer | NULL: cleanup |
 
-The second family (`0x1e6c110`, later) asks `XMemVirtualAlloc(0, size, 0x20402000, 0x21, 4)` then
+The second family (later) asks `XMemVirtualAlloc(0, size, 0x20402000, 0x21, 4)` then
 `(…, 3, 0x801)`, whose NULL leads to `int3`; then `XMemAllocatePhysicalPages(0x380, ...)`, a mapped block,
 device slot 74 (`+0x250`) and device slot 8 (`+0x40`), each tested for sign with `int3` on failure. For the
 attribute word `0x20402000`, a NULL return must never happen.
@@ -189,7 +189,7 @@ Order of work, by the measured stops. "Assumed" items need a test before anyone 
 | W9 | `xgameruntime`: `XErrorReport` is exported with a `void` return (`runtime/xgameruntime/xgameruntime.def`); the title only tests the pointer, so this looks harmless. Add a launcher test that the six `GetProcAddress` names resolve, that the options bits `2`, `4`, `8` are accepted, and that `xgameruntime.dll` loads by full path when the game executable sits in another folder | steps 6 to 8 | harmless return type assumed |
 | W10 | `ConsoleMode`: `runtime/xgameruntime/registry.cpp` serves `0x64`, which converts to 7 and passes the title's test. Keep a test pinning `0x64`, and the `RegOpenKeyW` variant (the title uses it) | step 9 | measured and consistent |
 | W11 | **TLS**: check that `anyxboxx_tls.dll` calls the title's callback 1 with reason 2 for every thread, existing or new, and that the index in the file is overwritten. The block (5,248 bytes) fits the 256 KiB capacity | step 4 | measured size; thread coverage not tested |
-| W12 | **Observability.** The native launcher has no handler for `0x80000003`: a title `int3` ends in a bare exit code (stop 0). Add a vectored handler that logs the RVA of the first `int3` or exception and the module, so a bisect gives a stop instead of an exit code | stop 0 | measured |
+| W12 | **Observability.** The native launcher has no handler for `0x80000003`: a title `int3` ends in a bare exit code (stop 0). Add a vectored handler that logs the address of the first `int3` or exception and the module, so a bisect gives a stop instead of an exit code | stop 0 | measured |
 | W13 | `GameInput.dll!#1`: AnyXboxX has no GameInput shim. The title's single caller binds to the host DLL. Choose: serve ordinal 1 from the launcher, or document the host dependency | static | measured; ABI version unchecked |
 | W14 | Audio (`chad` 5, `xapu` 5 from TomBox, `AcpHal` 9): missing, but not established as boot-blocking, since the call chain is indirect. Keep after W1 to W8 | section 2 | assumed |
 | W15 | Host-only imports: `api-ms-win-core-psm-appnotify-*`, `ext-ms-win-rtcore-ntuser-*`, MFPlat, WS2_32 by ordinal. Native mode depends on a recent Windows host; record this in [day-one.md](../day-one.md) | section 2 | measured on Windows 11 only |
@@ -232,6 +232,6 @@ need TomBox's sources only. None of them needs to read the game again.
   [#7049](https://github.com/ItsNotRexed/Leonida/issues/7049) (coordination, KoertLichtendonk),
   #6792, #6709, #4531, #6878, #6919, #5253, #6582, #6954, #7037, #4348, #2490.
 - Our comments with the measurements: the review comment of 2026-11-23 on #6935 (queue `Flags`) and the comment
-  on #7076 (command-list IID and list slots), both limited to counts, RVAs, HRESULTs and the IID.
+  on #7076 (command-list IID and list slots), both limited to counts, HRESULTs and the IID.
 - Neighbouring projects in general: [neighbors.md](neighbors.md); Leonida's GTA 6 notes:
   [leonida-gta6.md](leonida-gta6.md).

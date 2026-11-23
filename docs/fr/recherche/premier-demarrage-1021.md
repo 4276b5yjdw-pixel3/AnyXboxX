@@ -6,10 +6,10 @@
 (build 1.0.2.1) et sur les premiers lancements de cet exécutable sous `gta6rt` de Leonida. Elle remplace
 l'état « exécutable absent » de [pistes-premier-executable.md](pistes-premier-executable.md) (22 novembre).
 
-**La règle 1 d'[AGENTS.md](../../../AGENTS.md) s'applique.** La note ne contient que des noms de fonctions, des
-slots de vtable, des RVA, des HRESULT, des IID et des formes d'arguments. Aucun code désassemblé, aucune donnée,
-aucun fichier du jeu n'est reproduit. Les RVA sont relatives à la base préférée `0x140000000` et ne valent que
-pour le hash ci-dessous.
+**Les règles 1 et 2 d'[AGENTS.md](../../../AGENTS.md) s'appliquent.** La note ne contient que des noms de fonctions,
+des slots de vtable, des HRESULT, des IID, des valeurs de flags, des comptes et des formes d'arguments, relevés sur
+une copie possédée légalement (constats d'interopérabilité). Aucun code désassemblé, aucune donnée, aucune adresse
+ni RVA, aucun fichier du jeu n'est reproduit.
 
 **Mesuré et supposé.** Chaque ligne dit lequel des deux elle est. *Mesuré* : observé sur un lancement, ou lu dans
 le fichier par une méthode reproductible. *Supposé* : déduit, ou vrai sur une seule configuration. Les rapports
@@ -22,14 +22,14 @@ lancement) restent hors du dépôt.
 | --- | --- | --- |
 | SHA-256 | `e95020b2fa4a721db3df59fdecf75621730ac559d8835252f6c3b658d5a08993` | mesuré |
 | Taille, format | 120 181 760 octets, PE32+ AMD64, sous-système 2 (GUI), image de 184 995 840 octets, relocalisations présentes | mesuré |
-| Point d'entrée | RVA `0x56a1ec8` (amorce MSVC), `WinMain` à la RVA `0x5a91bd0` | mesuré |
+| Point d'entrée | amorce MSVC, puis `WinMain` | mesuré |
 | Fonctions | 299 257 entrées `.pdata` | mesuré |
 | Imports | 587 imports nommés dans 68 DLL, 0 chargé en différé, aucun import par ordinal sauf `GameInput.dll!#1` et WS2_32 | mesuré |
 | Imports côté console | 7 DLL : `xmem` (12), `d3d12_xs` (3), `xg_xs` (2), `XCRDAPI` (1), `chad` (5), `xapu` (5), `AcpHal` (9) = 37 | mesuré |
-| Exports | un seul : `__XMemAllocationHooks__` (RVA `0x6844380`, donnée) | mesuré |
+| Exports | un seul : `__XMemAllocationHooks__` (un export de donnée) | mesuré |
 | Packer | aucun vu : le point d'entrée se désassemble comme l'amorce MSVC standard, les tables d'initialiseurs du CRT sont lisibles, entropie de `.text` 6,754, et les lancements ci-dessous exécutent du code du jeu jusqu'à un `int3` dans l'image | mesuré ; l'entropie seule ne prouve pas l'absence de zone compressée |
 | Chaîne d'outils | deux sections `.xbld` nomment deux éditions du GDK (avril 2025 Update 2 et octobre 2025) ; chemin de débogage d'un build master Scarlett | mesuré |
-| TLS | deux callbacks : RVA `0x55dd4f4` (n'agit que pour `reason == 2`) et RVA `0x55e2ebc` (raisons 3 et 0) | mesuré |
+| TLS | deux callbacks : le premier (n'agit que pour `reason == 2`) et le second (raisons 3 et 0) | mesuré |
 | Control Flow Guard | `GuardFlags = 0` ; les trois pointeurs CFG sont initialisés dans le fichier vers des stubs de l'image | mesuré |
 | DLL du paquet | `XboxBvhBuilder` (7 imports), `amd_fidelityfx_loader_xbox` (4), `libHttpClient.GDK` (38), `Bink2Scarlett` (23), plus les copies du runtime MSVC. `make_game.py --check` de Leonida signale tous les fichiers attendus du paquet présents | mesuré ; présence, pas authenticité |
 
@@ -81,26 +81,26 @@ imports par des chemins indirects (vtables, tables de callbacks) : « atteint de
 
 | Étape | Où | Quoi |
 | --- | --- | --- |
-| 1 | entrée RVA `0x56a1ec8` | `__security_init_cookie`, puis `__scrt_common_main_seh` |
+| 1 | point d'entrée | `__security_init_cookie`, puis `__scrt_common_main_seh` |
 | 2 | initialiseurs C | table de 4 entrées (`_initterm_e`) |
 | 3 | initialiseurs C++ | table de 1 115 entrées (1 114 non nulles), presque seulement `VCRUNTIME140`, `malloc` et `atexit`. Aucun n'appelle directement un import console |
-| 4 | TLS dynamique | `__dyn_tls_init` ; le callback 1 exécute 15 initialiseurs `thread_local` seulement pour `DLL_THREAD_ATTACH` : le runtime doit l'appeler avec la raison 2 pour chaque thread invité. L'indice TLS du fichier (RVA `0x6e08b2c`) doit être écrasé ; le bloc fait 5 248 octets |
-| 5 | `WinMain` | première action : `XGameRuntimeInitialize` de la bibliothèque GDK liée statiquement (RVA `0x55dcf74`). Un HRESULT négatif mène à un `int3` |
-| 6 | chargeur du GDK (RVA `0x55e29dc`) | `GetModuleFileNameW(NULL)` avec le nom de fichier remplacé par `xgameruntime.dll`, `GetFileAttributesW`, valeur de registre `ForceUseLocalServices` sous `GamingServices`, `GetPackagesByPackageFamily`, puis `LoadLibraryExW("xgameruntime.dll", NULL, 0x800)` (`0xA00` en mode local) |
+| 4 | TLS dynamique | `__dyn_tls_init` ; le callback 1 exécute 15 initialiseurs `thread_local` seulement pour `DLL_THREAD_ATTACH` : le runtime doit l'appeler avec la raison 2 pour chaque thread invité. L'indice TLS du fichier doit être écrasé ; le bloc fait 5 248 octets |
+| 5 | `WinMain` | première action : `XGameRuntimeInitialize` de la bibliothèque GDK liée statiquement. Un HRESULT négatif mène à un `int3` |
+| 6 | chargeur du GDK | `GetModuleFileNameW(NULL)` avec le nom de fichier remplacé par `xgameruntime.dll`, `GetFileAttributesW`, valeur de registre `ForceUseLocalServices` sous `GamingServices`, `GetPackagesByPackageFamily`, puis `LoadLibraryExW("xgameruntime.dll", NULL, 0x800)` (`0xA00` en mode local) |
 | 7 | six `GetProcAddress` | `QueryApiImpl`, `InitializeApiImpl`, `InitializeApiImplEx`, `InitializeApiImplEx2`, `XErrorReport`, `UninitializeApiImpl`. `QueryApiImpl`, `XErrorReport`, `UninitializeApiImpl` et une variante `Initialize*` doivent être non nuls, sinon HRESULT `0x89240101` puis `int3` |
 | 8 | appel de l'initialiseur | deux constantes 64 bits (`0x633600002712`, `0x65f400001edd`) et un mot d'options où les bits `2`, `4`, `8` sont ajoutés. Sens des constantes : supposé |
-| 9 | test de console | la fonction RVA `0x55deb88` lit `HKLM\Software\Microsoft\Windows NT\CurrentVersion\OEM`, DWORD `ConsoleMode`. Absent renvoie 1. Seules les valeurs converties 1, 6, 7, 8 passent, sinon `int3`. Le brut `0x64` donne 7, `0x60` donne 6, `0x68` donne 8 |
-| 10 | après le GDK | six enveloppes de `CreateSemaphoreExW`, `RegisterAppStateChangeNotification` et `RegisterAppConstrainedChangeNotification`, puis l'init du jeu (RVA `0x221edc0`) et la boucle principale |
-| 11 | init graphique (RVA `0x19f4df0`) | appelle `0x2478440` (device et fenêtre) puis, plus tard, `0x1e6c110` (seconde famille mémoire) |
-| 12 | `0x2478440` | `RegisterClassExA`, `CreateWindowExA`, `ShowWindow`, `D3D12XboxCreateDevice(NULL, &params, riid, &device)`, une longue série de méthodes du device, puis le front mémoire de la section 4 |
+| 9 | test de console | la fonction de test de mode console lit `HKLM\Software\Microsoft\Windows NT\CurrentVersion\OEM`, DWORD `ConsoleMode`. Absent renvoie 1. Seules les valeurs converties 1, 6, 7, 8 passent, sinon `int3`. Le brut `0x64` donne 7, `0x60` donne 6, `0x68` donne 8 |
+| 10 | après le GDK | six enveloppes de `CreateSemaphoreExW`, `RegisterAppStateChangeNotification` et `RegisterAppConstrainedChangeNotification`, puis l'init du jeu et la boucle principale |
+| 11 | init graphique | appelle l'init du device et de la fenêtre puis, plus tard, l'init de la seconde famille mémoire |
+| 12 | init du device et de la fenêtre | `RegisterClassExA`, `CreateWindowExA`, `ShowWindow`, `D3D12XboxCreateDevice(NULL, &params, riid, &device)`, une longue série de méthodes du device, puis le front mémoire de la section 4 |
 
 `D3D12XboxCreateDevice` reçoit un bloc de paramètres de 0x40 octets dont les deux premiers champs valent `0x20004`
-et `0x100000`, et un `riid` à la RVA `0x61e0638`. Le signe du HRESULT est testé.
+et `0x100000`, et un `riid` pris dans les données en lecture seule. Le signe du HRESULT est testé.
 
 Autres faits statiques pour la suite : `DStorageGetFactory` est appelée paresseusement par un périphérique de
-fichiers (fonction RVA `0x1d8e4d0`). Il faut un pointeur de sortie non nul et un HRESULT 0, sinon `int3` ; puis la
+fichiers. Il faut un pointeur de sortie non nul et un HRESULT 0, sinon `int3` ; puis la
 méthode à l'offset de vtable `+0x40` est appelée avec `0x2000000` (une taille de tampon : supposé), le signe du
-retour est testé. `GameInput.dll!#1` (fonction RVA `0x59258a0`) se lie à la `GameInput.dll` de l'hôte, car Leonida
+retour est testé. `GameInput.dll!#1` se lie à la `GameInput.dll` de l'hôte, car Leonida
 enregistre son shim sous `GameInputCreate` et non `#1`.
 
 ## 4. Arrêts mesurés sous `gta6rt`
@@ -113,12 +113,12 @@ leurs auteurs. « Bouche-trou local » désigne un correctif privé, jamais publ
 | # | Arrêt | Cause | Statut | Pull request qui le traite |
 | --- | --- | --- | --- | --- |
 | 0 | code de sortie 127 ou 3 en moins d'une seconde, aucun import appelé, 12 événements de trace (mappages, `DllMain`, callbacks TLS), aucune exception tracée | un `int3` n'est pas un événement de la trace ; expliqué par les arrêts suivants | mesuré ; explication supposée | aucune : leçon pour l'outillage (section 5) |
-| 1 | `UNIMPLEMENTED d3d12_xs.dll!D3D12ConfigureVirtualMemoryX`, sortie 3, appelée depuis `game+0x1e1cfe5` | import absent. Même arrêt sur la version de référence, 3 lancements en mode `stop` et 3 en mode `log` | mesuré | #6792 de undeadhuman37 (fusionnée le 2026-11-23) |
-| 2 | `int3` `0x80000003` à `game+0x1e1d01b`, juste après `Configure...` rendu `S_OK` | le troisième `XMemVirtualAlloc` de l'init (taille `0x49400000`, attributs `0x20003000`, `r9 = 0x183`, protection `0x22004`) échoue avec `ERROR_NOT_SUPPORTED` | mesuré avec un bouche-trou local qui ignore le mot d'attributs et garde `protect & 0xff` | #6709 de Stalkerino (formes de réservation de 64 Kio), #4531 de labj1987 (pages de 2 et 4 Mio), #6878 de mrp1no (fermée ; mot d'attributs non nul, bits de protection console), #6919 de NiiRoZz (ouverte ; pages de 2 Mio et espaces réservés). Ajoutées tour à tour par-dessus #6792, #6709, #4531 et #5253 (maxxgabriel) laissent le même `int3` (bisect) |
-| 3 | `int3` à `game+0x5eb27be` (appelé via `game+0x1d488c4`) après `XMemAllocatePhysicalPages(rcx = 0x280, ...)` | pages physiques non servies. Un bouche-trou qui rend `rcx * 64 Kio` de `VirtualAlloc` donne le même arrêt ; `XMemMapPhysicalPages` n'est pas appelée avant. La vraie forme du handle n'est pas établie | mesuré ; cause supposée | #6919 (les sept imports `xmem` manquants) ; l'issue de coordination range #6878 sur le même terrain |
-| 4 | `int3` à `game+0x2478866` : slot 48 du device (`CreateCommandQueueX`), deuxième et troisième file | descriptions de file `{Type 2, Priority 0, Flags 0x1 / 0x2 / 0x3, NodeMask 0}`. Le PC n'accepte que `0x1`, donc `0x2` donne `E_INVALIDARG` | mesuré | aiguillage dans #6935 de Kam471 (fusionnée) ; la mesure de `Flags` est notre commentaire de revue dessus ; #6954 de Pipodi et #7037 de sneylol (ouvertes) |
-| 5 | `int3` à `game+0x2478b7b` : slot 73 du device (`CreateCommandListX`) | `riid = c3827890-4024-474c-98cf-645b51dc4874`, seul GUID de cette forme dans `.rdata`. Le device PC répond `E_NOINTERFACE` (`0x80004002`). Le même device et le même allocateur DIRECT créent la liste pour l'IID PC `c3827890-e548-4cfa-96cf-5689a9370f80` (test synthétique indépendant, Codex) | mesuré. Que l'IID console soit l'`ID3D12GraphicsCommandList6` du PC est supposé : seuls les 32 premiers bits coïncident | #7076 de NiiRoZz (ouverte ; liste proxy console, dépend de #6935 et #2490 de NolanCotter). Notre #7124 a été fermée en sa faveur, mesures ajoutées là-bas |
-| 6 | `int3` à `game+0x2478bd4` : le slot 9 de la liste (`+0x48`, `Close` dans la table PC) rend un HRESULT négatif | juste après la création, le titre appelle les slots 132 (`+0x420`) puis 131 (`+0x418`) de la liste, résultats inutilisés, puis le slot 9, testé. La liste PC a 80 slots : une liste PC brute ne peut pas servir `+0x420`. Sens de 131 et 132 : inconnu | mesuré ; nature des slots non établie | aucune pour l'instant ; #2490 (listes de commandes à l'ABI console) est la plus proche |
+| 1 | `UNIMPLEMENTED d3d12_xs.dll!D3D12ConfigureVirtualMemoryX`, sortie 3, appelée depuis l'init mémoire du titre | import absent. Même arrêt sur la version de référence, 3 lancements en mode `stop` et 3 en mode `log` | mesuré | #6792 de undeadhuman37 (fusionnée le 2026-11-23) |
+| 2 | `int3` `0x80000003` dans la même init, juste après `Configure...` rendu `S_OK` | le troisième `XMemVirtualAlloc` de l'init (taille `0x49400000`, attributs `0x20003000`, `r9 = 0x183`, protection `0x22004`) échoue avec `ERROR_NOT_SUPPORTED` | mesuré avec un bouche-trou local qui ignore le mot d'attributs et garde `protect & 0xff` | #6709 de Stalkerino (formes de réservation de 64 Kio), #4531 de labj1987 (pages de 2 et 4 Mio), #6878 de mrp1no (fermée ; mot d'attributs non nul, bits de protection console), #6919 de NiiRoZz (ouverte ; pages de 2 Mio et espaces réservés). Ajoutées tour à tour par-dessus #6792, #6709, #4531 et #5253 (maxxgabriel) laissent le même `int3` (bisect) |
+| 3 | `int3` dans l'enveloppe d'allocation de mémoire physique après `XMemAllocatePhysicalPages(rcx = 0x280, ...)` | pages physiques non servies. Un bouche-trou qui rend `rcx * 64 Kio` de `VirtualAlloc` donne le même arrêt ; `XMemMapPhysicalPages` n'est pas appelée avant. La vraie forme du handle n'est pas établie | mesuré ; cause supposée | #6919 (les sept imports `xmem` manquants) ; l'issue de coordination range #6878 sur le même terrain |
+| 4 | `int3` dans l'init du device : slot 48 du device (`CreateCommandQueueX`), deuxième et troisième file | descriptions de file `{Type 2, Priority 0, Flags 0x1 / 0x2 / 0x3, NodeMask 0}`. Le PC n'accepte que `0x1`, donc `0x2` donne `E_INVALIDARG` | mesuré | aiguillage dans #6935 de Kam471 (fusionnée) ; la mesure de `Flags` est notre commentaire de revue dessus ; #6954 de Pipodi et #7037 de sneylol (ouvertes) |
+| 5 | `int3` dans l'init du device : slot 73 du device (`CreateCommandListX`) | `riid = c3827890-4024-474c-98cf-645b51dc4874`, seul GUID de cette forme dans `.rdata`. Le device PC répond `E_NOINTERFACE` (`0x80004002`). Le même device et le même allocateur DIRECT créent la liste pour l'IID PC `c3827890-e548-4cfa-96cf-5689a9370f80` (test synthétique indépendant, Codex) | mesuré. Que l'IID console soit l'`ID3D12GraphicsCommandList6` du PC est supposé : seuls les 32 premiers bits coïncident | #7076 de NiiRoZz (ouverte ; liste proxy console, dépend de #6935 et #2490 de NolanCotter). Notre #7124 a été fermée en sa faveur, mesures ajoutées là-bas |
+| 6 | `int3` dans l'init du device : le slot 9 de la liste (`+0x48`, `Close` dans la table PC) rend un HRESULT négatif | juste après la création, le titre appelle les slots 132 (`+0x420`) puis 131 (`+0x418`) de la liste, résultats inutilisés, puis le slot 9, testé. La liste PC a 80 slots : une liste PC brute ne peut pas servir `+0x420`. Sens de 131 et 132 : inconnu | mesuré ; nature des slots non établie | aucune pour l'instant ; #2490 (listes de commandes à l'ABI console) est la plus proche |
 
 Formes d'arguments des slots 132 et 131 de la liste (statique, Codex). Première liste : slot 132
 `(0x700000, 0, 0, 0xffffffffff00)`, slot 131 `(0xc3c0, 0x80020000, 0, 0xffffffffff00)`. Seconde liste, dans une
@@ -149,7 +149,7 @@ AnyXboxX.
 | 24 | DirectStorage ouvre sa file ; #4348 de mariuslozo-boop répond `E_NOTIMPL` aux demandes zlib, BCPack et swizzle et l'exécution continue | `XCRDAPI` |
 | 26 | slot 57 du device, une fois par pipeline, puis le slot 108 | pipelines |
 
-Analyse statique de Codex sur le slot 57 (fonction RVA `0x24774c0`, site d'appel `0x2477578`) : `rdx` pointe un
+Analyse statique de Codex sur le slot 57 : `rdx` pointe un
 bloc dont les 8 premiers octets sont une référence d'objet, `riid` est l'`ID3D12PipelineState` du PC
 (`765a30f3-f624-4c6f-a828-ace948622445`), le pointeur de sortie est le quatrième argument, et le signe du résultat
 est testé. Le premier champ est très probablement une root signature : il vient du slot 16 du device (`+0x80`,
@@ -160,7 +160,7 @@ du device (`+0x120`) avec l'IID PC `ID3D12Fence` (`0a753dcf-c4d8-4b91-adf6-be5a6
 
 ### Front mémoire, dans l'ordre des appels (statique)
 
-Dans `0x2478440`, après `D3D12XboxCreateDevice`. Les arguments ne sont que des formes.
+Dans l'init du device et de la fenêtre, après `D3D12XboxCreateDevice`. Les arguments ne sont que des formes.
 
 | Appel | Forme | Branche d'échec |
 | --- | --- | --- |
@@ -171,7 +171,7 @@ Dans `0x2478440`, après `D3D12XboxCreateDevice`. Les arguments ne sont que des 
 | `XMemAllocatePhysicalPages` | `(0x280, &nombre entrée/sortie, tableau de PFN de nombre * 8 octets)`, renvoie un BOOL | 0 : nettoyage |
 | `XMemMapPhysicalPages` | `(adresse réservée, nombre, tableau de PFN)`, renvoie un pointeur | NULL : nettoyage |
 
-La seconde famille (`0x1e6c110`, plus tard) demande `XMemVirtualAlloc(0, taille, 0x20402000, 0x21, 4)` puis
+La seconde famille (plus tard) demande `XMemVirtualAlloc(0, taille, 0x20402000, 0x21, 4)` puis
 `(…, 3, 0x801)`, dont un NULL mène à `int3` ; puis `XMemAllocatePhysicalPages(0x380, ...)`, un bloc mappé, le slot
 74 du device (`+0x250`) et le slot 8 du device (`+0x40`), chacun testé en signe avec `int3` en cas d'échec. Pour
 le mot d'attributs `0x20402000`, un retour NULL ne doit jamais arriver.
@@ -194,7 +194,7 @@ dessus.
 | W9 | `xgameruntime` : `XErrorReport` est exporté avec un retour `void` (`runtime/xgameruntime/xgameruntime.def`) ; le titre ne teste que le pointeur, donc cela paraît sans effet. Ajouter un test du lanceur : les six noms de `GetProcAddress` se résolvent, les bits d'options `2`, `4`, `8` sont acceptés, et `xgameruntime.dll` se charge par chemin complet quand l'exécutable du jeu est dans un autre dossier | étapes 6 à 8 | innocuité du type de retour supposée |
 | W10 | `ConsoleMode` : `runtime/xgameruntime/registry.cpp` sert `0x64`, qui se convertit en 7 et passe le test du titre. Garder un test qui fige `0x64`, et la variante `RegOpenKeyW` (celle du titre) | étape 9 | mesuré et cohérent |
 | W11 | **TLS** : vérifier qu'`anyxboxx_tls.dll` appelle le callback 1 du titre avec la raison 2 pour chaque thread, existant ou nouveau, et que l'indice du fichier est écrasé. Le bloc (5 248 octets) tient dans la capacité de 256 Kio | étape 4 | taille mesurée ; couverture des threads non testée |
-| W12 | **Observabilité.** Le lanceur natif n'a aucun gestionnaire pour `0x80000003` : un `int3` du titre finit en simple code de sortie (arrêt 0). Ajouter un gestionnaire vectoriel qui journalise la RVA du premier `int3` ou de la première exception et le module, pour qu'un bisect donne un arrêt et non un code de sortie | arrêt 0 | mesuré |
+| W12 | **Observabilité.** Le lanceur natif n'a aucun gestionnaire pour `0x80000003` : un `int3` du titre finit en simple code de sortie (arrêt 0). Ajouter un gestionnaire vectoriel qui journalise l'adresse du premier `int3` ou de la première exception et le module, pour qu'un bisect donne un arrêt et non un code de sortie | arrêt 0 | mesuré |
 | W13 | `GameInput.dll!#1` : AnyXboxX n'a pas de shim GameInput. L'unique appelant du titre se lie à la DLL de l'hôte. Choisir : servir l'ordinal 1 depuis le lanceur, ou documenter la dépendance à l'hôte | statique | mesuré ; version d'ABI non vérifiée |
 | W14 | Audio (`chad` 5, `xapu` 5 chez TomBox, `AcpHal` 9) : manquant, mais non établi comme bloquant au démarrage, la chaîne d'appels étant indirecte. À traiter après W1 à W8 | section 2 | supposé |
 | W15 | Imports propres à l'hôte : `api-ms-win-core-psm-appnotify-*`, `ext-ms-win-rtcore-ntuser-*`, MFPlat, WS2_32 par ordinal. Le mode natif dépend d'un hôte Windows récent ; le noter dans [jour-j.md](../jour-j.md) | section 2 | mesuré sur Windows 11 seulement |
@@ -237,7 +237,7 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
   [#7049](https://github.com/ItsNotRexed/Leonida/issues/7049) (coordination, KoertLichtendonk),
   #6792, #6709, #4531, #6878, #6919, #5253, #6582, #6954, #7037, #4348, #2490.
 - Nos commentaires avec les mesures : le commentaire de revue du 2026-11-23 sur #6935 (`Flags` des files) et le
-  commentaire sur #7076 (IID de liste de commandes et slots de liste), tous deux limités à des comptes, des RVA,
+  commentaire sur #7076 (IID de liste de commandes et slots de liste), tous deux limités à des comptes,
   des HRESULT et l'IID.
 - Projets voisins en général : [voisins.md](voisins.md) ; notes de Leonida sur GTA 6 :
   [leonida-gta6.md](leonida-gta6.md).
