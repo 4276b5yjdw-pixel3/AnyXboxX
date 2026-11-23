@@ -18,7 +18,7 @@
 namespace {
 
 const wchar_t* const kRuntimeDlls[] = {L"xgameruntime.dll", L"xmem.dll", L"d3d12_xs.dll", L"kernelx.dll",
-                                       L"anyxboxx_tls.dll"};
+                                       L"anyxboxx_tls.dll", L"XCRDAPI.dll"};
 const char* const kRegistry[] = {"RegOpenKeyW", "RegOpenKeyExW", "RegQueryValueExW", "RegCloseKey"};
 const char* const kDxgi[] = {"CreateDXGIFactory", "CreateDXGIFactory1", "CreateDXGIFactory2"};
 
@@ -27,7 +27,7 @@ struct Game {
   std::wstring folder;
   char* base = nullptr;
   size_t size = 0;
-  HMODULE runtime[5] = {};
+  HMODULE runtime[6] = {};
   bool measuring = false;
 };
 
@@ -407,7 +407,7 @@ int wmain(int argc, wchar_t** argv) {
   GetModuleFileNameW(nullptr, self, MAX_PATH);
   const std::wstring self_path = self;
   const std::wstring runtime_folder = self_path.substr(0, self_path.find_last_of(L"\\/"));
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 6; ++i) {
     std::wstring path = runtime_folder + L"\\" + kRuntimeDlls[i];
     // xmem et d3d12_xs : celles de TomBox (plus complètes) si ANYXBOXX_TOMBOX_DIR les fournit.
     const std::wstring tombox = (i == 1 || i == 2) ? TomBoxFile(kRuntimeDlls[i]) : L"";

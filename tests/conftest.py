@@ -18,7 +18,7 @@ os.environ.setdefault("ANYXBOXX_SHADER_CACHE", tempfile.mkdtemp(prefix="anyxboxx
 
 RUNTIME_DIR = Path(os.environ.get("ANYXBOXX_RUNTIME")
                    or Path(__file__).resolve().parents[1] / "runtime" / "build" / "bin")
-RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "anyxboxx_tls.dll")
+RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "anyxboxx_tls.dll", "XCRDAPI.dll")
 
 
 def runtime_built():

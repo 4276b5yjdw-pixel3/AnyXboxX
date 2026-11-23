@@ -187,10 +187,10 @@ dessus.
 | W2 | **Fait, PR #107.** `runtime/xmem` ne sert lui-même aucun des sept imports manquants (`XMemVirtualAlloc`, trois appels de pages physiques, scatter, `XMemIsToolsMemAvailable`, `XMemTransferMemory`). Décider : continuer à compter sur TomBox, ou les écrire en C++ avec le décodeur ERA, et le dire dans [tombox.md](tombox.md) | section 2 | mesuré |
 | W3 | **Fait, PR #107.** `XMemAlloc(0x60000, 0xf0814000)` : vérifier que le décodeur ERA de `runtime/xmem/era_heap.cpp` ne refuse pas ce mot (« mémoire physique refusée » renvoie NULL, que le titre traite comme une branche d'erreur) | site d'appel statique | décodage de ce mot supposé |
 | W4 | **Fait, PR #107.** `D3D12ConfigureVirtualMemoryX` : le `d3d12_xs` d'AnyXboxX ne l'exporte pas (TomBox l'exporte et rejette une description NULL par `E_INVALIDARG`). Tester une description non nulle dont le deuxième champ de 32 bits dérive d'une taille, attendre `S_OK` | arrêt 1 | forme mesurée ; sens du champ supposé |
-| W5 | **Table des slots du device.** Comparer les slots que le titre emploie avant le premier échec de `Close` (8, 9, 16, 26, 36, 41, 48, 49, 57, 61, 73, 74, 79, 86, 127, et les slots 9, 131, 132 de la liste) avec le `d3d12_xs` de TomBox (194 méthodes sur 200 revendiquées). Résultat : un tableau slot, forme, couvert ou non, dans [tombox.md](tombox.md) | sections 3 et 4 | slots mesurés ; couverture TomBox non comparée |
-| W6 | Liste de commandes console : établir ce que sont les slots 131 et 132 de la liste, à partir de l'ABI de liste console de TomBox, avant d'écrire une enveloppe. Ne pas donner une liste PC brute au titre | arrêts 5, 6 | sens des slots inconnu |
-| W7 | **`DStorageGetFactory`** manque chez AnyXboxX et TomBox. Une `XCRDAPI.dll` minimale doit écrire le pointeur de sortie, rendre 0, et exposer la méthode à `+0x40` rendant un HRESULT non négatif ; les lectures de fichier peuvent répondre `E_NOTIMPL` comme le fait #4348. #4348 de Leonida est en GPL-3.0, réutilisable avec crédit (règle 2) | statique, arrêt 24 | mesuré |
-| W8 | **`xg_xs`** : `XGSuggestSwizzleMode` manque. `XGCreateTextureComputer` doit rendre un objet dont le slot 8 existe même s'il n'écrit aucune donnée tuilée, et aucun stub ne doit laisser un pointeur de sortie non écrit. `anyxboxx-texture` (SW_4K_S) est le moteur naturel | arrêt 22 (KkelebekK) | mesuré par d'autres |
+| W5 | **Fait, cette PR : table et test (section 6).** **Table des slots du device.** Comparer les slots que le titre emploie avant le premier échec de `Close` (8, 9, 16, 26, 36, 41, 48, 49, 57, 61, 73, 74, 79, 86, 127, et les slots 9, 131, 132 de la liste) avec le `d3d12_xs` de TomBox (194 méthodes sur 200 revendiquées). Résultat : un tableau slot, forme, couvert ou non, dans [tombox.md](tombox.md) | sections 3 et 4 | slots mesurés ; couverture TomBox non comparée |
+| W6 | **Non fait : demande d'abord le proxy de liste console (Leonida #7076), voir section 6.** Liste de commandes console : établir ce que sont les slots 131 et 132 de la liste, à partir de l'ABI de liste console de TomBox, avant d'écrire une enveloppe. Ne pas donner une liste PC brute au titre | arrêts 5, 6 | sens des slots inconnu |
+| W7 | **Fait, cette PR : `XCRDAPI.dll` minimal.** **`DStorageGetFactory`** manque chez AnyXboxX et TomBox. Une `XCRDAPI.dll` minimale doit écrire le pointeur de sortie, rendre 0, et exposer la méthode à `+0x40` rendant un HRESULT non négatif ; les lectures de fichier peuvent répondre `E_NOTIMPL` comme le fait #4348. #4348 de Leonida est en GPL-3.0, réutilisable avec crédit (règle 2) | statique, arrêt 24 | mesuré |
+| W8 | **Bloqué, voir section 6.** **`xg_xs`** : `XGSuggestSwizzleMode` manque. `XGCreateTextureComputer` doit rendre un objet dont le slot 8 existe même s'il n'écrit aucune donnée tuilée, et aucun stub ne doit laisser un pointeur de sortie non écrit. `anyxboxx-texture` (SW_4K_S) est le moteur naturel | arrêt 22 (KkelebekK) | mesuré par d'autres |
 | W9 | `xgameruntime` : `XErrorReport` est exporté avec un retour `void` (`runtime/xgameruntime/xgameruntime.def`) ; le titre ne teste que le pointeur, donc cela paraît sans effet. Ajouter un test du lanceur : les six noms de `GetProcAddress` se résolvent, les bits d'options `2`, `4`, `8` sont acceptés, et `xgameruntime.dll` se charge par chemin complet quand l'exécutable du jeu est dans un autre dossier | étapes 6 à 8 | innocuité du type de retour supposée |
 | W10 | `ConsoleMode` : `runtime/xgameruntime/registry.cpp` sert `0x64`, qui se convertit en 7 et passe le test du titre. Garder un test qui fige `0x64`, et la variante `RegOpenKeyW` (celle du titre) | étape 9 | mesuré et cohérent |
 | W11 | **TLS** : vérifier qu'`anyxboxx_tls.dll` appelle le callback 1 du titre avec la raison 2 pour chaque thread, existant ou nouveau, et que l'indice du fichier est écrasé. Le bloc (5 248 octets) tient dans la capacité de 256 Kio | étape 4 | taille mesurée ; couverture des threads non testée |
@@ -202,6 +202,24 @@ dessus.
 
 W1, W3, W7, W8, W9, W10, W11 et W12 se font à partir de la documentation publique et de tests synthétiques. W5 et
 W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
+
+## 6. Résultats de W5 à W8 (cette PR)
+
+- **W5.** La table des slots de périphérique est dans [tombox.md](tombox.md), figée par `tests/test_d3d12_device_slots.py`.
+  AnyXboxX ne sert aucun slot de périphérique : le travail est le proxy, pas une correction.
+- **W6.** Non fait. Les slots 131 et 132 appartiennent à une liste de commandes console, qu'AnyXboxX n'a pas ; le proxy
+  de liste (Leonida #7076) vient d'abord. Quand il existera, ces slots journaliseront leurs arguments et rendront
+  `E_NOTIMPL` (le titre ignore leurs résultats), jamais 0.
+- **W7.** `runtime/xcrdapi/` compile `XCRDAPI.dll`. `DStorageGetFactory` écrit une factory à la disposition console
+  (slots 0 à 8). Le slot 8 (`SetStagingBufferSize`, +0x40) rend `S_OK` et journalise la taille, ignorée faute de tampon
+  de transit : un no-op documenté qui laisse passer le test de signe du titre. `CreateQueue`, `OpenFile`,
+  `CreateStatusArray` et `SetCpuAffinity` rendent `E_NOTIMPL` avec une sortie NULL. Les lectures de fichier ne sont pas
+  encore servies. Tests : `tests/test_xcrdapi.py`.
+- **W8.** Bloqué. `XGSuggestSwizzleMode` n'a pas de signature publique (recherchée dans Leonida, TomBox, le GDK local et la
+  documentation publique) : aucun argument de sortie ne peut être écrit sans risque. `XGCreateTextureComputer` de TomBox
+  (`crates/compat/xg_xs/src/lib.rs`, lignes 372 à 381) sort tôt pour une dimension supérieure à 4 et sur sa branche
+  d'erreur sans écrire `*out`. Observé dans le source, pas mesuré sur le titre. La correction relève de l'amont, puisque
+  `third_party/` n'est pas modifié ici.
 
 ## Sources et crédits
 

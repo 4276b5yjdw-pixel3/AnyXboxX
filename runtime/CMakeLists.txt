@@ -51,6 +51,7 @@ target_link_libraries(xgameruntime PRIVATE anyxboxx_task dxgi ole32 iphlpapi)
 anyxboxx_dll(xmem xmem/xmem.cpp xmem/era_heap.cpp xmem/era_query.cpp xmem/aligned_pages.cpp
              xmem/virtual_alloc.cpp xmem/physical_pages.cpp xmem/xmem.def)
 anyxboxx_dll(d3d12_xs d3d12_xs/d3d12_xs.cpp d3d12_xs/virtual_memory.cpp d3d12_xs/d3d12_xs.def)
+anyxboxx_dll(XCRDAPI xcrdapi/xcrdapi.cpp xcrdapi/xcrdapi.def)
 anyxboxx_dll(kernelx kernelx/kernelx.cpp)
 anyxboxx_dll(anyxboxx_tls tls/anyxboxx_tls.cpp)
 
