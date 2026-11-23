@@ -45,6 +45,8 @@ Les tailles des derniers blocs de la plupart des groupes de trois ou quatre suiv
 
 Pour une catégorie précise de 153 groupes de dimensions candidates 512 × 512, des comparaisons de contenu suggèrent que le premier bloc réunit de petites résolutions dans cinq intervalles séparés par des zéros. Le test `comparer_niveaux_etpf.py` et ses hypothèses sont décrits dans [l'analyse ETPF](paquet/ANALYSE_ETPF.md) ; il demande NumPy. Cette observation n'établit pas une disposition valable pour les autres catégories.
 
+La comparaison de 16 agencements pour ces 153 groupes donne le meilleur score à des tuiles Morton 128 dans 142 cas ; 11 groupes favorisent des variantes linéaires. Utiliser ce résultat comme piste de test, pas comme conversion universelle. Le contrôle des indices sur des données synthétiques confirme seulement que l'outil applique des permutations valides.
+
 L'index ETPF comprend aussi une table candidate de valeurs 64 bits triées. Des comparaisons entre fichiers appuient leur association aux lignes de même rang, mais trois paires de valeurs identiques ont donné des contenus zlib différents. Si un futur lecteur les utilise pour la recherche, conserver le contexte du fichier et ne pas dédupliquer les ressources uniquement sur cette valeur. La commande `python ..\comparer_cles_etpf.py .. --comparer-blocs` reproduit les comparaisons depuis la racine AnyXboxX.
 
 Pour examiner une valeur dans un fichier précis, `inspect_etpf.py --cle` fournit son rang et la ligne candidate correspondante, après vérification de l'ordre de la table. Voir l'exemple et les limites dans l'analyse ETPF ; cet outil ne met pas encore en œuvre le chargement de ressources du jeu.
