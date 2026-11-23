@@ -205,6 +205,29 @@ class Asm:
     def zero_rdx(self):
         return self.raw(b"\x31\xd2")
 
+    def mov_edx(self, value):
+        return self.raw(b"\xba" + struct.pack("<I", value))
+
+    def mov_r8d(self, value):
+        return self.raw(b"\x41\xb8" + struct.pack("<I", value))
+
+    def mov_r9d(self, value):
+        return self.raw(b"\x41\xb9" + struct.pack("<I", value))
+
+    def lea_r8(self, offset):
+        return self.raw(b"\x4c\x8d\x05" + self._disp(rva(offset), 7))
+
+    def lea_r9(self, offset):
+        return self.raw(b"\x4c\x8d\x0d" + self._disp(rva(offset), 7))
+
+    def stack_dword(self, disp8, value):
+        """mov dword [rsp+disp8], valeur : le 5e argument d'un appel Windows x64."""
+        return self.raw(b"\xc7\x44\x24" + bytes([disp8]) + struct.pack("<I", value))
+
+    def nonzero_rax_to_eax(self):
+        """eax = 1 si rax est non nul, sinon 0 : le code de sortie dit si un pointeur est rendu."""
+        return self.raw(b"\x48\x85\xc0\x0f\x95\xc0\x0f\xb6\xc0")
+
     def zero_r8(self):
         return self.raw(b"\x45\x31\xc0")
 
