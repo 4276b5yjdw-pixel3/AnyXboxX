@@ -200,6 +200,7 @@ def XSystemGetDeviceType(c):
 - [調査対象の Scarlett パッケージのリバースエンジニアリングノート](../research/package/README.md)（(Codex 作成）：RDS5/ETPF テーブル、RPF ヘッダー、パッケージ構成。
 - [TomBox とその後継](../research/tombox.md)：Rust 製コンソール DLL、Direct3D 12.x、RDNA 2 シェーダー変換器、AnyXboxX が再利用するもの（MIT、出典明記）。
 - [Xbox2Windows](../research/xbox2windows.md)：静的再コンパイルの研究。BC7 と GFX10 タイリングを AnyXboxX が再利用（MIT、出典明記）。
+- [実行ファイル 1.0.2.1 の初回起動](../research/first-boot-1021.md)：Leonida の `gta6rt` で順に測定した停止箇所、対応する Leonida のプルリクエスト、AnyXboxX の作業リスト。
 
 ## テスト
 

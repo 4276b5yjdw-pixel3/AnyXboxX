@@ -200,6 +200,7 @@ def XSystemGetDeviceType(c):
 - [Reverse-Engineering-Notizen zum untersuchten Scarlett-Paket](../research/package/README.md) (von Codex verfasst): RDS5/ETPF-Tabellen, RPF-Header, Paketaufbau.
 - [TomBox und seine Fortsetzung](../research/tombox.md): Konsolen-DLLs in Rust, Direct3D 12.x, RDNA-2-Shader-Übersetzer, was AnyXboxX übernimmt (MIT, zitiert).
 - [Xbox2Windows](../research/xbox2windows.md): Forschung zur statischen Rekompilierung; BC7 und GFX10-Kachelung von AnyXboxX übernommen (MIT, zitiert).
+- [Erster Start der Ausführungsdatei 1.0.2.1](../research/first-boot-1021.md): unter `gta6rt` von Leonida gemessene Haltepunkte der Reihe nach, die Pull Requests von Leonida dazu, Arbeitsliste für AnyXboxX.
 
 ## Tests
 
