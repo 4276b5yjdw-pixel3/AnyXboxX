@@ -193,11 +193,20 @@ void PatchModule(HMODULE module) {
   }
 }
 
-// ANYXBOXX_TOMBOX_DIR : dossier des DLL console de TomBox (tools/build_tombox.py), ou "".
-std::wstring TomBoxFile(const std::wstring& dll) {
+// Dossier des DLL console de TomBox : ANYXBOXX_TOMBOX_DIR, sinon ..\tombox à côté du dossier du lanceur
+// (runtime/build/tombox, comme emu/tombox_paths.py). Ce dossier est produit par tools/build_tombox.py.
+std::wstring TomBoxFolder() {
   wchar_t folder[MAX_PATH] = {};
-  if (GetEnvironmentVariableW(L"ANYXBOXX_TOMBOX_DIR", folder, MAX_PATH) == 0) return L"";
-  const std::wstring path = std::wstring(folder) + L"\\" + BaseName(dll);
+  if (GetEnvironmentVariableW(L"ANYXBOXX_TOMBOX_DIR", folder, MAX_PATH) > 0) return folder;
+  wchar_t self[MAX_PATH] = {};
+  GetModuleFileNameW(nullptr, self, MAX_PATH);
+  const std::wstring self_path = self;
+  return self_path.substr(0, self_path.find_last_of(L"\\/")) + L"\\..\\tombox";
+}
+
+// Chemin de la DLL de TomBox qui sert `dll`, ou "" si elle n'est pas compilée.
+std::wstring TomBoxFile(const std::wstring& dll) {
+  const std::wstring path = TomBoxFolder() + L"\\" + BaseName(dll);
   return GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES ? L"" : path;
 }
 
@@ -409,8 +418,9 @@ int wmain(int argc, wchar_t** argv) {
   const std::wstring runtime_folder = self_path.substr(0, self_path.find_last_of(L"\\/"));
   for (int i = 0; i < 6; ++i) {
     std::wstring path = runtime_folder + L"\\" + kRuntimeDlls[i];
-    // xmem et d3d12_xs : celles de TomBox (plus complètes) si ANYXBOXX_TOMBOX_DIR les fournit.
-    const std::wstring tombox = (i == 1 || i == 2) ? TomBoxFile(kRuntimeDlls[i]) : L"";
+    // xmem, d3d12_xs et XCRDAPI : celles de TomBox (plus complètes) quand elles sont compilées.
+    const bool prefer_tombox = i == 1 || i == 2 || i == 5;
+    const std::wstring tombox = prefer_tombox ? TomBoxFile(kRuntimeDlls[i]) : L"";
     if (!tombox.empty()) path = tombox;
     wchar_t alternative[MAX_PATH] = {};
     // ANYXBOXX_D3D12_XS : une d3d12_xs.dll précise, prioritaire.

@@ -57,8 +57,8 @@ jobs:
         run: |
           cargo build --release --manifest-path rust/Cargo.toml
           cargo test --release --manifest-path rust/Cargo.toml
-      - name: DLL console de TomBox (d3d12_xs, xg_xs, xmem, d3d12_x, xaudio2_9, xapu, xgs12)
-        run: python tools/build_tombox.py d3d12_xs xg_xs xmem d3d12_x xaudio2_9 xapu xgs12
+      - name: DLL console de TomBox (runtime/build/tombox, lues par défaut)
+        run: python tools/build_tombox.py
       - run: python -m pip install -r requirements.txt -r requirements-dev.txt
       - name: pytest (suite complète, nombre de tests comparé aux README)
         run: python -m pytest
