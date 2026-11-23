@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can it run GTA VI? · AnyXboxX</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%236b2fbf%22/%3E%3C/svg%3E">
 <meta name="description" content="Can Grand Theft Auto VI (Xbox Series, build 1.0.2.1) run on a PC yet? Status, disk space and progress of AnyXboxX and Leonida.">
 <style>
 :root {
@@ -49,6 +50,15 @@ li { margin: 4px 0; }
 .links { display: flex; flex-wrap: wrap; gap: 10px; }
 .links a { display: inline-block; padding: 10px 16px; border-radius: 10px; background: var(--surface);
   border: 1px solid var(--line); text-decoration: none; font-weight: 600; }
+.estimator { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.estimator label { display: block; font-weight: 600; margin: 12px 0 4px; }
+.estimator select { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: inherit; }
+.estimator .check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+#detected { color: var(--muted); font-size: .9rem; margin: 0; }
+#result { margin-top: 16px; padding: 16px; border-radius: 10px; background: var(--wip-bg); }
+#fps { font-size: 2rem; font-weight: 700; color: var(--wip); font-variant-numeric: tabular-nums; }
+#quality { font-weight: 600; margin: 2px 0 0; }
 footer { margin-top: 56px; color: var(--muted); font-size: .85rem; }
 @media (max-width: 560px) { th:nth-child(3), td:nth-child(3) { display: none; } }
 </style>
@@ -73,6 +83,22 @@ footer { margin-top: 56px; color: var(--muted); font-size: .85rem; }
       <p>All stages. Figures are as Windows Explorer shows them (GiB): 400 GiB is about 430 GB.</p></div>
   </div>
   <p class="sub" style="margin-top:10px">These are work files, <b>on top of the game package itself</b>, which the runtime reads in place. Source: the prerequisites in Leonida's README. Work folders can go on another drive.</p>
+
+  <h2>Will my PC run it? (estimate)</h2>
+  <div class="estimator">
+    <p id="detected">Detecting your hardware…</p>
+    <label for="gpu">Graphics card</label><select id="gpu"></select>
+    <label class="check"><input type="checkbox" id="laptop"> Laptop version of this graphics card</label>
+    <label for="cpu">Processor</label><select id="cpu"></select>
+    <label for="ram">Memory (RAM)</label><select id="ram"></select>
+    <div id="result" hidden>
+      <div id="fps"></div>
+      <p id="quality"></p>
+      <p id="bottleneck" class="sub"></p>
+      <ul id="notes"></ul>
+    </div>
+  </div>
+  <p class="sub" style="margin-top:10px"><b>This is a guess, not a measurement</b>: the game does not run yet. It compares your parts to the Xbox Series X (graphics and processor indexes from public benchmarks, about ±20 %), assumes the console version runs at 30 fps and that translation costs 20 to 60 % more. Real numbers will replace it once the game boots. Detection happens in your browser; nothing is sent anywhere.</p>
 
   <h2>Where things stand</h2>
   <table>
@@ -107,5 +133,6 @@ footer { margin-top: 56px; color: var(--muted); font-size: .85rem; }
     Not affiliated with or endorsed by Rockstar Games, Take-Two Interactive or Microsoft. Grand Theft Auto and Xbox are trademarks of their respective owners.
   </footer>
 </main>
+<script type="module" src="app.js"></script>
 </body>
 </html>

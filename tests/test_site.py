@@ -43,3 +43,14 @@ def test_pages_workflow_builds_leonida_dashboard_outside_the_repository():
     workflow = (RACINE / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
     assert "progress_dashboard.py --out \"$RUNNER_TEMP/leonida\"" in workflow
     assert "actions/deploy-pages" in workflow
+
+
+def test_hardware_estimate_logic_passes_its_node_tests():
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent : la logique de site/estimate.js se teste avec node --test")
+    resultat = subprocess.run([node, "--test", str(RACINE / "site" / "estimate.test.mjs")],
+                              capture_output=True, text=True, encoding="utf-8", timeout=120)
+    assert resultat.returncode == 0, resultat.stdout[-2000:] + resultat.stderr[-2000:]
