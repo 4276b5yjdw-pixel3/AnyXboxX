@@ -2,6 +2,8 @@
 
 # Premier démarrage de l'exécutable 1.0.2.1 : ce que nous avons mesuré
 
+Suite le même soir, jusqu'à la boucle de frames, dans [demarrage-leonida-2026-11-23.md](demarrage-leonida-2026-11-23.md).
+
 État au 23 novembre 2026. Cette note range les recherches du jour sur `game_scarlett_master.exe`
 (build 1.0.2.1) et sur les premiers lancements de cet exécutable sous `gta6rt` de Leonida. Elle remplace
 l'état « exécutable absent » de [pistes-premier-executable.md](pistes-premier-executable.md) (22 novembre).

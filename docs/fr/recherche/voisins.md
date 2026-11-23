@@ -135,6 +135,8 @@ Le dépôt entier de Leonida est désormais un sous-module, `third_party/leonida
 
 Premiers lancements de l'exécutable 1.0.2.1 sous `gta6rt` (arrêts mesurés dans l'ordre, pull requests de Leonida qui les traitent, liste de travaux qui en découle pour AnyXboxX) : [premier-demarrage-1021.md](premier-demarrage-1021.md).
 
+Le même exécutable mené jusqu'à la boucle de frames sous `gta6rt` de Leonida (arrêts, quatre causes mesurées des images noires, constats statiques, nos erreurs, ce que le proxy TomBox doit encore servir) : [demarrage-leonida-2026-11-23.md](demarrage-leonida-2026-11-23.md).
+
 ## Licences modifiées en amont (23 novembre, après-midi)
 
 Le workflow avait refusé deux mises à jour parce qu'un fichier de licence changeait. Relues à la main, elles sont compatibles avec la GPL 3.0 ou ultérieure :

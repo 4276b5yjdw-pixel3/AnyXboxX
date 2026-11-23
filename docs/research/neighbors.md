@@ -134,6 +134,8 @@ The whole Leonida repository is now a submodule, `third_party/leonida-src`, trac
 
 First launches of the 1.0.2.1 executable under `gta6rt` (stops measured in order, the Leonida pull requests that treat them, and the resulting work list for AnyXboxX): [first-boot-1021.md](first-boot-1021.md).
 
+The same executable carried to the frame loop under Leonida's `gta6rt` (stops, four measured causes of black frames, static findings, our mistakes, what the TomBox proxy must still serve): [leonida-boot-2026-11-23.md](leonida-boot-2026-11-23.md).
+
 ## Licences changed upstream (23 November, afternoon)
 
 The workflow had refused two updates because a licence file changed. Reviewed by hand, they are compatible with GPL 3.0 or later:
