@@ -1,7 +1,7 @@
 # Leonida : traducteur RDNA 2 → SPIR-V (copie)
 
 Fichiers copiés **sans modification** depuis [ItsNotRexed/Leonida](https://github.com/ItsNotRexed/Leonida),
-dossier `tools/`, commit `aa2988cc55` (22 novembre 2026, 22 h). Licence : GNU GPL 3.0 (fichier `LICENSE`,
+dossier `tools/`, commit `7b7d73f890` (23 novembre 2026, 4 h). Licence : GNU GPL 3.0 (fichier `LICENSE`,
 la même que celle d'AnyXboxX). Tout le mérite de ce code revient aux auteurs de Leonida.
 
 | Fichier | Rôle |
@@ -16,6 +16,8 @@ la même que celle d'AnyXboxX). Tout le mérite de ce code revient aux auteurs d
 | `shader_meta.py`, `spirv_stubs.py` | métadonnées de pipeline et modules d'appoint |
 | `cpu_ref.py`, `ab_control_flow.py` | référence CPU et comparaison A/B du contrôle de flux |
 | `amd_swizzle.py` | détuilage d'images selon les motifs addrlib |
+| `spirv_opt.py` | optimiseur du SPIR-V produit (arbre des dominateurs : accès aux registres, gardes `%active`, constantes, code mort) |
+| `report_paths.py` | deux chemins de rapport désignent-ils le même fichier ? (refus d'écraser une entrée) |
 | `gfx10_formats.json` | noms des formats GFX10 |
 
 AnyXboxX l'appelle par `PrototypeScarlett/emu/rdna2_spirv.py`, sur le texte produit par son propre
