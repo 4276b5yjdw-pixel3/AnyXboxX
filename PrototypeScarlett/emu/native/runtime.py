@@ -12,7 +12,7 @@ from pathlib import Path
 from ..modules import dll_name
 from . import win32
 
-RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "anyxboxx_tls.dll")
+RUNTIME_DLLS = ("xgameruntime.dll", "xmem.dll", "d3d12_xs.dll", "kernelx.dll", "anyxboxx_tls.dll", "XCRDAPI.dll")
 GAME_RUNTIME = "xgameruntime"
 D3D12_OVERRIDE = "ANYXBOXX_D3D12_XS"
 TOMBOX_DIR = "ANYXBOXX_TOMBOX_DIR"
