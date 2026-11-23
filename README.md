@@ -77,7 +77,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Progress map: one cell per function (`--carte`) | ✅ done |
 | Controller (`GameInput`) and audio (`XAudio2`): same API on console and PC, bound to the Windows DLLs in native mode | ✅ done |
 | Markdown report of the missing imports per DLL and of the unemulated calls (`--lancer … --md rapport.md`) | ✅ done |
-| First-launch tool for a console executable: inventory, who provides each import (package, AnyXboxX, TomBox, Windows, missing), isolated runs, optional native run; report kept outside the repository: `python tools/jour_j.py <package> [--natif]` ([guide](docs/jour-j.md), in French) | ✅ done |
+| First-launch tool for a console executable: inventory, who provides each import (package, AnyXboxX, TomBox, Windows, missing), isolated runs, optional native run; report kept outside the repository: `python tools/jour_j.py <package> [--natif]` ([guide](docs/day-one.md), in French) | ✅ done |
 | Frame counter (`--fps`) and performance bench with a "constant 60 fps" verdict and a curve (`--banc-perf`) | ✅ done |
 | `XGameSave` saves (containers, blobs, quota, asynchronous reads) and persistent local storage, on the PC's disk (`%LOCALAPPDATA%\AnyXboxX\<TitleId>`, or `ANYXBOXX_SAVE_DIR`) | ✅ done |
 | `XPackage`: locally installed package (identifier, language, ready chunks, mounting on the game folder) | ✅ done |
@@ -141,7 +141,7 @@ The compiled demo program is `PrototypeScarlett/demo.pe`; its source code is `Pr
 
 ![SimpleTriangle launched by AnyXboxX in native mode](docs/images/simpletriangle-anyxboxx.png)
 
-AnyXboxX loads the executable itself and runs it directly on the processor, like Wine. The Xbox runtime (`xgameruntime.dll`) is provided by AnyXboxX; the window and DirectX 12 are the PC's. **Warning: in native mode, the program is not isolated.** Reserve this mode for trusted programs; `--rapport` and `--banc` remain isolated inside Unicorn. `ANYXBOXX_TRACE=1` displays the intercepted calls. Details: [docs/jeu-de-test.md](docs/jeu-de-test.md) (in French).
+AnyXboxX loads the executable itself and runs it directly on the processor, like Wine. The Xbox runtime (`xgameruntime.dll`) is provided by AnyXboxX; the window and DirectX 12 are the PC's. **Warning: in native mode, the program is not isolated.** Reserve this mode for trusted programs; `--rapport` and `--banc` remain isolated inside Unicorn. `ANYXBOXX_TRACE=1` displays the intercepted calls. Details: [docs/test-game.md](docs/test-game.md).
 
 ## Run a package in isolated mode
 
@@ -165,7 +165,7 @@ The test bench loads every PE module in a folder and runs their initialization:
 
 ![Test bench on the DLLs of a Scarlett package](docs/images/banc-dll.svg)
 
-Detailed results: [docs/avancee.md](docs/avancee.md) (in French). Free test game compared with its native execution: [docs/jeu-de-test.md](docs/jeu-de-test.md) (in French). An additional DLL folder (for example the Visual C++ DLLs) can follow the target: `--rapport <cible> <dossier>`.
+Detailed results: [docs/progress.md](docs/progress.md). Free test game compared with its native execution: [docs/test-game.md](docs/test-game.md). An additional DLL folder (for example the Visual C++ DLLs) can follow the target: `--rapport <cible> <dossier>`.
 
 The report lists the imported functions, the percentage already emulated and the missing functions. In the interface, the **Open an Xbox folder…** button reads `MicrosoftGame.Config`, displays this report, then launches the program; every non-emulated call appears in the log.
 
@@ -195,11 +195,11 @@ def XSystemGetDeviceType(c):
 
 ## Research
 
-- [Xbox Series X hardware architecture](docs/recherche/architecture-xbox-series-x.md) (in French): Zen 2 CPU, RDNA 2 GPU, memory, Velocity Architecture, security.
-- [Existing emulators and compatibility layers](docs/recherche/etat-de-l-art.md) (in French): WinDurango, XWine1, Xenia, XVD tools.
-- [Reverse-engineering notes on the studied Scarlett package](docs/recherche/paquet/README.md) (in French, written by Codex): RDS5/ETPF tables, RPF headers, package layout.
-- [TomBox and its continuation](docs/recherche/tombox.md) (in French): Rust console DLLs, Direct3D 12.x, RDNA 2 shader translator, what AnyXboxX reuses (MIT, credited).
-- [Xbox2Windows](docs/recherche/xbox2windows.md) (in French): static recompilation research; BC7 and GFX10 tiling reused by AnyXboxX (MIT, credited).
+- [Xbox Series X hardware architecture](docs/research/xbox-series-x-architecture.md): Zen 2 CPU, RDNA 2 GPU, memory, Velocity Architecture, security.
+- [Existing emulators and compatibility layers](docs/research/state-of-the-art.md): WinDurango, XWine1, Xenia, XVD tools.
+- [Reverse-engineering notes on the studied Scarlett package](docs/research/package/README.md) (written by Codex): RDS5/ETPF tables, RPF headers, package layout.
+- [TomBox and its continuation](docs/research/tombox.md): Rust console DLLs, Direct3D 12.x, RDNA 2 shader translator, what AnyXboxX reuses (MIT, credited).
+- [Xbox2Windows](docs/research/xbox2windows.md): static recompilation research; BC7 and GFX10 tiling reused by AnyXboxX (MIT, credited).
 
 ## Tests
 

@@ -77,7 +77,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 进展地图：每个函数一格（`--carte`） | ✅ 已完成 |
 | 手柄（`GameInput`）与音频（`XAudio2`）：主机与 PC 使用相同的 API，原生模式下绑定到 Windows 的 DLL | ✅ 完成 |
 | 按 DLL 列出缺失导入与未模拟调用的 Markdown 报告（`--lancer … --md rapport.md`） | ✅ 完成 |
-| 主机可执行文件首次启动工具：清单、每个导入的提供者（游戏包、AnyXboxX、TomBox、Windows、缺失）、隔离运行、可选的原生运行；报告保存在仓库之外：`python tools/jour_j.py <游戏包> [--natif]`（[指南](../jour-j.md)，法语） | ✅ 完成 |
+| 主机可执行文件首次启动工具：清单、每个导入的提供者（游戏包、AnyXboxX、TomBox、Windows、缺失）、隔离运行、可选的原生运行；报告保存在仓库之外：`python tools/jour_j.py <游戏包> [--natif]`（[指南](../day-one.md)，法语） | ✅ 完成 |
 | 帧计数器（`--fps`）与性能测试台，给出“恒定 60 fps”结论和曲线（`--banc-perf`） | ✅ 完成 |
 | `XGameSave` 存档（容器、blob、配额、异步读取）和持久化本地存储，保存在 PC 的磁盘上（`%LOCALAPPDATA%\AnyXboxX\<TitleId>`，或 `ANYXBOXX_SAVE_DIR`） | ✅ 已完成 |
 | `XPackage`：本地安装的包（标识符、语言、已就绪的数据块、挂载到游戏文件夹） | ✅ 已完成 |
@@ -141,7 +141,7 @@ cmake --build runtime/build --config Release
 
 ![由 AnyXboxX 以原生模式启动的 SimpleTriangle](../images/simpletriangle-anyxboxx.png)
 
-AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器上运行它。Xbox 运行时（`xgameruntime.dll`）由 AnyXboxX 提供；窗口和 DirectX 12 则使用电脑自身的。**注意：在原生模式下，程序没有被隔离。** 请仅对可信的程序使用此模式；`--rapport` 和 `--banc` 仍然在 Unicorn 中隔离运行。`ANYXBOXX_TRACE=1` 会显示被拦截的调用。详情：[docs/jeu-de-test.md](../jeu-de-test.md)（法语）。
+AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器上运行它。Xbox 运行时（`xgameruntime.dll`）由 AnyXboxX 提供；窗口和 DirectX 12 则使用电脑自身的。**注意：在原生模式下，程序没有被隔离。** 请仅对可信的程序使用此模式；`--rapport` 和 `--banc` 仍然在 Unicorn 中隔离运行。`ANYXBOXX_TRACE=1` 会显示被拦截的调用。详情：[docs/test-game.md](../test-game.md)。
 
 ## 以隔离模式运行游戏包
 
@@ -165,7 +165,7 @@ AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器�
 
 ![针对 Scarlett 包中 DLL 的测试台](../images/banc-dll.svg)
 
-详细结果：[docs/avancee.md](../avancee.md)（法语）。与原生运行结果对比的免费测试游戏：[docs/jeu-de-test.md](../jeu-de-test.md)（法语）。目标之后可以再跟一个额外的 DLL 文件夹（例如 Visual C++ 的 DLL）：`--rapport <cible> <dossier>`。
+详细结果：[docs/progress.md](../progress.md)。与原生运行结果对比的免费测试游戏：[docs/test-game.md](../test-game.md)。目标之后可以再跟一个额外的 DLL 文件夹（例如 Visual C++ 的 DLL）：`--rapport <cible> <dossier>`。
 
 报告会列出导入的函数、已模拟的百分比以及缺失的函数。在界面中，**Open an Xbox folder…**（打开 Xbox 文件夹）按钮会读取 `MicrosoftGame.Config`，显示该报告，然后启动程序；每个未模拟的调用都会出现在日志中。
 
@@ -195,11 +195,11 @@ def XSystemGetDeviceType(c):
 
 ## 调研
 
-- [Xbox Series X 的硬件架构](../recherche/architecture-xbox-series-x.md)（法语）：Zen 2 CPU、RDNA 2 GPU、内存、Velocity Architecture、安全性。
-- [现有的模拟器和兼容层](../recherche/etat-de-l-art.md)（法语）：WinDurango、XWine1、Xenia、XVD 工具。
-- [所研究 Scarlett 游戏包的逆向工程笔记](../recherche/paquet/README.md)（法语，由 Codex 撰写）：RDS5/ETPF 表、RPF 文件头、游戏包结构。
-- [TomBox 及其后续项目](../recherche/tombox.md)（法语）：Rust 编写的主机 DLL、Direct3D 12.x、RDNA 2 着色器翻译器，以及 AnyXboxX 复用的内容（MIT，已注明出处）。
-- [Xbox2Windows](../recherche/xbox2windows.md)（法语）：静态重编译研究；AnyXboxX 复用其 BC7 与 GFX10 平铺（MIT，已注明出处）。
+- [Xbox Series X 的硬件架构](../research/xbox-series-x-architecture.md)：Zen 2 CPU、RDNA 2 GPU、内存、Velocity Architecture、安全性。
+- [现有的模拟器和兼容层](../research/state-of-the-art.md)：WinDurango、XWine1、Xenia、XVD 工具。
+- [所研究 Scarlett 游戏包的逆向工程笔记](../research/package/README.md)（(由 Codex 撰写）：RDS5/ETPF 表、RPF 文件头、游戏包结构。
+- [TomBox 及其后续项目](../research/tombox.md)：Rust 编写的主机 DLL、Direct3D 12.x、RDNA 2 着色器翻译器，以及 AnyXboxX 复用的内容（MIT，已注明出处）。
+- [Xbox2Windows](../research/xbox2windows.md)：静态重编译研究；AnyXboxX 复用其 BC7 与 GFX10 平铺（MIT，已注明出处）。
 
 ## 测试
 
