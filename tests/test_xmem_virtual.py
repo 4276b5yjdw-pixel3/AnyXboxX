@@ -81,7 +81,8 @@ def release(address):
     kernel32.VirtualFree(address, 0, 0x8000)   # MEM_RELEASE
 
 
-# Formes mesurées : (type d'allocation, attributs, protection, état attendu).
+# Formes mesurées sur une copie possédée légalement, voir docs/research/first-boot-1021.md
+# (measured on a lawfully owned copy) : (type d'allocation, attributs, protection, état attendu).
 MEASURED_SHAPES = [
     (0x20401000, 0x283, 0x42404, MEM_COMMIT),                 # commit seul, sans réservation
     (0x20402000, 0x21, 4, MEM_RESERVE),                       # jamais NULL, réservation seule
