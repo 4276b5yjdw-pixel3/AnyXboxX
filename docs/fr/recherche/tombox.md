@@ -46,3 +46,32 @@ Leur désassembleur RDNA 2 (`tombox-xshader`), appelé depuis la passerelle Rust
 
 Leur crate `xma` (LGPL-2.1 ou ultérieure) est un portage en Rust du décodeur WMA Pro / XMA de FFmpeg (`libavcodec/wmaprodec.c`). Leur test `wmapro_fate_beethoven_matches_reference`, lancé localement avec l'échantillon public `wmapro/Beethovens_9th-1_small.wma` de la suite FATE de FFmpeg et un PCM de référence produit par `ffmpeg`, donne un écart maximal de 1 sur 16 bits et un rapport signal sur bruit de 101,5 dB. AnyXboxX l'utilise dans `rust/anyxboxx-audio` (`anyxboxx_xma <entrée.xma> <sortie.wav>`) pour les fichiers RIFF XMA2 à un flux ; aucun fichier XMA2 public n'a encore servi à vérifier la chaîne complète.
 
+## Table des slots du périphérique d3d12_xs (premier démarrage, W5)
+
+Slots que le titre appelle sur le périphérique console avant le premier `Close` en échec, comparés à la table de
+périphérique de TomBox (`crates/compat/d3d12_xs/src/console_slots.rs`, 90 slots) et à ce qu'AnyXboxX sert.
+« Assigné » est ce que trouve un grep des affectations `[n] = ...` dans `d3d12_xs/src` de TomBox ; le contexte de
+chaque ligne n'a été lu que là où c'est indiqué. Figée par `tests/test_d3d12_device_slots.py`.
+
+| Slot | Rôle mesuré | Table de périphérique TomBox | AnyXboxX |
+| --- | --- | --- | --- |
+| 8 | CreateCommandQueue (forme PC) | assigné, `device_wrap.rs` | aucun |
+| 9 | CreateCommandAllocator | assigné, `device_wrap.rs` | aucun |
+| 16 | CreateRootSignature (forme) | assigné à `cmdlist_validate.rs:1218`, contexte non vérifié | aucun |
+| 26 | non établi | non assigné au périphérique ; 26 est `fake_barrier` dans la table de liste (`cl_ext.rs:771`) | aucun |
+| 36 | CreateFence (forme PC) | non assigné | aucun |
+| 41 | CreateCommandSignature | assigné, `device_wrap.rs` | aucun |
+| 48 | CreateCommandQueueX (console) | assigné, `device_wrap.rs` | aucun |
+| 49 | non établi | non assigné | aucun |
+| 57 | DeserializeGraphicsPipelineState | assigné, `device_wrap.rs` | aucun |
+| 61 | CreateSampler | assigné, `device_wrap.rs` | aucun |
+| 73 | CreateCommandListX (console) | assigné, `device_wrap.rs` | aucun |
+| 74 | RegisterPagePool | assigné, `device_wrap.rs` | aucun |
+| 79 | ScheduleFrameEvent | assigné, `device_wrap.rs` | aucun |
+| 86 | non établi | non assigné | aucun |
+| 127 | CreateCommittedResource3 (forme) | hors table : la table de TomBox compte 90 slots | aucun |
+
+AnyXboxX ne sert aucun slot de périphérique : `runtime/d3d12_xs/d3d12_xs.def` exporte `D3D12ConfigureVirtualMemoryX`
+et les redirections de signature racine, pas `D3D12XboxCreateDevice`. Le manque est le proxy de périphérique entier,
+pas quelques slots : aucune correction simple n'existe. Les slots de liste 9, 131 et 132 appartiennent à la table de
+liste de commandes, que TomBox dimensionne à 110 (son tableau `vt` compte 128 entrées) ; 131 et 132 sont hors de celle-ci.
