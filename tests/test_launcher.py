@@ -2,10 +2,10 @@
 import os
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 
+from emu import tombox_paths
 from pe_builder import Asm, build_pe
 from test_native_tls import CALLBACKS, DIRECTORY, INDEX, TEMPLATE, VALUE, tls_reader
 
@@ -61,10 +61,10 @@ def test_package_without_its_executable_says_so(tmp_path, runtime_dir):
     assert result.returncode == 1 and "game_scarlett_master.exe" in stderr
 
 
-TOMBOX_D3D12 = Path(__file__).resolve().parents[1] / "third_party" / "tombox" / "target" / "release" / "d3d12_xs.dll"
+TOMBOX_D3D12 = tombox_paths.TOMBOX_INSTALL / "d3d12_xs.dll"
 
 
-@pytest.mark.skipif(not TOMBOX_D3D12.is_file(), reason="d3d12_xs de TomBox non compilée (tools/build_tombox.py d3d12_xs)")
+@pytest.mark.skipif(not TOMBOX_D3D12.is_file(), reason="d3d12_xs de TomBox non compilée (python tools/build_tombox.py)")
 def test_tombox_d3d12_serves_console_device_creation(tmp_path, runtime_dir):
     exe = build_pe(tmp_path / "d3d.exe", lambda iat: Asm().mov_eax(7).ret().build(),
                    imports=[("d3d12_xs.dll", "D3D12XboxCreateDevice"), ("d3d12_xs.dll", "DXGIXPresentArray")], dll=False)

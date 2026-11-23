@@ -187,7 +187,7 @@ dessus.
 | W2 | **Fait, PR #107.** `runtime/xmem` ne sert lui-même aucun des sept imports manquants (`XMemVirtualAlloc`, trois appels de pages physiques, scatter, `XMemIsToolsMemAvailable`, `XMemTransferMemory`). Décider : continuer à compter sur TomBox, ou les écrire en C++ avec le décodeur ERA, et le dire dans [tombox.md](tombox.md) | section 2 | mesuré |
 | W3 | **Fait, PR #107.** `XMemAlloc(0x60000, 0xf0814000)` : vérifier que le décodeur ERA de `runtime/xmem/era_heap.cpp` ne refuse pas ce mot (« mémoire physique refusée » renvoie NULL, que le titre traite comme une branche d'erreur) | site d'appel statique | décodage de ce mot supposé |
 | W4 | **Fait, PR #107.** `D3D12ConfigureVirtualMemoryX` : le `d3d12_xs` d'AnyXboxX ne l'exporte pas (TomBox l'exporte et rejette une description NULL par `E_INVALIDARG`). Tester une description non nulle dont le deuxième champ de 32 bits dérive d'une taille, attendre `S_OK` | arrêt 1 | forme mesurée ; sens du champ supposé |
-| W5 | **Fait, cette PR : table et test (section 6).** **Table des slots du device.** Comparer les slots que le titre emploie avant le premier échec de `Close` (8, 9, 16, 26, 36, 41, 48, 49, 57, 61, 73, 74, 79, 86, 127, et les slots 9, 131, 132 de la liste) avec le `d3d12_xs` de TomBox (194 méthodes sur 200 revendiquées). Résultat : un tableau slot, forme, couvert ou non, dans [tombox.md](tombox.md) | sections 3 et 4 | slots mesurés ; couverture TomBox non comparée |
+| W5 | **Résolu en réutilisant TomBox (section 6).** **Table des slots du device.** Comparer les slots que le titre emploie avant le premier échec de `Close` (8, 9, 16, 26, 36, 41, 48, 49, 57, 61, 73, 74, 79, 86, 127, et les slots 9, 131, 132 de la liste) avec le `d3d12_xs` de TomBox (194 méthodes sur 200 revendiquées). Résultat : un tableau slot, forme, couvert ou non, dans [tombox.md](tombox.md) | sections 3 et 4 | slots mesurés ; couverture TomBox non comparée |
 | W6 | **Non fait : demande d'abord le proxy de liste console (Leonida #7076), voir section 6.** Liste de commandes console : établir ce que sont les slots 131 et 132 de la liste, à partir de l'ABI de liste console de TomBox, avant d'écrire une enveloppe. Ne pas donner une liste PC brute au titre | arrêts 5, 6 | sens des slots inconnu |
 | W7 | **Fait, cette PR : `XCRDAPI.dll` minimal.** **`DStorageGetFactory`** manque chez AnyXboxX et TomBox. Une `XCRDAPI.dll` minimale doit écrire le pointeur de sortie, rendre 0, et exposer la méthode à `+0x40` rendant un HRESULT non négatif ; les lectures de fichier peuvent répondre `E_NOTIMPL` comme le fait #4348. #4348 de Leonida est en GPL-3.0, réutilisable avec crédit (règle 2) | statique, arrêt 24 | mesuré |
 | W8 | **Bloqué, voir section 6.** **`xg_xs`** : `XGSuggestSwizzleMode` manque. `XGCreateTextureComputer` doit rendre un objet dont le slot 8 existe même s'il n'écrit aucune donnée tuilée, et aucun stub ne doit laisser un pointeur de sortie non écrit. `anyxboxx-texture` (SW_4K_S) est le moteur naturel | arrêt 22 (KkelebekK) | mesuré par d'autres |
@@ -206,7 +206,13 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
 ## 6. Résultats de W5 à W8 (cette PR)
 
 - **W5.** La table des slots de périphérique est dans [tombox.md](tombox.md), figée par `tests/test_d3d12_device_slots.py`.
-  AnyXboxX ne sert aucun slot de périphérique : le travail est le proxy, pas une correction.
+  AnyXboxX ne servait aucun slot de périphérique. **Résolu en réutilisant TomBox**, sans écrire de proxy :
+  `tools/build_tombox.py` compile le `d3d12_xs` de TomBox (64 exports, proxy du périphérique vers le D3D12 de l'hôte),
+  que `runtime/build/tombox` sert désormais par défaut. `tests/test_tombox_native.py` obtient un périphérique via
+  `D3D12XboxCreateDevice` (IID_ID3D12Device, WARP ou GPU). La même exécution vérifie W1 (`XMemVirtualAlloc` avec
+  `0x20402000` ne rend jamais NULL) et la sortie de `DStorageGetFactory` (W5), par le `xmem` et le `XCRDAPI` de TomBox.
+  Restent les nôtres, absents de TomBox : `xgameruntime`, `kernelx`, `anyxboxx_tls`, et l'export `XMemGetAllocationHooks`
+  de xmem, que TomBox n'a pas (aucun import ne l'utilise dans l'analyse statique du titre ; à proposer en amont).
 - **W6.** Non fait. Les slots 131 et 132 appartiennent à une liste de commandes console, qu'AnyXboxX n'a pas ; le proxy
   de liste (Leonida #7076) vient d'abord. Quand il existera, ces slots journaliseront leurs arguments et rendront
   `E_NOTIMPL` (le titre ignore leurs résultats), jamais 0.

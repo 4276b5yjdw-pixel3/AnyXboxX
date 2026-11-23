@@ -8,10 +8,10 @@ import pefile
 
 from .bench import PATTERNS, is_pe32_plus
 from .modules import dll_name
+from .tombox_paths import TOMBOX_INSTALL, TOMBOX_PREFERRED
 
 CONSOLE_DLLS = ("xmem.dll", "d3d12_xs.dll", "kernelx.dll", "xg_xs.dll", "xgameruntime.dll")
-TOMBOX_PREFERRED = ("d3d12_xs.dll", "xmem.dll")     # comme emu/native/runtime.py
-TOMBOX_BUILD = Path(__file__).resolve().parents[2] / "third_party" / "tombox" / "target" / "release"
+TOMBOX_BUILD = TOMBOX_INSTALL      # dossier des DLL de TomBox par défaut (tools/build_tombox.py)
 DIRECTORY_IMPORT = pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"]
 DIRECTORY_EXPORT = pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]
 COMPLETE = "complete"

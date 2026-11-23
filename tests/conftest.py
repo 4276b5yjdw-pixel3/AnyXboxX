@@ -15,6 +15,9 @@ import pytest  # noqa: E402
 os.environ.setdefault("ANYXBOXX_SYSTEM_RUNTIME", "0")
 # Cache de shaders propre à la session de tests : jamais celui de l'utilisateur.
 os.environ.setdefault("ANYXBOXX_SHADER_CACHE", tempfile.mkdtemp(prefix="anyxboxx-shader-cache-"))
+# Sans DLL de TomBox dans les tests du runtime : ils vérifient nos DLL. Le dossier par défaut
+# (runtime/build/tombox) est testé à part, et tests/test_tombox_native.py le désigne explicitement.
+os.environ.setdefault("ANYXBOXX_TOMBOX_DIR", tempfile.mkdtemp(prefix="anyxboxx-sans-tombox-"))
 
 RUNTIME_DIR = Path(os.environ.get("ANYXBOXX_RUNTIME")
                    or Path(__file__).resolve().parents[1] / "runtime" / "build" / "bin")

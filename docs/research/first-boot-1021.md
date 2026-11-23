@@ -182,7 +182,7 @@ Order of work, by the measured stops. "Assumed" items need a test before anyone 
 | W2 | **Done, PR #107.** `runtime/xmem` itself serves none of the seven missing imports (`XMemVirtualAlloc`, three physical-page calls, scatter, `XMemIsToolsMemAvailable`, `XMemTransferMemory`). Decide: keep relying on TomBox, or implement them in C++ with the ERA decoder, and say so in [tombox.md](tombox.md) | section 2 | measured |
 | W3 | **Done, PR #107.** `XMemAlloc(0x60000, 0xf0814000)`: check that the ERA decoder of `runtime/xmem/era_heap.cpp` does not refuse this word ("physical memory refused" returns NULL, which the title treats as an error branch) | static call site | decode of this word assumed |
 | W4 | **Done, PR #107.** `D3D12ConfigureVirtualMemoryX`: the AnyXboxX `d3d12_xs` does not export it (TomBox does, and rejects a NULL description with `E_INVALIDARG`). Test a non-null description whose second 32-bit field derives from a size, expect `S_OK` | stop 1 | measured shape; field meaning assumed |
-| W5 | **Done, this PR: table and test (section 6).** **Device slot table.** Compare the slots the title uses before the first `Close` failure (8, 9, 16, 26, 36, 41, 48, 49, 57, 61, 73, 74, 79, 86, 127, and list slots 9, 131, 132) with TomBox's `d3d12_xs` (194 of 200 methods claimed). Output: a table slot, shape, covered or not, in [tombox.md](tombox.md) | sections 3 and 4 | slots measured; TomBox coverage not compared |
+| W5 | **Resolved by reusing TomBox (section 6).** **Device slot table.** Compare the slots the title uses before the first `Close` failure (8, 9, 16, 26, 36, 41, 48, 49, 57, 61, 73, 74, 79, 86, 127, and list slots 9, 131, 132) with TomBox's `d3d12_xs` (194 of 200 methods claimed). Output: a table slot, shape, covered or not, in [tombox.md](tombox.md) | sections 3 and 4 | slots measured; TomBox coverage not compared |
 | W6 | **Not done: needs the console list proxy first (Leonida #7076), see section 6.** Console command list: find out what list slots 131 and 132 are, from TomBox's console list ABI, before anyone writes a wrapper. Do not pass a raw PC list to the title | stops 5, 6 | slot meaning unknown |
 | W7 | **Done, this PR: minimal `XCRDAPI.dll`.** **`DStorageGetFactory`** is missing from AnyXboxX and TomBox. A minimal `XCRDAPI.dll` must write the output pointer, return 0, and expose the method at `+0x40` returning a non-negative HRESULT; file reads can answer `E_NOTIMPL` as #4348 does. Leonida's #4348 is GPL-3.0, reusable with credit (rule 2) | static, stop 24 | measured |
 | W8 | **Blocked, see section 6.** **`xg_xs`**: `XGSuggestSwizzleMode` is missing. `XGCreateTextureComputer` must hand back an object whose slot 8 exists even if it writes no tiled data, and no stub may leave an output pointer unset. `anyxboxx-texture` (SW_4K_S) is the natural back end | stop 22 (KkelebekK) | measured by others |
@@ -201,7 +201,13 @@ need TomBox's sources only. None of them needs to read the game again.
 ## 6. Results of W5 to W8 (this PR)
 
 - **W5.** The device slot table is in [tombox.md](tombox.md), frozen by `tests/test_d3d12_device_slots.py`.
-  AnyXboxX serves no device slot: the device proxy is the work, not a correction.
+  AnyXboxX served no device slot. **Resolved by reusing TomBox**, not by writing a proxy: `tools/build_tombox.py`
+  compiles TomBox's `d3d12_xs` (64 exports, device proxy to the host D3D12), which `runtime/build/tombox` now serves
+  by default. `tests/test_tombox_native.py` gets a device from `D3D12XboxCreateDevice` (IID_ID3D12Device, WARP or GPU).
+  The same run checks W1 (`XMemVirtualAlloc` with `0x20402000` never returns NULL) and the W5 `DStorageGetFactory`
+  output, both through TomBox's `xmem` and `XCRDAPI`. Not in TomBox and still ours: `xgameruntime`, `kernelx`,
+  `anyxboxx_tls`; and the xmem export `XMemGetAllocationHooks`, which TomBox lacks (no import of it was found in the
+  title's static analysis; to propose upstream).
 - **W6.** Not done. Slots 131 and 132 belong to a console command list, which AnyXboxX does not have; the list
   proxy (Leonida #7076) comes first. When it exists, these slots must log their arguments and return `E_NOTIMPL`
   (the title ignores their results), never 0.
