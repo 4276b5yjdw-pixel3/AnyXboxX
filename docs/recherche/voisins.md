@@ -126,3 +126,7 @@ VBR de plus de 64 bits ; trois modules génériques s'ajoutent (`call_evidence.p
 Tout ce qui est propre à un jeu : formats d'archives et de ressources (RPF, AWC, TTPF, XBCH,
 FSSM), noms de fichiers, hachages, inventaires de shaders, modules en ligne de jeux précis,
 cas Bink et FFX de Xbox2Windows. AnyXboxX reste une plateforme générique (règle 1 d'AGENTS.md).
+
+## Dépôt complet de Leonida (23 novembre)
+
+Le dépôt entier de Leonida est désormais un sous-module, `third_party/leonida-src`, suivi par le workflow comme TomBox. Voir [leonida-gta6.md](leonida-gta6.md) : ce qu'il apporte pour faire tourner le build 1.0.2.1 et la comparaison des fonctions GDK des deux runtimes.

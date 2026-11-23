@@ -54,6 +54,9 @@ VOISINS = (
     Voisin("Xbox2Windows", "R0Y00/Xbox2Windows", "third_party/xbox2windows",
            portes=("src/era_heap.cpp", "src/era_heap.h", "src/era_query.cpp", "tools/bc7_blocks.py",
                    "tools/bc7_tiles.py")),
+    # Dépôt complet (runtime gta6rt, shims GDK, outils de ressources, recherches) pour faire tourner le build
+    # Xbox 1.0.2.1 ; les copies de third_party/leonida restent celles qu'appelle PrototypeScarlett.
+    Voisin("Leonida (dépôt complet)", "ItsNotRexed/Leonida", "third_party/leonida-src", sous_module=True),
 )
 
 
