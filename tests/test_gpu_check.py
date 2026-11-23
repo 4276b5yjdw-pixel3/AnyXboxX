@@ -2,11 +2,15 @@
 import os
 import re
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
 from emu import rdna2_gpu
 
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / "tools" / "Run-GpuCheck.ps1"
 UNKNOWN = "aucune-carte-de-ce-nom-70"
 MINIMAL_HLSL = "RWByteAddressBuffer memory : register(u0);\n[numthreads(1, 1, 1)] void main() { memory.Store(0, 1u); }\n"
 gpu = pytest.mark.skipif(not rdna2_gpu.available(), reason="dxc ou anyxboxx_gpu_run.exe absent")
@@ -48,3 +52,49 @@ def test_part_of_a_name_in_any_case_picks_that_adapter(runtime_dir):
     chosen = describe(runtime_dir, name[len(name) // 3:].lower().strip())
     assert chosen.returncode == 0, chosen.stderr
     assert chosen.stdout.splitlines()[0] == default.stdout.splitlines()[0]
+
+
+def check(arguments, environment=None):
+    """Lance tools/Run-GpuCheck.ps1 avec `arguments` (sortie décodée en UTF-8)."""
+    return subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SCRIPT), *arguments],
+                          capture_output=True, encoding="utf-8", errors="replace", cwd=ROOT,
+                          env=environment or os.environ.copy(), timeout=600)
+
+
+@gpu
+def test_warp_report_lists_every_test_and_ignores_a_stale_variable(runtime_dir, tmp_path):
+    report = tmp_path / "rapport.md"
+    result = check(["-Backend", "warp", "-ReportPath", str(report), "-Python", sys.executable],
+                   {**os.environ, "ANYXBOXX_GPU": UNKNOWN})
+    assert result.returncode == 0, result.stdout + result.stderr
+    text = report.read_text(encoding="utf-8")
+    assert "- Adaptateur : Microsoft Basic Render Driver (vendor=1414 device=" in text
+    assert "| Test | Résultat |" in text
+    assert "| test_rdna2_hlsl::test_compute_shader_matches_the_interpreter | PASS |" in text
+    assert "| FAIL |" not in text
+
+
+@gpu
+def test_default_hardware_run_clears_a_stale_variable(runtime_dir, tmp_path):
+    report = tmp_path / "rapport.md"
+    result = check(["-ReportPath", str(report), "-Python", sys.executable], {**os.environ, "ANYXBOXX_GPU": UNKNOWN})
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Backend : hardware" in report.read_text(encoding="utf-8")
+
+
+def test_tests_that_cannot_run_are_a_failure_not_a_report_of_passes(runtime_dir, tmp_path):
+    fake = tmp_path / "python.cmd"
+    fake.write_text("@exit /b 4\n", encoding="ascii")
+    report = tmp_path / "rapport.md"
+    result = check(["-Backend", "warp", "-ReportPath", str(report), "-Python", str(fake)])
+    assert result.returncode == 1
+    assert "Les tests n'ont pas pu tourner (code 4)" in result.stdout
+    assert not report.exists()
+
+
+def test_missing_runtime_stops_before_any_report(tmp_path):
+    report = tmp_path / "rapport.md"
+    result = check(["-Backend", "warp", "-ReportPath", str(report)], {**os.environ, "ANYXBOXX_RUNTIME": str(tmp_path)})
+    assert result.returncode == 1
+    assert "cmake -S runtime -B runtime/build" in result.stdout + result.stderr
+    assert not report.exists()
