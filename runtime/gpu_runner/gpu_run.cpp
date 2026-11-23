@@ -1,5 +1,6 @@
 // anyxboxx_gpu_run.exe <shader.dxil> <mémoire.bin> [groupes]
 // anyxboxx_gpu_run.exe --draw <vs.dxil> <ps.dxil|-> <mémoire.bin> <sommets> <largeur> <hauteur>
+// anyxboxx_gpu_run.exe --adaptateur
 //
 // Exécute sur le GPU du PC un programme produit par le recompilateur RDNA 2 → HLSL, avec un seul
 // buffer brut en u0 (visible de tous les étages) : la mémoire du programme. Le fichier mémoire est
@@ -8,6 +9,8 @@
 // - Dessin : DrawInstanced(sommets) d'une liste de triangles (emu/rdna2_hlsl_graphics.py), sans
 //   input layout (le VS lit SV_VertexID), cible de rendu R32G32B32A32_FLOAT si un PS est donné.
 // Sans GPU D3D12 (ou avec ANYXBOXX_GPU=warp), le rendu logiciel WARP de Windows est utilisé.
+// ANYXBOXX_GPU=<partie du nom> : l'adaptateur matériel dont le nom la contient (aucun : échec, jamais WARP).
+// --adaptateur décrit l'adaptateur choisi (adapter.cpp).
 #include <windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -17,6 +20,8 @@
 #include <cstdio>
 #include <cstring>
 #include <vector>
+
+#include "adapter.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -53,6 +58,11 @@ bool WarpRequested() {
 }
 
 ComPtr<ID3D12Device> CreateDevice(const char** kind) {
+  std::wstring filter;
+  if (NamedAdapterRequested(filter)) {
+    *kind = "matériel";
+    return CreateNamedDevice(filter);
+  }
   ComPtr<ID3D12Device> device;
   if (!WarpRequested() && SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)))) {
     *kind = "matériel";
@@ -304,11 +314,13 @@ int RunDraw(int argc, wchar_t** argv) {
 }  // namespace
 
 int wmain(int argc, wchar_t** argv) {
+  if (argc >= 2 && std::wcscmp(argv[1], L"--adaptateur") == 0) return PrintAdapter();
   if (argc >= 2 && std::wcscmp(argv[1], L"--draw") == 0) return RunDraw(argc, argv);
   if (argc < 3) {
     std::fwprintf(stderr, L"Usage : anyxboxx_gpu_run.exe <shader.dxil> <mémoire.bin> [groupes]\n"
                           L"        anyxboxx_gpu_run.exe --draw <vs.dxil> <ps.dxil|-> <mémoire.bin> <sommets> "
-                          L"<largeur> <hauteur>\n");
+                          L"<largeur> <hauteur>\n"
+                          L"        anyxboxx_gpu_run.exe --adaptateur\n");
     return 2;
   }
   return RunCompute(argc, argv);
