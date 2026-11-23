@@ -50,3 +50,19 @@ test("un GPU ou un CPU inconnu est une erreur explicite", () => {
   assert.throws(() => estimate({ gpuKey: "voodoo 2" }), /unknown GPU/);
   assert.throws(() => estimate({ gpuKey: "rtx 3070", cpuLabel: "Pentium 4" }), /unknown CPU/);
 });
+
+test("recherche tapée : nom exact, fragment unique, fragment qui termine le nom", async () => {
+  const { matchCpu, matchGpu } = await import("./estimate.js");
+  assert.equal(matchCpu("13700k").label, "Core i7-13700K");
+  assert.equal(matchCpu("i7 13700K").label, "Core i7-13700K");
+  assert.equal(matchCpu("7800x3d").label, "Ryzen 7 7800X3D");
+  assert.equal(matchCpu("Ryzen 7").label, null);
+  assert.ok(matchCpu("Ryzen 7").candidates > 1);
+  assert.equal(matchGpu("GeForce RTX 4070 Super").key, "rtx 4070 super");
+  assert.equal(matchGpu("4070").key, "rtx 4070");
+  assert.equal(matchGpu("4070 ti").key, "rtx 4070 ti");
+  assert.equal(matchGpu("6700 xt").key, "rx 6700 xt");
+  assert.equal(matchGpu("b580").key, "arc b580");
+  assert.deepEqual(matchGpu(""), { key: null, label: null, candidates: 0 });
+  assert.equal(matchGpu("voodoo").candidates, 0);
+});
