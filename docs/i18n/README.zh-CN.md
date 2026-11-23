@@ -4,6 +4,13 @@
 
 AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unicorn 执行其代码。主机的系统函数在原生模式下由 C++ 运行时替代，在隔离的虚拟机中由 Python 代码替代（高级别模拟，与 WinDurango 或 Wine 类似）。该程序会表现为一台 Xbox Series X：`XSystemGetDeviceType` 返回 `XboxScarlettAnaconda`。
 
+## 目标与现状
+
+AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，版本 1.0.2.1**。只翻译这款游戏需要的部分（它导入的系统函数、它使用的着色器和 Direct3D 12.x 方法）。待这部分翻译完成后，再尝试其他游戏。本项目与面向同一版本的 [Leonida](https://github.com/ItsNotRexed/Leonida) 合作。
+
+> [!IMPORTANT]
+> **游戏目前无法游玩。** 所研究的游戏包中缺少可执行文件（`game_scarlett_master.exe`），因此游戏本身从未启动过。即使拿到可执行文件，也至少还需要几周的工作，游戏才能达到最基本的可玩状态。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。
+
 ## 翻译进展
 
 ![进展地图：每个函数一格，已翻译则为绿色](../images/carte-avancee.svg)

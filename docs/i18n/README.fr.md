@@ -6,6 +6,13 @@ AnyXboxX charge des exécutables Xbox GDK (format PE32+ x86-64) et exécute leur
 
 Pour poursuivre l'analyse du paquet Scarlett étudié, voir le [plan de compatibilité et ses limites](../recherche/plan-compatibilite-paquet.md).
 
+## Cible et état
+
+AnyXboxX est spécialisé sur un seul build : **Grand Theft Auto VI pour Xbox Series, version 1.0.2.1**. Seul ce dont ce jeu a besoin est traduit (les fonctions système qu'il importe, les shaders et les méthodes Direct3D 12.x qu'il utilise). D'autres jeux seront essayés quand cette traduction sera complète. Le projet travaille avec [Leonida](https://github.com/ItsNotRexed/Leonida), qui vise le même build.
+
+> [!IMPORTANT]
+> **Le jeu n'est pas jouable.** Son exécutable (`game_scarlett_master.exe`) manque dans le paquet étudié : le jeu lui-même n'a donc jamais été lancé. Une fois l'exécutable disponible, il faudra encore au moins quelques semaines de travail avant que le jeu soit un minimum jouable. Ce dépôt ne contient ni fichier du jeu, ni clé, ni exécutable, et n'explique pas comment les obtenir.
+
 ## Avancée de la traduction
 
 ![Carte de l'avancée : une case par fonction, verte si traduite](../images/carte-avancee.svg)
