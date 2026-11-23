@@ -2,10 +2,15 @@
 // par le titre avant la création du périphérique (sans cet export, le titre s'arrête en
 // « UNIMPLEMENTED d3d12_xs.dll!D3D12ConfigureVirtualMemoryX »).
 //
-// Structure de 32 octets : quatre mots de 32 bits (drapeaux, pages de la table, octets à
-// préserver pour le tampon d'images, réservé), puis deux mots de 64 bits de sortie. Un pointeur
-// nul est refusé ; sinon les sorties sont remises à zéro, comme TomBox. Les valeurs reçues sont
-// tracées mais ne règlent encore aucune table : la mémoire graphique passe par xmem.dll.
+// Disposition de la structure, d'après TomBox (crates/compat/d3d12_xs/src/vmem_x.rs, struct
+// VirtualMemoryConfiguration) : flags, page_table_pages, frame_buffer_preserve_bytes, reserved
+// (quatre mots de 32 bits), output0 et output1 (deux mots de 64 bits).
+//
+// Sur l'exécutable réel, le titre ne remplit que le mot à +4 (page_table_pages) et ne teste que
+// le résultat ; les pointeurs passés dans le cadre de pile de l'appelant ne garantissent pas
+// 32 octets. Mesure de Leonida (runtime/shims/d3d12_xs.cpp, lignes 221-223, GitHub Leonida
+// #6750) : leur shim n'écrit rien et rend S_OK. Ici aussi : on ne lit que flags et
+// page_table_pages (tracés), on n'écrit aucune sortie. Un pointeur nul est refusé.
 #include <windows.h>
 
 #include <cstdint>
@@ -14,25 +19,19 @@
 
 namespace {
 
-struct VirtualMemoryConfiguration {
+struct VirtualMemoryConfigurationHead {
   std::uint32_t flags;
   std::uint32_t page_table_pages;
-  std::uint32_t frame_buffer_preserve_bytes;
-  std::uint32_t reserved;
-  std::uint64_t output0;
-  std::uint64_t output1;
 };
 
 }  // namespace
 
 extern "C" {
 
-HRESULT WINAPI D3D12ConfigureVirtualMemoryX(VirtualMemoryConfiguration* description) {
+HRESULT WINAPI D3D12ConfigureVirtualMemoryX(VirtualMemoryConfigurationHead* description) {
   if (description == nullptr) return E_INVALIDARG;
-  anyxboxx::Log("[d3d12_xs] D3D12ConfigureVirtualMemoryX : drapeaux %u, pages %u, tampon %u",
-                description->flags, description->page_table_pages, description->frame_buffer_preserve_bytes);
-  description->output0 = 0;
-  description->output1 = 0;
+  anyxboxx::Log("[d3d12_xs] D3D12ConfigureVirtualMemoryX : drapeaux %u, pages %u",
+                description->flags, description->page_table_pages);
   return S_OK;
 }
 
