@@ -33,20 +33,20 @@ function fillSelects(detected, threads, ramGb) {
   $("ram").value = String(RAM_CHOICES.find((gb) => gb >= (ramGb || 16)) || 16);
 }
 
+const item = (texte) => Object.assign(document.createElement("li"), { textContent: texte });
+
 function render(threads) {
   const gpuKey = $("gpu").value;
-  if (!gpuKey) {
-    $("result").hidden = true;
-    return;
-  }
+  $("empty").hidden = Boolean(gpuKey);
+  $("answer").hidden = !gpuKey;
+  if (!gpuKey) return;
   const r = estimate({
     gpuKey, cpuLabel: $("cpu").value || null, threads, ramGb: Number($("ram").value), laptop: $("laptop").checked,
   });
-  $("result").hidden = false;
   $("fps").textContent = r.fpsLow === r.fpsHigh ? `~${r.fpsLow} fps` : `~${r.fpsLow}–${r.fpsHigh} fps`;
   $("quality").textContent = r.quality;
   $("bottleneck").textContent = r.bottleneck ? `Limited by your ${r.bottleneck}.` : "";
-  $("notes").replaceChildren(...r.notes.map((note) => Object.assign(document.createElement("li"), { textContent: note })));
+  $("notes").replaceChildren(...r.notes.map(item));
 }
 
 function main() {
@@ -54,11 +54,11 @@ function main() {
   const detected = detectGpu(renderer);
   const threads = navigator.hardwareConcurrency || null;
   const ramGb = navigator.deviceMemory || null;
-  $("detected").textContent = [
+  $("detected").replaceChildren(...[
     `Graphics: ${detected ? detected.label + (detected.laptop ? " (laptop)" : "") : renderer || "not revealed by this browser"}`,
     `CPU threads: ${threads ?? "not revealed"}`,
     `RAM: ${ramGb ? `about ${ramGb} GB (browsers round this value, check below)` : "not revealed"}`,
-  ].join(" · ");
+  ].map(item));
   fillSelects(detected, threads, ramGb);
   for (const id of ["gpu", "cpu", "ram", "laptop"]) $(id).addEventListener("change", () => render(threads));
   render(threads);
