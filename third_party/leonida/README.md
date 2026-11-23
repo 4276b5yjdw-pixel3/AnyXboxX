@@ -1,7 +1,7 @@
 # Leonida : traducteur RDNA 2 → SPIR-V (copie)
 
 Fichiers copiés **sans modification** depuis [ItsNotRexed/Leonida](https://github.com/ItsNotRexed/Leonida),
-dossier `tools/`, commit `7b7d73f890` (23 novembre 2026, 4 h). Licence : GNU GPL 3.0 (fichier `LICENSE`,
+dossier `tools/`, commit `1cc6e3c121` (23 novembre 2026, 15 h). Licence : GNU GPL 3.0 (fichier `LICENSE`,
 la même que celle d'AnyXboxX). Tout le mérite de ce code revient aux auteurs de Leonida.
 
 | Fichier | Rôle |
