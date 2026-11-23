@@ -11,6 +11,8 @@ AnyXboxX は 1 つのビルドに特化しています: **Xbox Series 版 Grand 
 > [!IMPORTANT]
 > **ゲームはプレイできません。** 調査したパッケージには実行ファイル（`game_scarlett_master.exe`）が含まれていないため、ゲーム本体は一度も起動していません。実行ファイルが入手できても、最低限プレイできるようになるまで少なくとも数週間の作業が必要です。このリポジトリにはゲームファイル、鍵、実行ファイルは含まれず、その入手方法も説明しません。
 
+オンラインの状況ページ（必要なディスク容量を含む）: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**。
+
 ## 変換の進捗
 
 ![進捗マップ：関数ごとに 1 マス、変換済みなら緑](../images/carte-avancee.svg)

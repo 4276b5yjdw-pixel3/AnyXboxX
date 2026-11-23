@@ -11,6 +11,8 @@ AnyXboxX ist auf einen einzigen Build spezialisiert: **Grand Theft Auto VI für 
 > [!IMPORTANT]
 > **Das Spiel ist nicht spielbar.** Seine ausführbare Datei (`game_scarlett_master.exe`) fehlt im untersuchten Paket, das Spiel selbst wurde also noch nie gestartet. Sobald eine ausführbare Datei verfügbar ist, sind noch mindestens einige Wochen Arbeit nötig, bevor das Spiel auch nur minimal spielbar ist. Dieses Repository enthält keine Spieldateien, Schlüssel oder ausführbaren Dateien und erklärt nicht, wie man sie erhält.
 
+Statusseite online, mit dem benötigten Speicherplatz: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
+
 ## Fortschritt der Übersetzung
 
 ![Fortschrittskarte: ein Feld pro Funktion, grün, wenn übersetzt](../images/carte-avancee.svg)

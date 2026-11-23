@@ -13,6 +13,8 @@ AnyXboxX est spécialisé sur un seul build : **Grand Theft Auto VI pour Xbox Se
 > [!IMPORTANT]
 > **Le jeu n'est pas jouable.** Son exécutable (`game_scarlett_master.exe`) manque dans le paquet étudié : le jeu lui-même n'a donc jamais été lancé. Une fois l'exécutable disponible, il faudra encore au moins quelques semaines de travail avant que le jeu soit un minimum jouable. Ce dépôt ne contient ni fichier du jeu, ni clé, ni exécutable, et n'explique pas comment les obtenir.
 
+Page d'état en ligne, avec l'espace disque à prévoir : **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
+
 ## Avancée de la traduction
 
 ![Carte de l'avancée : une case par fonction, verte si traduite](../images/carte-avancee.svg)

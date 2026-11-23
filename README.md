@@ -11,6 +11,8 @@ AnyXboxX is specialised on one build: **Grand Theft Auto VI for Xbox Series, ver
 > [!IMPORTANT]
 > **The game is not playable.** Its executable (`game_scarlett_master.exe`) is missing from the package studied, so the game itself has never been started. Once an executable is available, expect at least a few weeks of work before the game is even minimally playable. This repository contains no game files, keys or executable, and does not explain how to get them.
 
+Live status page, with the disk space to plan for: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
+
 ## Translation progress
 
 ![Progress map: one cell per function, green if translated](docs/images/carte-avancee.svg)

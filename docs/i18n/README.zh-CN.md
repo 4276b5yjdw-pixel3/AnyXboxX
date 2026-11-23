@@ -11,6 +11,8 @@ AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，�
 > [!IMPORTANT]
 > **游戏目前无法游玩。** 所研究的游戏包中缺少可执行文件（`game_scarlett_master.exe`），因此游戏本身从未启动过。即使拿到可执行文件，也至少还需要几周的工作，游戏才能达到最基本的可玩状态。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。
 
+在线状态页面（含所需磁盘空间）：**[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**。
+
 ## 翻译进展
 
 ![进展地图：每个函数一格，已翻译则为绿色](../images/carte-avancee.svg)

@@ -11,6 +11,8 @@ AnyXboxX está especializado en una sola versión: **Grand Theft Auto VI para Xb
 > [!IMPORTANT]
 > **El juego no es jugable.** Su ejecutable (`game_scarlett_master.exe`) falta en el paquete estudiado, así que el juego en sí nunca se ha iniciado. Cuando haya un ejecutable disponible, harán falta al menos unas semanas de trabajo antes de que el juego sea mínimamente jugable. Este repositorio no contiene archivos del juego, claves ni ejecutables, y no explica cómo obtenerlos.
 
+Página de estado en línea, con el espacio en disco necesario: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
+
 ## Avance de la traducción
 
 ![Mapa del avance: una casilla por función, verde si está traducida](../images/carte-avancee.svg)
