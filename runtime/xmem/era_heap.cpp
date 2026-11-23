@@ -5,7 +5,8 @@
 //
 // Tas (type 0) : CRT à l'alignement demandé, ou réservation propre au-delà d'une page.
 // Graphique (types 1 à 6) : région VirtualAlloc séparée, mémoire CPU ordinaire.
-// Physique (types 7 à 9) : pages physiques du titre, non modélisées ici : refus tracé.
+// Physique (types 7 à 9) : mémoire de la machine, servie comme des pages committées (le titre
+// l'utilise comme de la RAM mappée) ; un alignement au-delà de la granularité est refusé tracé.
 #include "era_heap.h"
 
 #include <windows.h>
@@ -16,6 +17,7 @@
 #include <cstring>
 #include <limits>
 
+#include "aligned_pages.h"
 #include "trace.h"
 
 namespace anyxboxx::era {
@@ -31,7 +33,6 @@ constexpr std::uint32_t kMinimumAlignmentLog2 = 4;  // ERA : 16 octets au moins
 constexpr std::size_t kSmallAlignment = 64;
 constexpr std::size_t kPageAlignment = 4096;
 constexpr std::size_t kPageBytes[] = {std::size_t{4} << 10, std::size_t{64} << 10, std::size_t{4} << 20};
-constexpr int kPlacementAttempts = 8;
 
 struct PageGeometry {
   std::size_t page;
@@ -57,16 +58,7 @@ Block Refuse(DWORD error) noexcept {
 void* AllocatePages(std::size_t bytes, std::size_t alignment) noexcept {
   const std::size_t page = Geometry().page;
   const std::size_t committed = (bytes + page - 1) & ~(page - 1);
-  for (int attempt = 0; attempt < kPlacementAttempts; ++attempt) {
-    void* probe = VirtualAlloc(nullptr, committed + alignment, MEM_RESERVE, PAGE_NOACCESS);
-    if (probe == nullptr) return nullptr;
-    const auto aligned = (reinterpret_cast<std::uintptr_t>(probe) + alignment - 1) & ~(alignment - 1);
-    VirtualFree(probe, 0, MEM_RELEASE);
-    // Un autre thread peut prendre la plage entre la libération et cet appel : on réessaie.
-    void* block = VirtualAlloc(reinterpret_cast<void*>(aligned), committed, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    if (block != nullptr) return block;
-  }
-  return nullptr;
+  return pages::AllocateAligned(committed, alignment, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 }
 
 Block AllocateHeap(std::size_t bytes, std::size_t requested) noexcept {
@@ -80,6 +72,17 @@ Block AllocateHeap(std::size_t bytes, std::size_t requested) noexcept {
   if (block == nullptr) return Refuse(ERROR_NOT_ENOUGH_MEMORY);
   std::memset(block, 0, bytes);
   return {block, Placement::kHeap};
+}
+
+// Mémoire physique du titre : pages committées de la machine, à l'alignement demandé tant
+// qu'il tient dans la granularité (64 Kio), refusé et tracé au-delà.
+Block AllocatePhysical(std::size_t bytes, std::size_t alignment) noexcept {
+  if (alignment > Geometry().granularity) {
+    anyxboxx::Log("[xmem] XMemAlloc : mémoire physique, alignement %zu au-delà de la granularité non tenu", alignment);
+    return Refuse(ERROR_NOT_SUPPORTED);
+  }
+  void* block = AllocatePages(bytes, alignment);
+  return block != nullptr ? Block{block, Placement::kPages} : Refuse(ERROR_NOT_ENOUGH_MEMORY);
 }
 
 Block AllocateGraphics(std::size_t bytes, const Fields& fields, std::size_t alignment) noexcept {
@@ -119,15 +122,13 @@ Block Allocate(std::size_t bytes, std::uint64_t attributes) noexcept {
     anyxboxx::Log("[xmem] XMemAlloc : attributs 0x%llx non définis", attributes);
     return Refuse(ERROR_INVALID_PARAMETER);
   }
-  if (fields.memory_type > kGraphicsLast) {
-    anyxboxx::Log("[xmem] XMemAlloc : mémoire physique (type %u) non émulée", fields.memory_type);
-    return Refuse(ERROR_NOT_SUPPORTED);
-  }
   bytes = std::max<std::size_t>(bytes, 1);  // taille nulle : bloc unique d'un octet, comme avant
   const std::size_t alignment = std::size_t{1} << std::max(kMinimumAlignmentLog2, fields.alignment);
   const auto limit = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
   if (bytes > limit - alignment - sizeof(void*)) return Refuse(ERROR_NOT_ENOUGH_MEMORY);
-  return fields.memory_type == kHeap ? AllocateHeap(bytes, alignment) : AllocateGraphics(bytes, fields, alignment);
+  if (fields.memory_type == kHeap) return AllocateHeap(bytes, alignment);
+  if (fields.memory_type > kGraphicsLast) return AllocatePhysical(bytes, alignment);
+  return AllocateGraphics(bytes, fields, alignment);
 }
 
 void Release(const Block& block) noexcept {

@@ -9,3 +9,10 @@ EXPORTS
   XMemVirtualQuery
   XMemGetWorkingSetStatistics
   AnyXboxX_DecodeAllocAttributes
+  XMemVirtualAlloc
+  XMemAllocatePhysicalPages
+  XMemFreePhysicalPages
+  XMemMapPhysicalPages
+  XMemMapPhysicalPagesScatter
+  XMemIsToolsMemAvailable
+  XMemTransferMemory
