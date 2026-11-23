@@ -36,7 +36,7 @@ def test_adapter_flag_describes_warp(runtime_dir):
     result = describe(runtime_dir, "warp")
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
-    assert re.fullmatch(r"adapter=Microsoft Basic Render Driver vendor=1414 device=[0-9a-f]{4}", lines[0])
+    assert re.fullmatch(r"adapter=.+ vendor=1414 device=[0-9a-f]{4}", lines[0])
     assert re.fullmatch(r"driver=(\d+\.\d+\.\d+\.\d+|inconnu)", lines[1])
     assert lines[2] == "backend=warp"
     assert re.fullmatch(r"native_lane_range=\d+-\d+", lines[3])
@@ -68,7 +68,8 @@ def test_warp_report_lists_every_test_and_ignores_a_stale_variable(runtime_dir, 
                    {**os.environ, "ANYXBOXX_GPU": UNKNOWN})
     assert result.returncode == 0, result.stdout + result.stderr
     text = report.read_text(encoding="utf-8")
-    assert "- Adaptateur : Microsoft Basic Render Driver (vendor=1414 device=" in text
+    assert re.search(r"^- Adaptateur : .+ \(vendor=1414 device=[0-9a-f]{4}\)$", text, re.M)
+    assert "Backend : warp" in text
     assert "| Test | Résultat |" in text
     assert "| test_rdna2_hlsl::test_compute_shader_matches_the_interpreter | PASS |" in text
     assert "| FAIL |" not in text
@@ -79,7 +80,8 @@ def test_default_hardware_run_clears_a_stale_variable(runtime_dir, tmp_path):
     report = tmp_path / "rapport.md"
     result = check(["-ReportPath", str(report), "-Python", sys.executable], {**os.environ, "ANYXBOXX_GPU": UNKNOWN})
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "Backend : hardware" in report.read_text(encoding="utf-8")
+    default = re.match(r"adapter=(.+) vendor=", describe(runtime_dir, None).stdout).group(1)
+    assert f"- Adaptateur : {default} (vendor=" in report.read_text(encoding="utf-8")
 
 
 def test_tests_that_cannot_run_are_a_failure_not_a_report_of_passes(runtime_dir, tmp_path):
@@ -97,4 +99,29 @@ def test_missing_runtime_stops_before_any_report(tmp_path):
     result = check(["-Backend", "warp", "-ReportPath", str(report)], {**os.environ, "ANYXBOXX_RUNTIME": str(tmp_path)})
     assert result.returncode == 1
     assert "cmake -S runtime -B runtime/build" in result.stdout + result.stderr
+    assert not report.exists()
+
+
+@gpu
+def test_report_names_the_backend_that_actually_ran(runtime_dir, tmp_path):
+    report = tmp_path / "rapport.md"
+    result = check(["-Adapter", "warp", "-ReportPath", str(report), "-Python", sys.executable])
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Backend : warp" in report.read_text(encoding="utf-8")
+
+
+def test_missing_dxc_stops_before_any_report(runtime_dir, tmp_path):
+    report = tmp_path / "rapport.md"
+    result = check(["-Backend", "warp", "-ReportPath", str(report), "-Python", sys.executable],
+                   {**os.environ, "ANYXBOXX_DXC": str(tmp_path / "absent" / "dxc.exe")})
+    assert result.returncode == 1
+    assert "ANYXBOXX_DXC" in result.stdout
+    assert not report.exists()
+
+
+def test_a_name_that_matches_no_adapter_stops_before_any_report(runtime_dir, tmp_path):
+    report = tmp_path / "rapport.md"
+    result = check(["-Adapter", UNKNOWN, "-ReportPath", str(report), "-Python", sys.executable])
+    assert result.returncode == 1
+    assert UNKNOWN in result.stdout + result.stderr
     assert not report.exists()

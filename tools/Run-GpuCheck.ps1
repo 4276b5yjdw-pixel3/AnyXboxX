@@ -7,7 +7,8 @@ Lance les tests GPU d'AnyXboxX sur un adaptateur et écrit un rapport Markdown p
 L'adaptateur est celui que choisit anyxboxx_gpu_run.exe : par défaut le premier adaptateur de DXGI,
 -Adapter <partie du nom> pour une autre carte, -Backend warp pour le rendu logiciel de Windows.
 Le rapport (par défaut %LOCALAPPDATA%\AnyXboxX\banc-gpu\rapport-<carte>.md) se colle dans le fil des rapports GPU.
-Il faut le runtime C++ compilé (runtime/build) et l'environnement Python de tests (.venv).
+Il faut le runtime C++ compilé (runtime/build), dxc du SDK Windows et l'environnement Python de tests (.venv).
+Un nom d'adaptateur qui ne correspond à aucune carte, ou dxc absent : arrêt sans rapport (code 1).
 
 .EXAMPLE
 .\tools\Run-GpuCheck.ps1
@@ -81,6 +82,10 @@ if (-not $Python) {
 $gpu = if ($Backend -eq 'warp') { 'warp' } elseif ($Adapter) { $Adapter } else { '' }
 
 $description = Invoke-Tool -FilePath $runner -Arguments '--adaptateur' -Gpu $gpu -Timeout 60000
+if ($description.Code -ne 0) {
+    Get-Lines ($description.Err + "`n" + $description.Out) | Write-Output
+    exit 1
+}
 $fields = @{}
 foreach ($line in Get-Lines $description.Out) {
     if ($line -match '^adapter=(.+) vendor=([0-9a-f]+) device=([0-9a-f]+)$') {
@@ -88,6 +93,17 @@ foreach ($line in Get-Lines $description.Out) {
     } elseif ($line -match '^(\w+)=(.*)$') {
         $fields[$Matches[1]] = $Matches[2]
     }
+}
+
+# Même recherche que emu/rdna2_gpu.find_dxc : sans dxc, les tests GPU seraient seulement ignorés.
+$kits = if (${env:ProgramFiles(x86)}) { ${env:ProgramFiles(x86)} } else { 'C:\Program Files (x86)' }
+$dxc = if ($env:ANYXBOXX_DXC) { $env:ANYXBOXX_DXC } else {
+    Get-ChildItem -Path (Join-Path $kits 'Windows Kits\10\bin\10.*\x64\dxc.exe') -ErrorAction SilentlyContinue |
+        Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+}
+if (-not $dxc -or -not (Test-Path -LiteralPath $dxc -PathType Leaf)) {
+    Write-Output 'dxc absent : installe le SDK Windows 10.0.26100 (dxc.exe) ou définis ANYXBOXX_DXC'
+    exit 1
 }
 
 $junit = Join-Path ([IO.Path]::GetTempPath()) ('anyxboxx-banc-gpu-{0}.xml' -f [guid]::NewGuid())
@@ -133,19 +149,15 @@ $report.Add("## Rapport GPU d'AnyXboxX")
 $report.Add('')
 $report.Add("Commit : $(if ($commit) { $commit } else { 'inconnu' })")
 $report.Add("Windows : $($windows.CurrentBuildNumber).$($windows.UBR)")
-$report.Add("Backend : $Backend")
+$report.Add("Backend : $($fields.backend)")
 if ($Backend -eq 'hardware' -and $Adapter) { $report.Add("Filtre d'adaptateur : $Adapter") }
 $report.Add('')
 $report.Add('### Adaptateur')
 $report.Add('')
-if ($description.Code -eq 0) {
-    $report.Add("- Adaptateur : $($fields.adapter) (vendor=$($fields.vendor) device=$($fields.device))")
-    $report.Add("- Pilote : $($fields.driver)")
-    $report.Add("- Largeur de wave native : $($fields.native_lane_range)")
-    $report.Add("- Ray tracing (DXR) : $($fields.raytracing_tier)")
-} else {
-    $report.Add("- Adaptateur : introuvable ($(Get-Lines ($description.Err + "`n" + $description.Out) | Select-Object -First 1))")
-}
+$report.Add("- Adaptateur : $($fields.adapter) (vendor=$($fields.vendor) device=$($fields.device))")
+$report.Add("- Pilote : $($fields.driver)")
+$report.Add("- Largeur de wave native : $($fields.native_lane_range)")
+$report.Add("- Ray tracing (DXR) : $($fields.raytracing_tier)")
 $report.Add('')
 $report.Add('| Test | Résultat |')
 $report.Add('|---|---|')
@@ -167,5 +179,5 @@ $report.Add("Colle tout ce fichier en commentaire de $thread.")
 [IO.File]::WriteAllLines($ReportPath, $report, [Text.UTF8Encoding]::new($false))
 $report | Write-Output
 Write-Output "Rapport enregistré : $ReportPath"
-$failed = $description.Code -ne 0 -or @($cases | Where-Object Status -eq 'FAIL').Count -gt 0
+$failed = @($cases | Where-Object Status -eq 'FAIL').Count -gt 0
 exit $(if ($failed) { 1 } else { 0 })
