@@ -35,7 +35,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $gpuTests = 'tests/test_rdna2_hlsl.py', 'tests/test_rdna2_graphics.py', 'tests/test_rdna2_image.py'
-$thread = 'https://github.com/LooperSalty/AnyXboxX/issues/70'
+$thread = 'https://github.com/LooperSalty/AnyXboxX/issues/112'
 
 # Lance un programme sans fenêtre, ANYXBOXX_GPU fixé (ou retiré), sorties lues en UTF-8.
 function Invoke-Tool {
