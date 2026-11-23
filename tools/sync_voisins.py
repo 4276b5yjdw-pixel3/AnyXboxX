@@ -5,8 +5,8 @@
 Sans --appliquer : lecture seule, compare les versions épinglées aux dernières versions publiées.
 Avec --appliquer : avance le sous-module TomBox, recopie sans modification les fichiers déjà copiés dans
 third_party/leonida et third_party/xbox2windows depuis le dernier commit, et change les numéros de commit
-dans leurs README et dans THIRD_PARTY.md. Rien n'est fusionné : le workflow voisins.yml en fait une pull
-request que la CI teste. Bibliothèque standard seulement ; le code téléchargé n'est jamais exécuté.
+dans leurs README et dans THIRD_PARTY.md. Rien n'est fusionné : le workflow voisins.yml pousse la branche
+auto/voisins, que la CI teste ; un mainteneur la relit et ouvre la pull request. Bibliothèque standard seulement ; le code téléchargé n'est jamais exécuté.
 
 Un voisin n'est pas mis à jour (et le rapport le dit) si sa licence a changé ou si un fichier copié a
 disparu en amont. Les fichiers portés à la main (Rust, C++) ne sont jamais touchés : le rapport signale
