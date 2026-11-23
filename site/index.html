@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can it run GTA VI? · AnyXboxX</title>
+<meta name="description" content="Can Grand Theft Auto VI (Xbox Series, build 1.0.2.1) run on a PC yet? Status, disk space and progress of AnyXboxX and Leonida.">
+<style>
+:root {
+  --bg: #f6f5f2; --surface: #ffffff; --text: #1b1b1f; --muted: #5d5d66; --line: #e2e0da;
+  --no: #c2352b; --no-bg: #fbe9e7; --wip: #a86400; --wip-bg: #fdf1dc; --ok: #1f7a46; --ok-bg: #e3f3e9;
+  --accent: #6b2fbf;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111114; --surface: #1a1a1f; --text: #ececf1; --muted: #a2a2ad; --line: #2c2c34;
+    --no: #ff7a6e; --no-bg: #3a1714; --wip: #f2b24c; --wip-bg: #35260c; --ok: #5fd08f; --ok-bg: #12301f;
+    --accent: #b993ff;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 920px; margin: 0 auto; padding: 48px 16px 64px; }
+a { color: var(--accent); }
+h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); line-height: 1.2; margin: 0 0 8px; }
+h2 { font-size: 1.25rem; margin: 48px 0 12px; }
+.sub { color: var(--muted); margin: 0; }
+.verdict { margin: 28px 0 0; padding: 24px; border-radius: 14px; background: var(--no-bg);
+  border: 1px solid var(--no); }
+.verdict strong { display: block; font-size: clamp(2rem, 7vw, 3.2rem); line-height: 1.1; color: var(--no); }
+.verdict p { margin: 10px 0 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.card .num { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.card .what { font-weight: 600; margin-top: 2px; }
+.card p { color: var(--muted); margin: 6px 0 0; font-size: .93rem; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; overflow: hidden; }
+th, td { text-align: left; padding: 11px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+th { border-top: 0; color: var(--muted); font-weight: 600; font-size: .85rem; }
+.tag { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .82rem; font-weight: 600;
+  white-space: nowrap; }
+.no { color: var(--no); background: var(--no-bg); }
+.wip { color: var(--wip); background: var(--wip-bg); }
+.ok { color: var(--ok); background: var(--ok-bg); }
+ul { padding-left: 20px; }
+li { margin: 4px 0; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.links a { display: inline-block; padding: 10px 16px; border-radius: 10px; background: var(--surface);
+  border: 1px solid var(--line); text-decoration: none; font-weight: 600; }
+footer { margin-top: 56px; color: var(--muted); font-size: .85rem; }
+@media (max-width: 560px) { th:nth-child(3), td:nth-child(3) { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Can it run GTA VI on PC?</h1>
+  <p class="sub">Grand Theft Auto VI for Xbox Series, build 1.0.2.1 · status as of <time datetime="2026-11-23">23 November 2026</time></p>
+
+  <div class="verdict" id="verdict">
+    <strong>Not yet.</strong>
+    <p>The game's executable (<code>game_scarlett_master.exe</code>) is missing from the package studied, so the game itself has never been started, by AnyXboxX or by Leonida. Once an executable is available, expect <b>at least a few weeks of work</b> before the game is even minimally playable.</p>
+  </div>
+
+  <h2>Disk space to plan for</h2>
+  <div class="cards">
+    <div class="card" data-disk="run" data-gb="30"><div class="num">~30 GB</div><div class="what">To run the game</div>
+      <p>Leonida's <code>check</code>, <code>shaders</code> and <code>runtime</code> stages.</p></div>
+    <div class="card" data-disk="assets" data-gb="370"><div class="num">~370 GB</div><div class="what">Asset export (optional)</div>
+      <p>Only for the asset tools (models, textures, audio). Not needed to play.</p></div>
+    <div class="card" data-disk="full" data-gb="400"><div class="num">~400 GB</div><div class="what">Full build</div>
+      <p>All stages. Figures are as Windows Explorer shows them (GiB): 400 GiB is about 430 GB.</p></div>
+  </div>
+  <p class="sub" style="margin-top:10px">These are work files, <b>on top of the game package itself</b>, which the runtime reads in place. Source: the prerequisites in Leonida's README. Work folders can go on another drive.</p>
+
+  <h2>Where things stand</h2>
+  <table>
+    <thead><tr><th>Piece</th><th>Status</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>Game executable</td><td><span class="tag no">missing</span></td><td>Nothing can boot without it.</td></tr>
+      <tr><td>Booting, story mode</td><td><span class="tag no">no</span></td><td>Waits for the executable.</td></tr>
+      <tr><td>GPU shaders (RDNA 2 → SPIR-V)</td><td><span class="tag ok">done</span></td><td>All 26,503 of the game's shaders translate and pass <code>spirv-val</code> (Leonida).</td></tr>
+      <tr><td>Models, textures, audio</td><td><span class="tag ok">exported</span></td><td>Read from the player's own copy (Leonida); some texture formats still partial.</td></tr>
+      <tr><td>Xbox Direct3D 12 → Vulkan</td><td><span class="tag wip">in progress</span></td><td>Device, queues and resources work; ray tracing in progress (Leonida).</td></tr>
+      <tr><td>Console system functions (GDK)</td><td><span class="tag wip">in progress</span></td><td>AnyXboxX writes 210 of 396 GDK functions; Leonida has its own shims. Both projects share their work.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>What you will need, once it works</h2>
+  <ul>
+    <li>Your own copy of the Xbox Series package, version 1.0.2.1. Nothing here provides it or explains how to get it.</li>
+    <li>Windows 10 or 11, 64-bit, and a GPU with Vulkan.</li>
+    <li>The disk space above.</li>
+  </ul>
+
+  <h2>Follow the work</h2>
+  <div class="links">
+    <a href="leonida/progress.html">Leonida's live progress dashboard</a>
+    <a href="https://github.com/ItsNotRexed/Leonida">Leonida on GitHub</a>
+    <a href="https://github.com/LooperSalty/AnyXboxX">AnyXboxX on GitHub</a>
+  </div>
+  <p class="sub" style="margin-top:10px">The dashboard is generated by Leonida's own <code>tools/progress_dashboard.py</code> and rebuilt every six hours.</p>
+
+  <footer>
+    AnyXboxX and Leonida are open-source projects under the GPL 3.0. They contain no game files, keys or executables.
+    Not affiliated with or endorsed by Rockstar Games, Take-Two Interactive or Microsoft. Grand Theft Auto and Xbox are trademarks of their respective owners.
+  </footer>
+</main>
+</body>
+</html>
