@@ -2,6 +2,8 @@
 
 # First boot of the 1.0.2.1 executable: what we measured
 
+Continued the same evening, up to the frame loop, in [leonida-boot-2026-11-23.md](leonida-boot-2026-11-23.md).
+
 State as of 23 November 2026. This note files the research of that day on `game_scarlett_master.exe`
 (build 1.0.2.1) and on the first launches of that executable under Leonida's `gta6rt`. It supersedes the
 "executable absent" state of [first-executable-leads.md](first-executable-leads.md) (22 November).
