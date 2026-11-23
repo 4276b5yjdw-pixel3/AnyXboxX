@@ -200,6 +200,7 @@ def XSystemGetDeviceType(c):
 - [所研究 Scarlett 游戏包的逆向工程笔记](../research/package/README.md)（(由 Codex 撰写）：RDS5/ETPF 表、RPF 文件头、游戏包结构。
 - [TomBox 及其后续项目](../research/tombox.md)：Rust 编写的主机 DLL、Direct3D 12.x、RDNA 2 着色器翻译器，以及 AnyXboxX 复用的内容（MIT，已注明出处）。
 - [Xbox2Windows](../research/xbox2windows.md)：静态重编译研究；AnyXboxX 复用其 BC7 与 GFX10 平铺（MIT，已注明出处）。
+- [可执行文件 1.0.2.1 的首次启动](../research/first-boot-1021.md)：在 Leonida 的 `gta6rt` 下依次测得的停止点、处理这些问题的 Leonida 拉取请求，以及 AnyXboxX 的工作清单。
 
 ## 测试
 

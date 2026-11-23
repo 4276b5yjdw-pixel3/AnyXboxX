@@ -132,6 +132,8 @@ Bink and FFX cases of Xbox2Windows. AnyXboxX stays a generic platform (rule 1 of
 
 The whole Leonida repository is now a submodule, `third_party/leonida-src`, tracked by the workflow like TomBox. See [leonida-gta6.md](leonida-gta6.md): what it brings to run the 1.0.2.1 build and the comparison of the GDK functions of the two runtimes.
 
+First launches of the 1.0.2.1 executable under `gta6rt` (stops measured in order, the Leonida pull requests that treat them, and the resulting work list for AnyXboxX): [first-boot-1021.md](first-boot-1021.md).
+
 ## Licences changed upstream (23 November, afternoon)
 
 The workflow had refused two updates because a licence file changed. Reviewed by hand, they are compatible with GPL 3.0 or later:
