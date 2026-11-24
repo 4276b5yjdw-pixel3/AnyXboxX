@@ -2,6 +2,16 @@
 
 [English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · **Português** · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+> [!NOTE]
+> **Onde estamos (24/11/2026)**
+>
+> Medido em um i7-13700KF + RTX 4070 SUPER, Windows 11, com a integração estável do VIctory (`third_party/victory`, branch `anyxboxx/stable` do fork `LooperSalty/victory`) iniciada por `tools/lancer_victory.ps1 -GameDir <pasta do jogo>`:
+>
+> - ✅ O build 1.0.2.1 do Xbox Series de GTA VI **inicia** no PC: boot, tela de perfil, configurações da primeira execução, telas legais, carregamento, menu de pausa. Os menus rodam a 30 fps.
+> - ✅ Ele chega até **a primeira cena cinematográfica** (abertura da missão 1, créditos de abertura exibidos). Nenhum travamento da GPU em 5 minutos no mundo.
+> - ⛔ Limite por enquanto: a cena 3D continua preta (as passagens de iluminação ainda não foram traduzidas) e o mundo roda a 0,3 a 0,5 imagem por segundo, portanto não é jogável. Trabalho em andamento nos travamentos da GPU do branch experimental (`anyxboxx/essai`) e na iluminação.
+> - Requisitos: a sua própria cópia do jogo, uma GPU NVIDIA ou AMD com SM 6.6 e mesh shaders, Rust. Nenhum arquivo do jogo neste repositório.
+
 O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o código deles com o Unicorn. As funções de sistema do console são substituídas por um runtime C++ em modo nativo e por código Python na máquina isolada (emulação de alto nível, como o WinDurango ou o Wine). O programa se apresenta como um Xbox Series X: `XSystemGetDeviceType` retorna `XboxScarlettAnaconda`.
 
 ## Foco e estado
@@ -9,7 +19,7 @@ O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o cód
 O AnyXboxX é especializado em um único build: **Grand Theft Auto VI para Xbox Series, versão 1.0.2.1**. Só é traduzido o que este jogo precisa (as funções de sistema que ele importa, os shaders e os métodos do Direct3D 12.x que ele usa). Outros jogos serão testados quando essa tradução estiver completa. O projeto se apoia no [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou posterior), que mira o mesmo build: nossa integração do VIctory mais 24 pull requests da comunidade é o submódulo `third_party/victory` (fork `LooperSalty/victory`, branch `anyxboxx/stable`). Obrigado a Marvisak e aos autores dessas pull requests, creditados um a um em [THIRD_PARTY.md](../../THIRD_PARTY.md).
 
 > [!IMPORTANT]
-> **O jogo não é jogável.** Via VIctory, o build 1.0.2.1 do Xbox Series agora chega à primeira cena cinematográfica (abertura da missão 1) na nossa máquina, mas a cena continua preta e a taxa é de 0,3 a 0,5 imagem por segundo no mundo. Este repositório não contém arquivos do jogo, chaves nem executáveis, e não explica como obtê-los.
+> **O jogo não é jogável.** Veja o quadro no topo desta página para saber o estado atual. Este repositório não contém arquivos do jogo, chaves nem executáveis, e não explica como obtê-los.
 
 Página de status online, com o espaço em disco necessário: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
 
