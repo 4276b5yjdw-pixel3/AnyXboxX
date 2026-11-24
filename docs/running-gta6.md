@@ -26,11 +26,11 @@ The world is reached and displayed. Nothing here comes from reading the game's c
 
 **Measured on `7b0f736` (maintainer, same machine, from the VIctory log of the run `victory-fork-7b0-relay.log`).** With `VICTORY_RELAY=2` and the launcher settings, pipeline cache already filled: world reached in about 1 min 25 s; 3.5 fps on the first frame of the world, then 4.5 fps after 2 min, about 4,975 draws per frame, 346 draws lost without a host pipeline; no device loss during about 2 min 40 s in the world, after which the maintainer closed the window. An earlier run of `7b0f736` without `VICTORY_RELAY`: 5.4 fps at about 3 min, no loss, window closed. The maintainer's opinion: "slightly better" than `d279e69`. Reference `d279e69`: 4.0 to 4.3 fps, about 4,580 draws, about 430 lost.
 
-**Known limits (stability).** The device loss after about 13 minutes was observed on `d279e69`; the rest of this paragraph describes that run. `7b0f736` fixes a device loss tied to wave64; its long-run stability is not yet measured by us (our longest run on it is about 3 minutes). The fork's issue #26 reports 21.5 minutes stable on an RTX 4060 Ti with `VICTORY_RELAY=2` (third-party report, not reproduced here). The second run on `d279e69` held about 13 minutes in the world (first draws at 19:07:27 UTC), then lost the GPU device at 19:20:35 UTC: "host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists", the last list being a compute shader (`c1488f485ad606fb`). Measured, from the VIctory log of the run; the cause is not known. Plan on a few minutes to about 13 minutes in the world before a device loss, and relaunch. The message names `VICTORY_LATE_WAIT=1` while the launcher sets `3`: the setting actually in force in that run is to be checked.
+**Known limits (stability).** The device loss after about 13 minutes was observed on `d279e69`; the rest of this paragraph describes that run. `7b0f736` fixes a device loss tied to wave64; its long-run stability is not yet measured by us (our longest run on it is about 3 minutes). The fork's issue #26 reports 21.5 minutes stable on an RTX 4060 Ti with `VICTORY_RELAY=2` (third-party report, not reproduced here). The second run on `d279e69` held about 13 minutes in the world (first draws at 19:07:27 UTC), then lost the GPU device at 19:20:35 UTC: "host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists", the last list being a compute shader (`c1488f485ad606fb`). Measured, from the VIctory log of the run; the cause is not known. Plan on a few minutes to about 13 minutes in the world before a device loss, and relaunch. The message names `VICTORY_LATE_WAIT=1` while the launcher sets `3`: the setting actually in force in that run is to be checked. Checked since (read statically in `crates/victory-gpu/src/host.rs`, `late()`, same code at `d279e69` and `7b0f736`): `3` was in force. Stage 3 includes stages 1 and 2, and the `(VICTORY_LATE_WAIT=1)` and `(VICTORY_LATE_WAIT=2)` tags in log lines name the stage a counter belongs to, not the value set.
 
 **First cold launch.** The first launch with an empty cache crashed at loading (pipeline compilation, then the game's internal crash tracked as VIctory #1464). The second launch, with the cache filled, held. If the first launch crashes, launch again.
 
-The settings of the successful run are now the defaults of `tools/lancer_victory.ps1` (table in the Run section). They need the `diag` build (`--profile diag --features diagnostics`). Pass `-NoTunedSettings` to turn them off.
+The settings of the successful run are now the defaults of `tools/lancer_victory.ps1` (table in the Run section), except five variables that the pinned source never reads and DRED, which is now opt-in (see Run). They need the `diag` build (`--profile diag --features diagnostics`). Pass `-NoTunedSettings` to turn them off.
 
 ## What you get today
 
@@ -137,16 +137,15 @@ The script sets the variables below (unless you pass `-NoTunedSettings`, which k
 | Variable | Value | Why |
 | --- | --- | --- |
 | `VICTORY_GAME_DIR` | your game folder | No `victory.toml` is needed. |
-| `VICTORY_CAPPED_DYNAMIC` | `262144` | NVIDIA caps the descriptor heap at 1,000,000 entries. With the default dynamic range, about 720 indirect draws per frame were dropped; with 262,144 slots they are not. |
-| `VICTORY_SHADER_LOOP_LIMIT` | `32` | Translated shader loops were almost endless; with a limit of 32 iterations the GPU is about 6 times faster. |
-| `VICTORY_RT_MISS` | `1` | Every ray misses (ray-tracing diagnostic): more ray-tracing programs translate. |
-| `VICTORY_WAVE32_READFIRSTLANE`, `VICTORY_WAVE32_CROSSLANE` | `approx` | Approximate `readfirstlane` and cross-lane operations on wave32. |
-| `VICTORY_SKIP_BVH_BUILDER` | `1` | Leaves out the title's BVH builder, which causes a GPU timeout (TDR). |
-| `VICTORY_D3D12_DRED` | `1` | Device-removed data. On in the measured run; it slows the world, so turn it off (`-NoTunedSettings`) when you only want speed. |
+| `VICTORY_SHADER_LOOP_LIMIT` | `256` | Translated shader loops were almost endless, so they are cut. At 32 (the former value) hair is drawn as glowing strands and the scene is darker; at 1024 the device was lost on an RTX 3060 Ti with the default 2-second timeout; 256 held (fork issue #18, and observed on Linux in runs 3 and 4 below). |
 | `VICTORY_LATE_WAIT` | `3` | Host pipeline wait setting of the fork's pull request #1. |
 | `VICTORY_WIDE_BACK` | `1` | Fork option, on in the measured run. |
 | `VICTORY_RELAY` | `2` | Fork option, on in the measured run of `7b0f736`. |
 | `VICTORY_CARD_BUFFERS_MIN_MB`, `VICTORY_CARD_BUFFERS_MB` | `1`, `1024` | Card buffer sizing, in MB. |
+
+The former defaults `VICTORY_RT_MISS`, `VICTORY_WAVE32_READFIRSTLANE`, `VICTORY_WAVE32_CROSSLANE`, `VICTORY_SKIP_BVH_BUILDER` and `VICTORY_CAPPED_DYNAMIC` are gone: no file of the pinned commit reads them (the BVH builder is off unless `VICTORY_BVH_BUILDER=1`). `tests/test_lanceur_victory.py` now checks that VIctory reads every variable the launcher sets.
+
+`-Dred` sets `VICTORY_D3D12_DRED=1` (device-removed data) to diagnose a device loss. It is off by default: VIctory turns it on whenever the variable exists, and it notes every command list operation, which slows each frame.
 
 The first cold launch may crash while the pipelines compile: launch again once the cache is filled.
 

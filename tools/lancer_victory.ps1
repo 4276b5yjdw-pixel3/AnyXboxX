@@ -11,6 +11,10 @@
 .PARAMETER NoTunedSettings
   Optional. Does not set the tuned variables below (only VICTORY_GAME_DIR is set).
 
+.PARAMETER Dred
+  Optional. Turns on device-removed data (VICTORY_D3D12_DRED) to diagnose a device loss.
+  Off by default: it notes every command list operation and slows each frame.
+
 .NOTES
   The first cold launch may crash while the pipelines compile; launch again once the cache is filled.
   Settings measured on 2026-11-24 with the submodule's pinned commit (fxceless/victory-gta6).
@@ -22,7 +26,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$GameDir,
     [string]$SkipPipelines,
-    [switch]$NoTunedSettings
+    [switch]$NoTunedSettings,
+    [switch]$Dred
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,19 +60,8 @@ if (-not (Test-Path -LiteralPath $exe)) {
 $env:VICTORY_GAME_DIR = $GameDir
 if (-not $NoTunedSettings) {
     $tuned = [ordered]@{
-        # Every ray misses instead of tracing (more ray-tracing programs translate).
-        VICTORY_RT_MISS                 = '1'
-        # Approximate readfirstlane and cross-lane operations on wave32.
-        VICTORY_WAVE32_READFIRSTLANE    = 'approx'
-        VICTORY_WAVE32_CROSSLANE        = 'approx'
-        # Leave out the title's BVH builder, which causes a GPU timeout (TDR).
-        VICTORY_SKIP_BVH_BUILDER        = '1'
-        # Dynamic descriptor range sized for NVIDIA's capped heap (262,144 slots).
-        VICTORY_CAPPED_DYNAMIC          = '262144'
-        # Translated shader loops stop after 32 iterations.
-        VICTORY_SHADER_LOOP_LIMIT       = '32'
-        # Device-removed data (slows the world; kept on as in the measured run).
-        VICTORY_D3D12_DRED              = '1'
+        # Translated shader loops stop after 256 iterations (32 cuts the hair strand loops short).
+        VICTORY_SHADER_LOOP_LIMIT       = '256'
         # Host pipeline wait setting from the fork's pull request #1.
         VICTORY_LATE_WAIT               = '3'
         # Wide back-end option of the fork, on in the measured run.
@@ -81,6 +75,10 @@ if (-not $NoTunedSettings) {
     foreach ($name in $tuned.Keys) {
         Set-Item -Path "Env:$name" -Value $tuned[$name]
     }
+}
+# VIctory turns DRED on when the variable exists, whatever its value: only set it when asked.
+if ($Dred) {
+    $env:VICTORY_D3D12_DRED = '1'
 }
 if ($PSBoundParameters.ContainsKey('SkipPipelines') -and $SkipPipelines) {
     $env:VICTORY_SKIP_PIPELINES = $SkipPipelines
