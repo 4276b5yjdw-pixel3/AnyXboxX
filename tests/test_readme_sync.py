@@ -33,7 +33,7 @@ def texts():
     return {path.relative_to(REPO).as_posix(): path.read_text(encoding="utf-8") for path in READMES}
 
 
-def test_eight_languages(texts):
+def test_nine_languages(texts):
     assert len(texts) == LANGUAGE_COUNT, sorted(texts)
 
 
