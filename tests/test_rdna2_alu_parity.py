@@ -78,7 +78,8 @@ def test_all_32bit_exec_alu_ops_are_covered_by_hlsl():
                       | set(rdna2_exec_vop3.CARRY) | set(rdna2_exec_vop3.LANE_OPERATIONS)) - covered
     assert missing_vector == set()
 
-    scalar_32 = {name for name in rdna2_exec_ops.SCALAR if not name.endswith(("_b64", "_u64"))}
+    wide = ("_b64", "_u64", "_i64", "_b64_b32")       # 64 bits : pas encore traduits en HLSL
+    scalar_32 = {name for name in rdna2_exec_ops.SCALAR if not name.endswith(wide)}
     missing_scalar = scalar_32 - covered
     assert missing_scalar == set()
 
