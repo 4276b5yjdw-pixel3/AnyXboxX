@@ -38,6 +38,12 @@ python tools/jour_j.py .. --natif --duree 120
 
 **Ce mode n'isole pas le jeu.** Il est réservé à un exécutable dont la provenance est connue.
 
+### Ce que l'hôte Windows doit fournir
+
+Le mode natif lie certains imports à Windows lui-même, pas à AnyXboxX. Quand l'un d'eux manque, `anyxboxx.exe` s'arrête avant le point d'entrée et le nomme (`dll!fonction` ou `dll!#ordinal`).
+
+- **GameInput** (`GameInput.dll!#1`). Le titre importe `GameInputCreate` par l'ordinal 1, comme le lie la bibliothèque GameInput du GDK. AnyXboxX ne le sert pas, volontairement : le runtime GameInput de l'hôte donne les vraies manettes, et tout runtime GameInput accepte l'interface v0 que crée ce `GameInputCreate` ([GameInputCreate](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/input/gameinput/functions/gameinputcreate), [versions de l'API](https://learn.microsoft.com/en-us/gaming/gdk/docs/features/common/input/overviews/input-version-interop)). Les versions récentes de Windows l'incluent (`System32\GameInput.dll`) ; s'il manque, installer le redistribuable avec `winget install Microsoft.GameInput` ([GameInput NuGet](https://learn.microsoft.com/en-us/gaming/gdk/docs/features/common/input/overviews/input-nuget)).
+
 ## 4. Après le diagnostic
 
 - Les fonctions **manquantes** du rapport deviennent des issues, une par DLL.

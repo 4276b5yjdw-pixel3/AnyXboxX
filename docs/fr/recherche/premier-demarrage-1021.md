@@ -197,7 +197,7 @@ dessus.
 | W10 | **Fait, cette PR : voir section 7.** `ConsoleMode` : `runtime/xgameruntime/registry.cpp` sert `0x64`, qui se convertit en 7 et passe le test du titre. Garder un test qui fige `0x64`, et la variante `RegOpenKeyW` (celle du titre) | étape 9 | mesuré et cohérent |
 | W11 | **Fait, cette PR : nouveaux threads vérifiés ; les threads antérieurs à l'installation ne reçoivent pas la raison 2, comme sous Windows, voir section 7.** **TLS** : vérifier qu'`anyxboxx_tls.dll` appelle le callback 1 du titre avec la raison 2 pour chaque thread, existant ou nouveau, et que l'indice du fichier est écrasé. Le bloc (5 248 octets) tient dans la capacité de 256 Kio | étape 4 | taille mesurée ; couverture des threads non testée |
 | W12 | **Observabilité.** Le lanceur natif n'a aucun gestionnaire pour `0x80000003` : un `int3` du titre finit en simple code de sortie (arrêt 0). Ajouter un gestionnaire vectoriel qui journalise l'adresse du premier `int3` ou de la première exception et le module, pour qu'un bisect donne un arrêt et non un code de sortie | arrêt 0 | mesuré |
-| W13 | `GameInput.dll!#1` : AnyXboxX n'a pas de shim GameInput. L'unique appelant du titre se lie à la DLL de l'hôte. Choisir : servir l'ordinal 1 depuis le lanceur, ou documenter la dépendance à l'hôte | statique | mesuré ; version d'ABI non vérifiée |
+| W13 | **Fait, cette PR : dépendance à l'hôte documentée dans [jour-j.md](../jour-j.md), pas de shim, voir section 7.** `GameInput.dll!#1` : AnyXboxX n'a pas de shim GameInput. L'unique appelant du titre se lie à la DLL de l'hôte. Choisir : servir l'ordinal 1 depuis le lanceur, ou documenter la dépendance à l'hôte | statique | mesuré ; version d'ABI non vérifiée |
 | W14 | Audio (`chad` 5, `xapu` 5 chez TomBox, `AcpHal` 9) : manquant, mais non établi comme bloquant au démarrage, la chaîne d'appels étant indirecte. À traiter après W1 à W8 | section 2 | supposé |
 | W15 | Imports propres à l'hôte : `api-ms-win-core-psm-appnotify-*`, `ext-ms-win-rtcore-ntuser-*`, MFPlat, WS2_32 par ordinal. Le mode natif dépend d'un hôte Windows récent ; le noter dans [jour-j.md](../jour-j.md) | section 2 | mesuré sur Windows 11 seulement |
 | W16 | `__XMemAllocationHooks__` : le titre exporte un symbole de données qu'aucun source de Leonida ne lit. Si `XMemAlloc*` se comporte mal, vérifier si le runtime de la console le lit par `GetProcAddress` sur l'exécutable | table d'exports | rôle supposé |
@@ -229,7 +229,7 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
   d'erreur sans écrire `*out`. Observé dans le source, pas mesuré sur le titre. La correction relève de l'amont, puisque
   `third_party/` n'est pas modifié ici.
 
-## 7. Résultats de W9 à W13 (cette PR)
+## 7. Résultats de W9, W10, W11 et W13 (cette PR ; W12 est traité dans l'issue #113)
 
 - **W9.** `tests/test_gdk_boot.py` fabrique un titre (avec `tests/pe_builder.py`) dans son propre dossier, loin du
   runtime et sans `xgameruntime.dll` à côté, et rejoue les étapes 6 à 8 : `GetModuleFileNameW(NULL)` avec le nom de
@@ -276,6 +276,24 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
   d'outils est récente, section 1, mais la garde n'a pas été cherchée). Le lanceur installe la TLS avant le point
   d'entrée du titre, sur le même thread : dans `anyxboxx.exe`, les threads antérieurs à l'installation sont seulement
   ceux du lanceur et du chargeur de Windows.
+- **W13.** L'ordinal 1 est `GameInputCreate(IGameInput**)`. Sources : Microsoft Learn dit qu'en GameInput v0,
+  `GameInputCreate` est exporté par `GameInput.lib` et crée toujours l'interface v0, que les bibliothèques des
+  versions antérieures, « comme celle du GDK », continuent de l'appeler et sont relayées au runtime installé, et que
+  tout runtime accepte la v0 ([GameInputCreate](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/input/gameinput/functions/gameinputcreate),
+  [GameInputInitialize](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/input/gameinput/functions/gameinputinitialize),
+  [versions de l'API](https://learn.microsoft.com/en-us/gaming/gdk/docs/features/common/input/overviews/input-version-interop)).
+  La bibliothèque NuGet récente exporte `GameInputInitialize` à la place : un import de `GameInputCreate` par ordinal
+  correspond donc à la bibliothèque v0 du GDK. Mesuré sur notre hôte Windows 11 : `System32\GameInput.dll`
+  (0.2309.26100.9818) exporte `GameInputCreate` à l'ordinal 1, tout comme `System32\GameInputRedist.dll` (4.0.306.0,
+  avec `GameInputInitialize` à 2). La question d'ABI de la ligne est donc réglée pour la fabrique : v0, que tout runtime
+  hôte sert. Que la `GameInput.dll` de la console numérote aussi `GameInputCreate` 1 est supposé, d'après l'import
+  statique et la bibliothèque du GDK.
+  **Choix : pas de shim, l'hôte le sert.** Un `GameInputCreate` du runtime répondant `E_NOTIMPL` (règle 3) priverait
+  de vraies manettes un titre que l'hôte sert déjà, et un `GameInputCreate` fonctionnel doublerait le runtime de l'hôte.
+  `tests/test_launcher.py` vérifie qu'`anyxboxx.exe` lie `GameInput.dll!#1` à l'hôte et que l'appel rend `S_OK` avec un
+  objet (ignoré sur un hôte sans GameInput), et qu'une bibliothèque de l'hôte à laquelle manque un import par ordinal
+  arrête le lanceur en nommant l'import (`dll!#1`), jamais un thunk muet. `tests/test_native_services.py` vérifiait
+  déjà la même liaison en mode natif Python. [jour-j.md](../jour-j.md) dit quoi installer quand GameInput manque.
 
 ## Sources et crédits
 
