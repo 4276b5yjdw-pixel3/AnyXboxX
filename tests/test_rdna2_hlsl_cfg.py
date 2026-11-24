@@ -108,3 +108,47 @@ def test_structured_nested_loops_and_branch_match_interpreter():
     )
     expected, actual = compare(code)
     assert actual == expected
+
+
+@gpu
+def test_if_else_diamond_matches_interpreter():
+    # if (s4 == 0) s5 = 10 else s5 = 20; v1 = s5 + lane
+    code = with_lane_offset(
+        sopc("s_cmp_eq_u32", 4, const(0)),
+        sopp("s_cbranch_scc0", 2),
+        sop1("s_mov_b32", 5, const(10)),
+        sopp("s_branch", 1),
+        sop1("s_mov_b32", 5, const(20)),
+        vop2("v_add_nc_u32", 1, 5, V + 0),
+        *store_lane(1, 0),
+    )
+    assert "switch (pc)" not in rdna2_hlsl.translate(code)
+    for branch_value in (0, 1):
+        expected, actual = compare(code, sgprs={4: branch_value})
+        assert actual == expected
+
+
+@gpu
+def test_irreducible_cfg_fallback_matches_interpreter():
+    # Two-entry loop (irreducible CFG -> switch (pc) fallback):
+    # entry -> B2 when s4 == 0, else B1; B1 adds 1 to s5 then falls into B2;
+    # B2 decrements s4 and loops back to B1 while s4 != 0.
+    code = with_lane_offset(
+        sopc("s_cmp_eq_u32", 4, const(0)),
+        sopp("s_cbranch_scc1", 2),
+        sopp("s_branch", 0),
+        # B1:
+        sop2("s_add_u32", 5, 5, const(1)),
+        # B2:
+        sopc("s_cmp_eq_u32", 4, const(0)),
+        sopp("s_cbranch_scc1", 3),
+        sop2("s_sub_u32", 4, 4, const(1)),
+        sopc("s_cmp_lg_u32", 4, const(0)),
+        sopp("s_cbranch_scc1", -6),
+        vop2("v_add_nc_u32", 1, 5, V + 0),
+        *store_lane(1, 0),
+    )
+    assert "switch (pc)" in rdna2_hlsl.translate(code)
+    for start_s4 in (0, 3):
+        expected, actual = compare(code, sgprs={4: start_s4, 5: 10})
+        assert actual == expected
