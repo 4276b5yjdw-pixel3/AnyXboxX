@@ -35,6 +35,30 @@ def _bitfield(value, offset, width, is_signed=False):
     return signed(field, width) if is_signed and width else field
 
 
+def _perm_b32(src0, src1, src2):
+    out = 0
+    for shift in (0, 8, 16, 24):
+        sel = (src2 >> shift) & 0xFF
+        if sel < 4:
+            byte = (src1 >> (sel * 8)) & 0xFF
+        elif sel < 8:
+            byte = (src0 >> ((sel - 4) * 8)) & 0xFF
+        elif sel == 8:
+            byte = 0x00
+        elif sel == 9:
+            byte = 0xFF if src1 & 0x0000_8000 else 0x00
+        elif sel == 10:
+            byte = 0xFF if src1 & 0x8000_0000 else 0x00
+        elif sel == 11:
+            byte = 0xFF if src0 & 0x0000_8000 else 0x00
+        elif sel == 12:
+            byte = 0xFF if src0 & 0x8000_0000 else 0x00
+        else:
+            byte = 0xFF
+        out |= byte << shift
+    return out
+
+
 # Instructions propres à VOP3 : fonction(a, b, c) des trois sources.
 VECTOR3 = {
     "v_fma_f32": _float3(_fma),
@@ -69,6 +93,7 @@ VECTOR3 = {
     "v_bcnt_u32_b32": lambda a, b, c: bin(a).count("1") + b,
     "v_bfm_b32": lambda a, b, c: ((1 << (a & 31)) - 1) << (b & 31),
     "v_ldexp_f32": lambda a, b, c: _float_op(lambda x: math.ldexp(x, signed(b)))(bits_float(a)),
+    "v_perm_b32": _perm_b32,
 }
 # Retenues (VOP3b) : fonction(a, b, retenue entrante) → (résultat, retenue sortante).
 CARRY = {

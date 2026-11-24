@@ -13,15 +13,22 @@ from emu import rdna2, rdna2_hlsl_image
 from emu.rdna2_exec_ops import signed
 from emu.rdna2_exec_vop3 import Fields
 from emu.rdna2_hlsl_memory import memory_statements
-from emu.rdna2_hlsl_ops import (BRANCHES, SCALAR, VECTOR, Untranslatable, compare_condition, hexa,
-                                is_compare, scalar_statement, scalar_target, source)
+from emu.rdna2_hlsl_ops import (BRANCHES, HELPERS as ALU_HELPERS, SCALAR, VECTOR, Untranslatable,
+                                compare_condition, hexa, is_compare, scalar_statement, scalar_target,
+                                source)
 from emu.rdna2_operands import FIELDS
 
 ACTIVE = "((s[126] >> lane) & 1u) != 0"
 SCALAR_FAMILIES = ("SOP1", "SOP2", "SOPC", "SOPK", "SOPP")
 MEMORY_FAMILIES = ("SMEM", "DS", "MUBUF", "FLAT", "GLOBAL", "SCRATCH")
-CARRY = {"v_add_co_u32": ("x + y", "r < x"), "v_sub_co_u32": ("x - y", "x < y"),
-         "v_add_co_ci_u32": ("x + y + k", "(r < x) || (k != 0 && r == x)")}
+CARRY = {
+    "v_add_co_u32": ("x + y", "r < x"),
+    "v_sub_co_u32": ("x - y", "x < y"),
+    "v_subrev_co_u32": ("y - x", "y < x"),
+    "v_add_co_ci_u32": ("x + y + k", "(r < x) || (k != 0 && r == x)"),
+    "v_sub_co_ci_u32": ("x - y - k", "(x < y) || (k != 0 && x == y)"),
+    "v_subrev_co_ci_u32": ("y - x - k", "(y < x) || (k != 0 && y == x)"),
+}
 OUTPUT_SCALE = {1: "2.0f", 2: "4.0f", 3: "0.5f"}
 
 PRELUDE = """// Généré par AnyXboxX (emu/rdna2_hlsl.py) : programme RDNA 2 recompilé en HLSL.
@@ -175,7 +182,8 @@ def _leaders(data, instructions):
 
 def translate(data, sgprs=None):
     """Texte HLSL d'un programme RDNA 2 ; `sgprs` : valeurs initiales {numéro: valeur}."""
-    prelude = PRELUDE.replace("[numthreads", rdna2_hlsl_image.HELPERS + "\n[numthreads", 1)
+    helpers = ALU_HELPERS + "\n" + rdna2_hlsl_image.HELPERS
+    prelude = PRELUDE.replace("[numthreads", helpers + "\n[numthreads", 1)
     return "\n".join([prelude.rstrip("\n"), *body(data, sgprs), "}", ""])
 
 

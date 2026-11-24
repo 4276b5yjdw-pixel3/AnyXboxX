@@ -6,7 +6,7 @@ ces étages : une instruction DS lève Untranslatable, comme tout export non pri
 """
 from emu import rdna2, rdna2_graphics as graphics, rdna2_hlsl_image
 from emu.rdna2_hlsl import body
-from emu.rdna2_hlsl_ops import Untranslatable
+from emu.rdna2_hlsl_ops import HELPERS as ALU_HELPERS, Untranslatable
 
 ACTIVE = "((s[126] >> lane) & 1u) != 0"
 FINISH = "pc = END_PC; break;"
@@ -100,7 +100,7 @@ def render_targets(data):
 
 def translate_vertex(data, sgprs=None):
     """Vertex shader HLSL (vs_6_0) : v0 = SV_VertexID, exports enregistrés dans VERTEX_RECORDS."""
-    lines = [COMMON.format(stage="vertex shader", images=rdna2_hlsl_image.HELPERS),
+    lines = [COMMON.format(stage="vertex shader", images=ALU_HELPERS + "\n" + rdna2_hlsl_image.HELPERS),
              "struct VSOut { float4 position : SV_Position; float2 bary : TEXCOORD0; };",
              "VSOut main(uint vertex : SV_VertexID) {", REGISTERS,
              "  VSOut o_out;", "  o_out.position = float4(0.0f, 0.0f, 0.0f, 1.0f);",
@@ -117,7 +117,7 @@ def translate_pixel(data, width, sgprs=None):
     targets = render_targets(data)
     outputs = " ".join(f"float4 t{t} : SV_Target{t};" for t in targets)
     returned = "PSOut" if targets else "void"
-    lines = [COMMON.format(stage="pixel shader", images=rdna2_hlsl_image.HELPERS)]
+    lines = [COMMON.format(stage="pixel shader", images=ALU_HELPERS + "\n" + rdna2_hlsl_image.HELPERS)]
     if targets:
         lines.append(f"struct PSOut {{ {outputs} }};")
     lines += [f"{returned} main(float4 position : SV_Position, float2 bary : TEXCOORD0, "
