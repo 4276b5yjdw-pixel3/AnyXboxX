@@ -49,6 +49,22 @@ All are diagnostics: they need the `diag` build (the `diagnostics` feature). Pro
 | `VICTORY_PROFILE=<ms>` | Sampling profiler of the whole process; logs the busiest call stacks every 5 s (sampling period in ms, 4 by default). | Local, not published |
 | `VICTORY_RT_MISS=1` | Every ray misses (ray-tracing diagnostic, off by default). | Local, not published |
 
+## State on 24 November (evening)
+
+Measured by running our own copy of the 1.0.2.1 build under VIctory, on the local integration branch (VIctory `main` + pull requests + local fixes not all published), i7-13700KF + RTX 4070 SUPER. These are run measurements (fps, counts, traces) and the output of `victory translate`; nothing comes from reading the game's code.
+
+- **Series S mode is faster (measured).** `victory run --console series-s ...` gives about 3.1 to 3.3 fps in the world, against about 2.0 to 2.4 fps in Series X mode (about +50%), with the same image symptom. The game then renders internally at 1280x720 and presents at 1920x1080. Recommended for iterating.
+- **Black image diagnosis (measured).** The geometry exists in the G-buffer: the characters of the cutscene are visible in 1440p and 720p. The final colour is a uniform tint that darkens over time (exposure), with the subtitles drawn on top. Almost all deferred lighting passes are translated and bound. A per-pass trace (local option `VICTORY_INDIRECT_TRACE`, not published) shows that about 379 mesh `ExecuteIndirect` calls start with zero arguments, because the GPU passes that produce those arguments are not translated yet: the translator refuses them with "an address from a phi" and "a lane mask holding lanes elsewhere read as data". This is the current work item.
+- **Translation (measured).** Untranslated shaders in game: about 130 to 170 (in-game count). On the corpus (26,084 programs, `victory translate`): VS/PS 13,780 emitted of 14,038, CS 2,212, MS 8,654 of 8,765 (counts as printed by the tool).
+- **Fixes published upstream** (`Marvisak/VIctory`): #1215 (speed: direct `NtWriteVirtualMemory` write, copies without `VirtualQuery`, profiler), #1225 (`readfirstlane` of a uniform address: ColorDownsample), #1231 (uniform loop counter: light probes). Measurement comments were also added on #497, #320, #1074, #1198 and #841.
+- **Community.** The project has a Discord server (link at the top of the README).
+
+Variable added to the table above (diagnostic, `diag` build):
+
+| Variable | Effect | Where it comes from |
+| --- | --- | --- |
+| `VICTORY_INDIRECT_TRACE` | Per-pass trace of `ExecuteIndirect` calls and their arguments. | Local, not published |
+
 ## Requirements
 
 - Windows 10 or 11, x64.
