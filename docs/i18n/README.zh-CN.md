@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/badge/Discord-AnyXboxX-5865F2?logo=discord&logoColor=white)](https://discord.gg/TcX42vRyPU)
 
-[English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · [日本語](README.ja.md) · **中文**
+[English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · [日本語](README.ja.md) · **中文** · [Русский](README.ru.md)
 
 > [!NOTE]
 > **当前进展（2026-11-24）**
@@ -106,7 +106,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 第二个 RDNA 2 → SPIR-V（Vulkan）转换器：Leonida 的转换器（GPL-3.0），原样复制到 `third_party/leonida/`，由 AnyXboxX 自己的反汇编器提供输入，无需 `llvm-mc`；支持顶点、像素和计算着色器；包中 `XboxBvhBuilder.dll` 自带的 52 个主机着色器中有 51 个可转换（用 `tools/fssm_mesure.py` 在本地测量）（`scarlett.py --rdna2 <shader.bin> --spirv ps`） | 🟡 进行中 |
 | TomBox 更新到最新版本（D3D12.X：按他们的统计 200 个方法中已实现 194 个），并额外构建 4 个主机库，从 `ANYXBOXX_TOMBOX_DIR` 提供：`d3d12_x`（ESRAM）、`XAudio2_9`（XMA 声部）、`xapu`、`xgs12`；`tools/build_tombox.py d3d12_xs xg_xs xmem d3d12_x xaudio2_9 xapu xgs12` | 🟡 进行中 |
 | 将主机 DXIL 转换为 PC DXIL（`dxil-ms-xb2` → `dxil-ms-dx`，无需经过 HLSL）：Xbox2Windows 的工具（MIT），连同其测试原样复制到 `third_party/xbox2windows/`；`python third_party/xbox2windows/tools/dxil_retarget.py <输入> <输出>` 或 `--pe <game.exe>` | ✅ 已完成 |
-| 拉取请求检查：每个拉取请求都运行 lint 并核对 8 个 README 的同步（行、图片、测试数量） | ✅ 已完成 |
+| 拉取请求检查：每个拉取请求都运行 lint 并核对 9 个 README 的同步（行、图片、测试数量） | ✅ 已完成 |
 | Rust 实现的主机纹理：从 Xbox2Windows（MIT）移植的 BC7 解码和 GFX10 `SW_4K_S` 去平铺，复现了参考摘要；`anyxboxx_texture bc7 <blocks.bin> <宽> <高> <out.png> [--4k-s]` | 🟡 进行中 |
 | 由 AnyXboxX 自行编写的其他 GDK 接口（`XGameUi`、`XNetworking`…） | ⏳ 待完成 |
 | RDNA 2 → DXIL 着色器重编译器：首批程序已翻译为 HLSL、编译为 DXIL 并通过 D3D12 在 PC 的 GPU 上运行（`--hlsl`、`anyxboxx_gpu_run.exe`，无 GPU 时用 WARP），内存与 wave32 参考解释器的结果完全一致，该解释器可执行 1,487 种编码中的 599 种（标量、VOP1/VOP2/VOPC/VOP3、内存：SMEM、LDS、GLOBAL、带 V# 边界的 MUBUF、原子操作、分支、`exec` 分歧）；首个顶点着色器和像素着色器（EXP 导出、VINTRP 插值）已用 D3D12 绘制，逐顶点、逐像素一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 进行中 |

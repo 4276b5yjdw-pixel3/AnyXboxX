@@ -28,7 +28,7 @@ python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools → All ch
 - [ ] Un test échoue sans ce changement et passe avec.
 - [ ] Les commandes et résultats de chaque vérification sont indiqués ci-dessus.
 - [ ] Une fonction non implémentée renvoie une erreur (`E_NOTIMPL`), jamais un faux succès.
-- [ ] README : la même modification dans les 8 langues (le test `test_readme_sync.py` le vérifie).
+- [ ] README : la même modification dans les 9 langues (le test `test_readme_sync.py` le vérifie).
 - [ ] Aucun fichier de jeu, de console ou de SDK, aucune clé, aucun dump, aucun lien de téléchargement.
 - [ ] Constats tirés d'un titre : limités à ce que permet la règle 2 d'`AGENTS.md` (noms, slots, formes d'arguments, valeurs de flags, HRESULT, IID, comptes), avec la manière dont ils ont été obtenus ; aucune adresse ni RVA.
 - [ ] Code repris d'un autre projet : licence compatible et crédit dans `THIRD_PARTY.md`.

@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/badge/Discord-AnyXboxX-5865F2?logo=discord&logoColor=white)](https://discord.gg/TcX42vRyPU)
 
-[English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · **日本語** · [中文](README.zh-CN.md)
+[English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · **日本語** · [中文](README.zh-CN.md) · [Русский](README.ru.md)
 
 > [!NOTE]
 > **現在地（2026-11-24）**
@@ -106,7 +106,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | 2 つ目の RDNA 2 → SPIR-V（Vulkan）トランスレーター：Leonida のもの（GPL-3.0）を `third_party/leonida/` に無変更でコピーし、`llvm-mc` なしで AnyXboxX 自身の逆アセンブラーから入力；頂点・ピクセル・コンピュートシェーダーに対応；パッケージの `XboxBvhBuilder.dll` に含まれるコンソール用シェーダー 52 個のうち 51 個を変換（`tools/fssm_mesure.py` でローカル計測）（`scarlett.py --rdna2 <shader.bin> --spirv ps`） | 🟡 進行中 |
 | TomBox を最新版に更新（D3D12.X：彼らの集計で 200 メソッド中 194）し、さらに 4 つのコンソールライブラリをビルドして `ANYXBOXX_TOMBOX_DIR` から提供：`d3d12_x`（ESRAM）、`XAudio2_9`（XMA ボイス）、`xapu`、`xgs12`；`tools/build_tombox.py d3d12_xs xg_xs xmem d3d12_x xaudio2_9 xapu xgs12` | 🟡 進行中 |
 | コンソールの DXIL を PC の DXIL に変換（`dxil-ms-xb2` → `dxil-ms-dx`、HLSL を経由しない）：Xbox2Windows のツール（MIT）をテストとともに `third_party/xbox2windows/` に無変更でコピー；`python third_party/xbox2windows/tools/dxil_retarget.py <入力> <出力>` または `--pe <game.exe>` | ✅ 完了 |
-| プルリクエストのチェック：lint と 8 つの README の同期（行、画像、テスト数）をプルリクエストごとに確認 | ✅ 完了 |
+| プルリクエストのチェック：lint と 9 つの README の同期（行、画像、テスト数）をプルリクエストごとに確認 | ✅ 完了 |
 | Rust によるコンソールテクスチャ：Xbox2Windows（MIT）から移植した BC7 デコードと GFX10 `SW_4K_S` タイル解除、参照ダイジェストを再現；`anyxboxx_texture bc7 <blocks.bin> <幅> <高さ> <out.png> [--4k-s]` | 🟡 進行中 |
 | AnyXboxX が自前で書くその他の GDK のインターフェース（`XGameUi`、`XNetworking`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー：最初のプログラムを HLSL に変換し、DXIL にコンパイルして D3D12 で PC の GPU 上で実行（`--hlsl`、`anyxboxx_gpu_run.exe`、GPU がなければ WARP）、メモリは 1,487 エンコーディング中 599 を実行する wave32 リファレンスインタープリター（スカラー、VOP1/VOP2/VOPC/VOP3、メモリ：SMEM、LDS、GLOBAL、V# 境界付き MUBUF、アトミック、分岐、`exec` による分岐）の結果と一致；最初の頂点シェーダーとピクセルシェーダー（EXP エクスポート、VINTRP 補間）を D3D12 で描画し、頂点ごと・ピクセルごとに一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 進行中 |
