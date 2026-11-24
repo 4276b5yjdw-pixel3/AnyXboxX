@@ -11,7 +11,7 @@
 >
 > - ✅ O build 1.0.2.1 do Xbox Series de GTA VI **inicia** no PC: boot, tela de perfil, configurações da primeira execução, telas legais, carregamento, menu de pausa. Os menus rodam a 30 fps.
 > - ✅ Ele chega **ao mundo com um personagem controlável**: o tutorial «Move / Move the camera» (L / R) é exibido, composto sobre uma imagem 3D ainda preta.
-> - ⛔ Limite por enquanto: o mundo roda a cerca de 2,4 imagens por segundo no modo Series X e cerca de 3,2 no modo Series S (antes 0,2), a imagem 3D continua preta (a geometria existe no G-buffer, mas a cor final é um tom uniforme, medido na noite de 24/11) e cerca de 130 a 170 shaders ainda não foram traduzidos no jogo, portanto não é jogável. Trabalho em andamento nos shaders de máscaras de lanes e na composição final.
+> - ⛔ Limite atual: o dispositivo host é perdido após alguns minutos até cerca de 13 minutos no mundo, então não é estável. A integração anterior ficava em cerca de 2,4 imagens por segundo sem imagem 3D; com o fork fixado o mundo é exibido e jogável a cerca de 4 imagens por segundo.
 > - 👁 Observado pelo mantenedor (Windows 11, RTX 4070 Super), com o fork `fxceless/victory-gta6` no commit `d279e69` e as configurações do lançador: o jogo foi jogado a cerca de 4 fps por cerca de 13 minutos na área inicial (a prisão). O personagem se move sob o controle do jogador e interage com os primeiros NPCs; depois o dispositivo host é perdido (limite conhecido).
 > - Requisitos: a sua própria cópia do jogo, uma GPU NVIDIA ou AMD com SM 6.6 e mesh shaders, Rust. Nenhum arquivo do jogo neste repositório.
 > - Como executar: [docs/running-gta6.md](../running-gta6.md).
