@@ -188,7 +188,7 @@ Order of work, by the measured stops. "Assumed" items need a test before anyone 
 | W6 | **Not done: needs the console list proxy first (Leonida #7076), see section 6.** Console command list: find out what list slots 131 and 132 are, from TomBox's console list ABI, before anyone writes a wrapper. Do not pass a raw PC list to the title | stops 5, 6 | slot meaning unknown |
 | W7 | **Done, this PR: minimal `XCRDAPI.dll`.** **`DStorageGetFactory`** is missing from AnyXboxX and TomBox. A minimal `XCRDAPI.dll` must write the output pointer, return 0, and expose the method at `+0x40` returning a non-negative HRESULT; file reads can answer `E_NOTIMPL` as #4348 does. Leonida's #4348 is GPL-3.0, reusable with credit (rule 2) | static, stop 24 | measured |
 | W8 | **Blocked, see section 6.** **`xg_xs`**: `XGSuggestSwizzleMode` is missing. `XGCreateTextureComputer` must hand back an object whose slot 8 exists even if it writes no tiled data, and no stub may leave an output pointer unset. `anyxboxx-texture` (SW_4K_S) is the natural back end | stop 22 (KkelebekK) | measured by others |
-| W9 | `xgameruntime`: `XErrorReport` is exported with a `void` return (`runtime/xgameruntime/xgameruntime.def`); the title only tests the pointer, so this looks harmless. Add a launcher test that the six `GetProcAddress` names resolve, that the options bits `2`, `4`, `8` are accepted, and that `xgameruntime.dll` loads by full path when the game executable sits in another folder | steps 6 to 8 | harmless return type assumed |
+| W9 | **Done, this PR: `tests/test_gdk_boot.py`; return type kept, see section 7.** `xgameruntime`: `XErrorReport` is exported with a `void` return (`runtime/xgameruntime/xgameruntime.def`); the title only tests the pointer, so this looks harmless. Add a launcher test that the six `GetProcAddress` names resolve, that the options bits `2`, `4`, `8` are accepted, and that `xgameruntime.dll` loads by full path when the game executable sits in another folder | steps 6 to 8 | harmless return type assumed |
 | W10 | `ConsoleMode`: `runtime/xgameruntime/registry.cpp` serves `0x64`, which converts to 7 and passes the title's test. Keep a test pinning `0x64`, and the `RegOpenKeyW` variant (the title uses it) | step 9 | measured and consistent |
 | W11 | **TLS**: check that `anyxboxx_tls.dll` calls the title's callback 1 with reason 2 for every thread, existing or new, and that the index in the file is overwritten. The block (5,248 bytes) fits the 256 KiB capacity | step 4 | measured size; thread coverage not tested |
 | W12 | **Observability.** The native launcher has no handler for `0x80000003`: a title `int3` ends in a bare exit code (stop 0). Add a vectored handler that logs the address of the first `int3` or exception and the module, so a bisect gives a stop instead of an exit code | stop 0 | measured |
@@ -223,6 +223,25 @@ need TomBox's sources only. None of them needs to read the game again.
   (`crates/compat/xg_xs/src/lib.rs`, lines 372 to 381) returns early for a dimension above 4 and on its error branch
   without writing `*out`. Observed in the source, not measured on the title. The fix belongs upstream, since
   `third_party/` is not edited here.
+
+## 7. Results of W9 to W13 (this PR)
+
+- **W9.** `tests/test_gdk_boot.py` builds a title (with `tests/pe_builder.py`) in its own folder, away from the
+  runtime and without an `xgameruntime.dll` beside it, and replays steps 6 to 8: `GetModuleFileNameW(NULL)` with the
+  file name replaced by `xgameruntime.dll`, `LoadLibraryExW` of that full path with `0xA00`, then of the bare name with
+  `0x800`, the six `GetProcAddress`, and the three `Initialize*` with the two constants and options `2 | 4 | 8`. Both
+  loads must return the same AnyXboxX module, the six names must resolve, and each initialiser must return `S_OK`.
+  The same program runs under `anyxboxx.exe` and under the Python native mode. Without the full-path redirection the
+  first load fails and the result drops to 0 (checked by mutating the Python shim). The argument order of the
+  initialisers (constants in `rcx`, `rdx`, options in `r8`) is assumed; our initialisers ignore their arguments when
+  the Windows runtime is off, so the test pins that no option bit is refused.
+  `XErrorReport` keeps its `void` return. Microsoft Learn documents no `XErrorReport`: the
+  [XError members](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/system/xerror/xerror_members) page
+  lists only `XErrorCallback`, `XErrorSetCallback`, `XErrorSetOptions` and `XErrorOptions`. It is an internal export
+  that `xgameruntime.lib` resolves by name, so there is no public signature to fix it to; the title only tests the
+  pointer (static, section 3). Its `(HRESULT, const char*)` parameters follow the first two of the documented
+  [XErrorCallback](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/system/xerror/functions/xerrorcallback).
+  The decision is written next to the function in `runtime/xgameruntime/xgameruntime.cpp`.
 
 ## Sources and credits
 
