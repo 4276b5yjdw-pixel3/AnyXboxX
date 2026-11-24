@@ -2,6 +2,16 @@
 
 [English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · **日本語** · [中文](README.zh-CN.md)
 
+> [!NOTE]
+> **現在地（2026-11-24）**
+>
+> i7-13700KF + RTX 4070 SUPER、Windows 11 で計測。VIctory の安定版統合（`third_party/victory`、フォーク `LooperSalty/victory` のブランチ `anyxboxx/stable`）を `tools/lancer_victory.ps1 -GameDir <ゲームのフォルダー>` で起動しています。
+>
+> - ✅ GTA VI の Xbox Series 1.0.2.1 ビルドは PC で**起動します**。起動、プロフィール画面、初回設定、法的画面、ロード、ポーズメニューまで動作し、メニューは 30 fps です。
+> - ✅ **最初のカットシーン**（ミッション 1 の冒頭、オープニングクレジット表示）まで進みます。ワールド内で 5 分間 GPU ハングは発生していません。
+> - ⛔ 現時点の限界: 3D シーンは黒いままで（ライティングパスがまだ変換されていません）、ワールドは毎秒 0.3〜0.5 フレームのためプレイできません。実験ブランチ（`anyxboxx/essai`）の GPU ハングとライティングに取り組み中です。
+> - 必要なもの: ご自身のゲームのコピー、SM 6.6 とメッシュシェーダー対応の NVIDIA または AMD の GPU、Rust。このリポジトリにゲームファイルは含まれません。
+
 AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込み、そのコードを Unicorn で実行します。コンソールのシステム関数は、ネイティブモードでは C++ ランタイムに、隔離されたマシンでは Python のコードに置き換えられます（WinDurango や Wine と同じ高レベルエミュレーション）。このプログラムは Xbox Series X として振る舞い、`XSystemGetDeviceType` は `XboxScarlettAnaconda` を返します。
 
 ## 対象と現状
@@ -9,7 +19,7 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 AnyXboxX は 1 つのビルドに特化しています: **Xbox Series 版 Grand Theft Auto VI、バージョン 1.0.2.1**。このゲームが必要とするもの（インポートするシステム関数、使用するシェーダーと Direct3D 12.x メソッド）だけを変換します。ほかのゲームは、この変換が完了してから試します。本プロジェクトは同じビルドを対象とする [VIctory](https://github.com/Marvisak/VIctory)（Marvisak、GPL-3.0 以降）を土台にしています。VIctory とコミュニティの 24 件のプルリクエストを統合したものがサブモジュール `third_party/victory`（フォーク `LooperSalty/victory`、ブランチ `anyxboxx/stable`）です。Marvisak と各プルリクエストの作者に感謝します。個別のクレジットは [THIRD_PARTY.md](../../THIRD_PARTY.md) にあります。
 
 > [!IMPORTANT]
-> **ゲームはプレイできません。** VIctory を介すと、Xbox Series 版 1.0.2.1 ビルドは私たちのマシンで最初のカットシーン（ミッション 1 の冒頭）まで進みますが、シーンはまだ真っ黒で、ワールド内のフレームレートは毎秒 0.3〜0.5 枚です。このリポジトリにはゲームファイル、鍵、実行ファイルは含まれず、その入手方法も説明しません。
+> **ゲームはプレイできません。** 現在地はこのページ上部のボックスを参照してください。このリポジトリにはゲームファイル、鍵、実行ファイルは含まれず、その入手方法も説明しません。
 
 オンラインの状況ページ（必要なディスク容量を含む）: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**。
 

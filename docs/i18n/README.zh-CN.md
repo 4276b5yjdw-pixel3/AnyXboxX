@@ -2,6 +2,16 @@
 
 [English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · [日本語](README.ja.md) · **中文**
 
+> [!NOTE]
+> **当前进展（2026-11-24）**
+>
+> 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的稳定版整合（`third_party/victory`，分支仓库 `LooperSalty/victory` 的 `anyxboxx/stable` 分支），通过 `tools/lancer_victory.ps1 -GameDir <游戏文件夹>` 启动：
+>
+> - ✅ GTA VI 的 Xbox Series 1.0.2.1 版本**可以在 PC 上启动**：启动、档案界面、首次运行设置、法律声明界面、加载、暂停菜单。菜单为 30 fps。
+> - ✅ 最远能到**第一段过场动画**（任务 1 的开场，显示开场字幕）。在世界中 5 分钟内没有 GPU 挂起。
+> - ⛔ 目前的限制：3D 场景仍是黑的（光照 pass 尚未翻译），世界中的帧率为每秒 0.3 到 0.5 帧，无法游玩。正在处理实验分支（`anyxboxx/essai`）的 GPU 挂起问题和光照。
+> - 要求：你自己的游戏副本、支持 SM 6.6 和 mesh shader 的 NVIDIA 或 AMD GPU、Rust。本仓库不包含任何游戏文件。
+
 AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unicorn 执行其代码。主机的系统函数在原生模式下由 C++ 运行时替代，在隔离的虚拟机中由 Python 代码替代（高级别模拟，与 WinDurango 或 Wine 类似）。该程序会表现为一台 Xbox Series X：`XSystemGetDeviceType` 返回 `XboxScarlettAnaconda`。
 
 ## 目标与现状
@@ -9,7 +19,7 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，版本 1.0.2.1**。只翻译这款游戏需要的部分（它导入的系统函数、它使用的着色器和 Direct3D 12.x 方法）。待这部分翻译完成后，再尝试其他游戏。本项目基于面向同一版本的 [VIctory](https://github.com/Marvisak/VIctory)（Marvisak，GPL-3.0 或更高版本）：我们对 VIctory 及 24 个社区 pull request 的整合就是子模块 `third_party/victory`（分支仓库 `LooperSalty/victory`，分支 `anyxboxx/stable`）。感谢 Marvisak 和这些 pull request 的作者，逐一致谢见 [THIRD_PARTY.md](../../THIRD_PARTY.md)。
 
 > [!IMPORTANT]
-> **游戏目前无法游玩。** 通过 VIctory，Xbox Series 1.0.2.1 版本现在能在我们的机器上运行到第一段过场动画（任务 1 的开场），但画面仍是黑的，世界中的帧率为每秒 0.3 到 0.5 帧。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。
+> **游戏目前无法游玩。** 当前进展见本页顶部的方框。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。
 
 在线状态页面（含所需磁盘空间）：**[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**。
 
