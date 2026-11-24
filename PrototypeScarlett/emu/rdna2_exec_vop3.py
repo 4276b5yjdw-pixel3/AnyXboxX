@@ -8,7 +8,7 @@ Sémantique d'après la documentation publique d'AMD (« RDNA 2 Instruction Set 
 import math
 
 from emu.rdna2_exec_ops import (MASK32, VECTOR, VECTOR_COMPARE, _float_op, _fma, bits_float, float_bits,
-                                signed)
+                                ldexp, signed)
 
 SIGN = 0x8000_0000
 EXEC_LO = 126
@@ -92,7 +92,7 @@ VECTOR3 = {
     "v_mul_hi_i32": lambda a, b, c: (signed(a) * signed(b)) >> 32,
     "v_bcnt_u32_b32": lambda a, b, c: bin(a).count("1") + b,
     "v_bfm_b32": lambda a, b, c: ((1 << (a & 31)) - 1) << (b & 31),
-    "v_ldexp_f32": lambda a, b, c: _float_op(lambda x: math.ldexp(x, signed(b)))(bits_float(a)),
+    "v_ldexp_f32": lambda a, b, c: _float_op(lambda x: ldexp(x, signed(b)))(bits_float(a)),
     "v_perm_b32": _perm_b32,
 }
 # Retenues (VOP3b) : fonction(a, b, retenue entrante) → (résultat, retenue sortante).

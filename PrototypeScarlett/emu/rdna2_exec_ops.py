@@ -7,7 +7,10 @@ puis arrondis en simple précision ; les dénormaux ne sont pas traités à part
 import math
 import struct
 
+from emu import rdna2_exec_bits
+
 MASK32, MASK64 = 0xFFFF_FFFF, (1 << 64) - 1
+EXEC = 126                                  # exec_lo ; exec_hi en 127
 INT32_MIN, INT32_MAX = -(1 << 31), (1 << 31) - 1
 POSITIVE_INFINITY, NEGATIVE_INFINITY = 0x7F80_0000, 0xFF80_0000
 
@@ -41,9 +44,33 @@ def _float_op(function):
 
 
 def _to_int(value, low, high):
+    """Conversion saturée : NaN → 0, ±infini et hors bornes → la borne la plus proche."""
     if math.isnan(value):
         return 0
+    if math.isinf(value):
+        return high if value > 0 else low
     return int(min(max(math.trunc(value), low), high))
+
+
+def _exp2(x):
+    """2^x ; au-delà du format double, +infini (Python lève OverflowError)."""
+    try:
+        return 2.0 ** x
+    except OverflowError:
+        return math.inf
+
+
+def _fract(x):
+    """x + -floor(x) (ISA) : NaN pour ±infini, où floor ne donne pas d'entier."""
+    return math.nan if math.isinf(x) else x - math.floor(x)
+
+
+def ldexp(x, exponent):
+    """x × 2^exponent ; ±infini quand le résultat dépasse le format double."""
+    try:
+        return math.ldexp(x, exponent)
+    except OverflowError:
+        return math.copysign(math.inf, x)
 
 
 def _reciprocal(x):
@@ -56,9 +83,9 @@ def _log2(x):
 
 # --- Scalaires --------------------------------------------------------------------------
 
-def _sop2(operation, width=1, second_width=None):
+def _sop2(operation, width=1, second_width=None, first_width=None):
     def execute(wave, f, literal):
-        a = wave.read_scalar(f["ssrc0"], literal, width)
+        a = wave.read_scalar(f["ssrc0"], literal, first_width or width)
         b = wave.read_scalar(f["ssrc1"], literal, second_width or width)
         result, scc = operation(a, b, wave)
         wave.write_scalar(f["sdst"], result, width)
@@ -77,19 +104,23 @@ def _sop1(operation, width=1):
     return execute
 
 
-def _saveexec(combine):
+def _saveexec(combine, width=1, writes_new=False):
+    """EXEC = combine(S0, EXEC) ; D = ancien EXEC (saveexec) ou nouvel EXEC (wrexec)."""
+    mask = MASK64 if width == 2 else MASK32
+
     def execute(wave, f, literal):
-        previous = wave.exec
-        wave.s[126] = combine(wave.read_scalar(f["ssrc0"], literal), previous) & MASK32
-        wave.write_scalar(f["sdst"], previous)
-        wave.scc = wave.exec != 0
+        previous = wave.read_scalar(EXEC, literal, width)
+        new = combine(wave.read_scalar(f["ssrc0"], literal, width), previous) & mask
+        wave.write_scalar(EXEC, new, width)
+        wave.write_scalar(f["sdst"], new if writes_new else previous, width)
+        wave.scc = new != 0
     return execute
 
 
-def _compare_scalar(test, width=1, is_signed=False):
+def _compare_scalar(test, width=1, is_signed=False, second_width=None):
     def execute(wave, f, literal):
         a = wave.read_scalar(f["ssrc0"], literal, width)
-        b = wave.read_scalar(f["ssrc1"], literal, width)
+        b = wave.read_scalar(f["ssrc1"], literal, second_width or width)
         if is_signed:
             a, b = signed(a), signed(b)
         wave.scc = bool(test(a, b))
@@ -159,10 +190,6 @@ SCALAR = {
     "s_sext_i32_i8": _sop1(lambda a, w: (signed(a, 8), None)),
     "s_sext_i32_i16": _sop1(lambda a, w: (signed(a, 16), None)),
     "s_abs_i32": _sop1(lambda a, w: (abs(signed(a)), a != 0)),
-    "s_and_saveexec_b32": _saveexec(lambda s, e: s & e),
-    "s_or_saveexec_b32": _saveexec(lambda s, e: s | e),
-    "s_xor_saveexec_b32": _saveexec(lambda s, e: s ^ e),
-    "s_andn2_saveexec_b32": _saveexec(lambda s, e: s & ~e),
     "s_movk_i32": _sopk(lambda d, k, raw, w: (k, None)),
     "s_cmovk_i32": _sopk(lambda d, k, raw, w: (k if w.scc else None, None)),
     "s_addk_i32": _sopk(lambda d, k, raw, w: (signed(d) + k, _overflow(0, 0, signed(d) + k))),
@@ -179,6 +206,7 @@ SCALAR["s_cmp_eq_u64"] = _compare_scalar(COMPARISONS["eq"], 2)
 SCALAR["s_cmp_lg_u64"] = _compare_scalar(COMPARISONS["lg"], 2)
 for _name in NO_OPERATION:
     SCALAR[_name] = lambda wave, f, literal: None
+SCALAR.update(rdna2_exec_bits.scalar_operations(_sop1, _sop2, _logic, _saveexec, _compare_scalar))
 
 BRANCHES = {
     "s_branch": lambda w: True,
@@ -228,7 +256,7 @@ VECTOR = {
     "v_rcp_f32": _unary_float(_reciprocal),
     "v_rsq_f32": _unary_float(lambda x: _reciprocal(math.sqrt(x))),
     "v_sqrt_f32": _unary_float(math.sqrt),
-    "v_exp_f32": _unary_float(lambda x: 2.0 ** x),
+    "v_exp_f32": _unary_float(_exp2),
     "v_log_f32": _unary_float(_log2),
     "v_sin_f32": _unary_float(lambda x: math.sin(x * 2 * math.pi)),
     "v_cos_f32": _unary_float(lambda x: math.cos(x * 2 * math.pi)),
@@ -236,7 +264,7 @@ VECTOR = {
     "v_ceil_f32": _unary_float(lambda x: x if math.isinf(x) else float(math.ceil(x))),
     "v_trunc_f32": _unary_float(lambda x: x if math.isinf(x) else float(math.trunc(x))),
     "v_rndne_f32": _unary_float(_round_even),
-    "v_fract_f32": _unary_float(lambda x: x - math.floor(x)),
+    "v_fract_f32": _unary_float(_fract),
     "v_add_f32": _binary_float(lambda x, y: x + y),
     "v_sub_f32": _binary_float(lambda x, y: x - y),
     "v_subrev_f32": _binary_float(lambda x, y: y - x),
