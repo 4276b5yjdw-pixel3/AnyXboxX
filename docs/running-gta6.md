@@ -4,15 +4,15 @@
 
 This guide installs and starts the project, and lists everything you need to repeat our tests on the Xbox Series 1.0.2.1 build of GTA VI, up to where we are today: the first cutscene. It does not provide the game and does not explain how to get it: you bring your own copy. Never put game files in this repository or attach them to an issue.
 
-The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), tracked here as the `third_party/victory` submodule, pinned to the fork [fxceless/victory-gta6](https://github.com/fxceless/victory-gta6) (GPL-3.0) at commit `d279e69`. The script `tools/lancer_victory.ps1` builds it and starts it on your game folder.
+The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), tracked here as the `third_party/victory` submodule, pinned to the fork [fxceless/victory-gta6](https://github.com/fxceless/victory-gta6) (GPL-3.0) at commit `7b0f736`. The script `tools/lancer_victory.ps1` builds it and starts it on your game folder.
 
 ## Pinned fork (24 November, night)
 
-`third_party/victory` points to `fxceless/victory-gta6` at commit `d279e69` ("Make host pipeline waits configurable and prewarm pending requests (#1)", contributed by ZazaJr24). The fork is not a GitHub fork attached to VIctory; its licence is GPL-3.0, compatible with AnyXboxX (GPL-3.0 or later). It replaces our former `anyxboxx/stable` integration.
+`third_party/victory` points to `fxceless/victory-gta6` at commit `7b0f736` ("Shader tests: recognise the software adapter from the device's own adapter"). It was first pinned at `d279e69` ("Make host pipeline waits configurable and prewarm pending requests (#1)", contributed by ZazaJr24); `7b0f736` adds `e9765a7` ("Fix the device loss introduced by the wave64 update") and `004bf69`. Newer commits, from `1684989` on, are not taken: the maintainer judged them a regression. The fork is not a GitHub fork attached to VIctory; its licence is GPL-3.0, compatible with AnyXboxX (GPL-3.0 or later). It replaces our former `anyxboxx/stable` integration.
 
 Measured by the maintainer on 2026-11-24 (i7-13700KF + RTX 4070 SUPER, Windows 11) by running our own copy of the 1.0.2.1 build, from the VIctory log of the run (frame rate and draw counters as the program prints them), against our former `last` integration:
 
-| | fork `d279e69` | former `last` integration |
+| | fork `d279e69` (first pin) | former `last` integration |
 | --- | --- | --- |
 | Frame rate in the world | 4.0 to 4.3 fps | 2.3 fps |
 | Draws per frame | about 4,580 | about 2,860 |
@@ -24,7 +24,9 @@ The world is reached and displayed. Nothing here comes from reading the game's c
 
 **Observed by the maintainer (Windows 11, RTX 4070 Super).** With the `fxceless/victory-gta6` fork at commit `d279e69` and the launcher settings, the game was played at about 4 fps for about 13 minutes in the starting area (the prison): the character moves under the player's control and interacts with the first NPCs, then the host device is lost (known limit).
 
-**Known limits (stability).** The second run held about 13 minutes in the world (first draws at 19:07:27 UTC), then lost the GPU device at 19:20:35 UTC: "host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists", the last list being a compute shader (`c1488f485ad606fb`). Measured, from the VIctory log of the run; the cause is not known. Plan on a few minutes to about 13 minutes in the world before a device loss, and relaunch. The message names `VICTORY_LATE_WAIT=1` while the launcher sets `3`: the setting actually in force in that run is to be checked.
+**Measured on `7b0f736` (maintainer, same machine, from the VIctory log of the run `victory-fork-7b0-relay.log`).** With `VICTORY_RELAY=2` and the launcher settings, pipeline cache already filled: world reached in about 1 min 25 s; 3.5 fps on the first frame of the world, then 4.5 fps after 2 min, about 4,975 draws per frame, 346 draws lost without a host pipeline; no device loss during about 2 min 40 s in the world, after which the maintainer closed the window. An earlier run of `7b0f736` without `VICTORY_RELAY`: 5.4 fps at about 3 min, no loss, window closed. The maintainer's opinion: "slightly better" than `d279e69`. Reference `d279e69`: 4.0 to 4.3 fps, about 4,580 draws, about 430 lost.
+
+**Known limits (stability).** The device loss after about 13 minutes was observed on `d279e69`; the rest of this paragraph describes that run. `7b0f736` fixes a device loss tied to wave64; its long-run stability is not yet measured by us (our longest run on it is about 3 minutes). The fork's issue #26 reports 21.5 minutes stable on an RTX 4060 Ti with `VICTORY_RELAY=2` (third-party report, not reproduced here). The second run on `d279e69` held about 13 minutes in the world (first draws at 19:07:27 UTC), then lost the GPU device at 19:20:35 UTC: "host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists", the last list being a compute shader (`c1488f485ad606fb`). Measured, from the VIctory log of the run; the cause is not known. Plan on a few minutes to about 13 minutes in the world before a device loss, and relaunch. The message names `VICTORY_LATE_WAIT=1` while the launcher sets `3`: the setting actually in force in that run is to be checked.
 
 **First cold launch.** The first launch with an empty cache crashed at loading (pipeline compilation, then the game's internal crash tracked as VIctory #1464). The second launch, with the cache filled, held. If the first launch crashes, launch again.
 
@@ -143,6 +145,7 @@ The script sets the variables below (unless you pass `-NoTunedSettings`, which k
 | `VICTORY_D3D12_DRED` | `1` | Device-removed data. On in the measured run; it slows the world, so turn it off (`-NoTunedSettings`) when you only want speed. |
 | `VICTORY_LATE_WAIT` | `3` | Host pipeline wait setting of the fork's pull request #1. |
 | `VICTORY_WIDE_BACK` | `1` | Fork option, on in the measured run. |
+| `VICTORY_RELAY` | `2` | Fork option, on in the measured run of `7b0f736`. |
 | `VICTORY_CARD_BUFFERS_MIN_MB`, `VICTORY_CARD_BUFFERS_MB` | `1`, `1024` | Card buffer sizing, in MB. |
 
 The first cold launch may crash while the pipelines compile: launch again once the cache is filled.

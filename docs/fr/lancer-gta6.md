@@ -4,15 +4,15 @@
 
 Ce guide explique comment installer et lancer le projet, et tout ce qu'il faut installer pour refaire nos essais sur le build Xbox Series 1.0.2.1 de GTA VI, jusqu'au point où nous en sommes : la première cinématique. Il ne fournit pas le jeu et n'explique pas comment l'obtenir : vous apportez votre propre copie. Ne mettez jamais de fichier du jeu dans ce dépôt et ne les joignez à aucune issue.
 
-Le lancement passe par [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou ultérieure), suivi ici comme sous-module `third_party/victory`, épinglé sur le fork [fxceless/victory-gta6](https://github.com/fxceless/victory-gta6) (GPL-3.0) au commit `d279e69`. Le script `tools/lancer_victory.ps1` le compile et le lance sur votre dossier du jeu.
+Le lancement passe par [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou ultérieure), suivi ici comme sous-module `third_party/victory`, épinglé sur le fork [fxceless/victory-gta6](https://github.com/fxceless/victory-gta6) (GPL-3.0) au commit `7b0f736`. Le script `tools/lancer_victory.ps1` le compile et le lance sur votre dossier du jeu.
 
 ## Fork épinglé (24 novembre, nuit)
 
-`third_party/victory` pointe vers `fxceless/victory-gta6` au commit `d279e69` (« Make host pipeline waits configurable and prewarm pending requests (#1) », contribué par ZazaJr24). Ce fork n'est pas un fork GitHub rattaché à VIctory ; sa licence est GPL-3.0, compatible avec AnyXboxX (GPL-3.0 ou ultérieure). Il remplace notre ancienne intégration `anyxboxx/stable`.
+`third_party/victory` pointe vers `fxceless/victory-gta6` au commit `7b0f736` (« Shader tests: recognise the software adapter from the device's own adapter »). Il était d'abord épinglé sur `d279e69` (« Make host pipeline waits configurable and prewarm pending requests (#1) », contribué par ZazaJr24) ; `7b0f736` ajoute `e9765a7` (« Fix the device loss introduced by the wave64 update ») et `004bf69`. Les commits plus récents, à partir de `1684989`, ne sont pas pris : le mainteneur les a jugés en régression. Ce fork n'est pas un fork GitHub rattaché à VIctory ; sa licence est GPL-3.0, compatible avec AnyXboxX (GPL-3.0 ou ultérieure). Il remplace notre ancienne intégration `anyxboxx/stable`.
 
 Mesuré par le mainteneur le 2026-11-24 (i7-13700KF + RTX 4070 SUPER, Windows 11) en lançant notre propre copie du build 1.0.2.1, d'après le journal de VIctory de l'essai (fréquence d'images et compteurs de dessins tels que le programme les affiche), contre notre ancienne intégration `last` :
 
-| | fork `d279e69` | ancienne intégration `last` |
+| | fork `d279e69` (premier épinglage) | ancienne intégration `last` |
 | --- | --- | --- |
 | Fréquence dans le monde | 4,0 à 4,3 fps | 2,3 fps |
 | Dessins par image | environ 4 580 | environ 2 860 |
@@ -24,7 +24,9 @@ Le monde est atteint et affiché. Rien ici ne vient de la lecture du code du jeu
 
 **Observé par le mainteneur (Windows 11, RTX 4070 Super).** Avec le fork `fxceless/victory-gta6` au commit `d279e69` et les réglages du lanceur, le jeu a été joué à environ 4 fps pendant environ 13 minutes dans la zone de départ (la prison) : le personnage se déplace sous le contrôle du joueur et interagit avec les premiers PNJ, puis le périphérique hôte est perdu (limite connue).
 
-**Limites connues (stabilité).** Le deuxième lancement a tenu environ 13 minutes dans le monde (premiers dessins à 19:07:27 UTC), puis a perdu le périphérique GPU à 19:20:35 UTC : « host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists », la dernière liste étant un compute shader (`c1488f485ad606fb`). Mesuré, d'après le journal de VIctory de l'essai ; la cause n'est pas connue. Comptez de quelques minutes à environ 13 minutes dans le monde avant une perte du périphérique, puis relancez. Le message cite `VICTORY_LATE_WAIT=1` alors que le lanceur pose `3` : le réglage réellement actif dans cet essai reste à vérifier.
+**Mesuré sur `7b0f736` (mainteneur, même machine, d'après le journal VIctory de l'essai `victory-fork-7b0-relay.log`).** Avec `VICTORY_RELAY=2` et les réglages du lanceur, cache de pipelines déjà rempli : monde atteint en environ 1 min 25 ; 3,5 i/s à la première image du monde, puis 4,5 i/s après 2 min, environ 4 975 draws par image, 346 draws perdus faute de pipeline hôte ; aucune perte du périphérique pendant environ 2 min 40 dans le monde, puis le mainteneur a fermé la fenêtre. Un essai antérieur de `7b0f736` sans `VICTORY_RELAY` : 5,4 i/s à environ 3 min, aucune perte, fenêtre fermée. Avis du mainteneur : « légèrement mieux » que `d279e69`. Référence `d279e69` : 4,0 à 4,3 i/s, environ 4 580 draws, environ 430 perdus.
+
+**Limites connues (stabilité).** La perte du périphérique après environ 13 minutes a été observée sur `d279e69` ; la suite de ce paragraphe décrit cet essai. `7b0f736` corrige une perte de périphérique liée au wave64 ; sa tenue longue n'est pas encore mesurée chez nous (notre essai le plus long dessus dure environ 3 minutes). L'issue n°26 du fork rapporte 21,5 minutes stables sur une RTX 4060 Ti avec `VICTORY_RELAY=2` (rapport tiers, non reproduit ici). Sur `d279e69`, le deuxième lancement a tenu environ 13 minutes dans le monde (premiers dessins à 19:07:27 UTC), puis a perdu le périphérique GPU à 19:20:35 UTC : « host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists », la dernière liste étant un compute shader (`c1488f485ad606fb`). Mesuré, d'après le journal de VIctory de l'essai ; la cause n'est pas connue. Comptez de quelques minutes à environ 13 minutes dans le monde avant une perte du périphérique, puis relancez. Le message cite `VICTORY_LATE_WAIT=1` alors que le lanceur pose `3` : le réglage réellement actif dans cet essai reste à vérifier.
 
 **Premier lancement à froid.** Le premier lancement avec un cache vide a planté au chargement (compilation des pipelines, puis le plantage interne du jeu suivi sous VIctory #1464). Le deuxième lancement, avec le cache rempli, a tenu. Si le premier plante, relancez.
 
@@ -143,6 +145,7 @@ Le script règle les variables ci-dessous (sauf avec `-NoTunedSettings`, qui ne 
 | `VICTORY_D3D12_DRED` | `1` | Données de périphérique perdu. Actif dans l'essai mesuré ; il ralentit le monde, désactivez-le (`-NoTunedSettings`) si seule la vitesse compte. |
 | `VICTORY_LATE_WAIT` | `3` | Réglage d'attente des pipelines côté hôte, de la pull request n°1 du fork. |
 | `VICTORY_WIDE_BACK` | `1` | Option du fork, active dans l'essai mesuré. |
+| `VICTORY_RELAY` | `2` | Option du fork, active dans l'essai mesuré de `7b0f736`. |
 | `VICTORY_CARD_BUFFERS_MIN_MB`, `VICTORY_CARD_BUFFERS_MB` | `1`, `1024` | Dimensionnement des tampons de carte, en Mo. |
 
 Le premier lancement à froid peut planter pendant la compilation des pipelines : relancez une fois le cache rempli.

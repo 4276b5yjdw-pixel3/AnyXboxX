@@ -72,6 +72,8 @@ if (-not $NoTunedSettings) {
         VICTORY_LATE_WAIT               = '3'
         # Wide back-end option of the fork, on in the measured run.
         VICTORY_WIDE_BACK               = '1'
+        # Relay mode 2 of the fork; on in the measured run of 7b0f736 (21.5 min stable on a 4060 Ti, per the fork's issue #26).
+        VICTORY_RELAY                   = '2'
         # Card buffer sizing: minimum and total, in MB.
         VICTORY_CARD_BUFFERS_MIN_MB     = '1'
         VICTORY_CARD_BUFFERS_MB         = '1024'
