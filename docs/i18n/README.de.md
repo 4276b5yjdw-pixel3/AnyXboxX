@@ -11,7 +11,7 @@
 >
 > - ✅ Der Xbox-Series-Build 1.0.2.1 von GTA VI **startet** auf dem PC: Boot, Profilbildschirm, Einstellungen beim ersten Start, rechtliche Bildschirme, Ladevorgang, Pausenmenü. Die Menüs laufen mit 30 fps.
 > - ✅ Er erreicht **die Spielwelt mit steuerbarer Figur**: das Tutorial „Move / Move the camera“ (L / R) wird angezeigt, über einem 3D-Bild, das noch schwarz ist.
-> - ⛔ Grenze im Moment: Die Spielwelt läuft mit etwa 2,4 Bildern pro Sekunde (vorher 0,2), das 3D-Bild bleibt schwarz (die Szene existiert in 2560x1440, aber das präsentierte Ziel bleibt null) und etwa 170 Shader sind im Spiel noch nicht übersetzt, ist also nicht spielbar. Arbeit läuft an Lane-Masken-Shadern und an der finalen Komposition.
+> - ⛔ Grenze im Moment: Die Spielwelt läuft mit etwa 2,4 Bildern pro Sekunde im Series-X-Modus und etwa 3,2 im Series-S-Modus (vorher 0,2), das 3D-Bild bleibt schwarz (die Geometrie existiert im G-Buffer, aber die Endfarbe ist ein einheitlicher Farbton; gemessen am Abend des 24.11.) und etwa 130 bis 170 Shader sind im Spiel noch nicht übersetzt, ist also nicht spielbar. Arbeit läuft an Lane-Masken-Shadern und an der finalen Komposition.
 > - Voraussetzungen: eine eigene Kopie des Spiels, eine NVIDIA- oder AMD-GPU mit SM 6.6 und Mesh Shaders, Rust. Keine Spieldateien in diesem Repository.
 > - So startest du es: [docs/running-gta6.md](../running-gta6.md).
 
@@ -82,7 +82,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | Tabelle der 396 GDK-Funktionen: Schnittstelle und Methodennummer, aus `xgameruntime.lib` extrahiert (`tools/gdk_interfaces.py`) | ✅ erledigt |
 | `XTaskQueue`, `XAsync`, `XThread` von AnyXboxX bereitgestellt: testgdk läuft ohne die Runtime von Windows | ✅ erledigt |
 | Übrige GDK-Schnittstellen: an die GDK-Runtime von Windows delegiert, von der Ablaufverfolgung benannt | 🟡 in Arbeit |
-| 649 automatisierte Tests | ✅ erledigt |
+| 650 automatisierte Tests | ✅ erledigt |
 | D3D12.X: `D3D12XboxCreateDevice`, `ID3D12*`-Schnittstellen der Konsole und `DXGIXPresentArray`, bereitgestellt von TomBox' Rust-`d3d12_xs.dll` (MIT, 48 implementierte Exporte, gebaut mit `tools/build_tombox.py d3d12_xs`, geladen mit `ANYXBOXX_D3D12_XS=<Pfad>`); ohne Konsolen-Executable hier nicht testbar | 🟡 in Arbeit |
 | Konsolenbibliotheken von TomBox (Rust, GPL-3.0) für das, was AnyXboxX fehlt: `xg_xs` (Texturlayouts, 23 Exporte) und vollständiges `xmem` (38 Exporte), mit `ANYXBOXX_TOMBOX_DIR=<Ordner>`; gebaut mit `tools/build_tombox.py xg_xs xmem` | 🟡 in Arbeit |
 | `XUser` offline: immer angemeldetes lokales Profil, einstellbarer Gamertag (`ANYXBOXX_GAMERTAG`), Anmeldung von testgdk erfolgreich | ✅ erledigt |
@@ -109,7 +109,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | Übrige von AnyXboxX geschriebene GDK-Schnittstellen (`XGameUi`, `XNetworking`…) | ⏳ offen |
 | Shader-Rekompilierer RDNA 2 → DXIL: erste Programme nach HLSL übersetzt, zu DXIL kompiliert und mit D3D12 auf der GPU des PCs ausgeführt (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP ohne GPU), Speicher identisch mit einem wave32-Referenzinterpreter, der 599 von 1.487 Kodierungen ausführt (skalar, VOP1/VOP2/VOPC/VOP3, Speicher: SMEM, LDS, GLOBAL, MUBUF mit V#-Grenzen, Atomics, Sprünge, `exec`-Divergenz); ein erster Vertex- und Pixel-Shader (EXP-Exporte, VINTRP-Interpolation) mit D3D12 gezeichnet, Vertex für Vertex und Pixel für Pixel identisch: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in Arbeit |
 | Shader-Cache: übersetzte Shader einmal zu DXIL kompiliert, danach von der Festplatte (1,4 ms) oder aus dem Speicher (0,8 ms) statt mit dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` oder `ANYXBOXX_SHADER_CACHE`, Größe begrenzt | 🟡 in Arbeit |
-| GTA VI Xbox Series 1.0.2.1 über VIctory (`third_party/victory`): erreicht die Spielwelt mit steuerbarer Figur (Tutorial „Move / Move the camera“ über schwarzem 3D-Bild); Menüs mit 30 fps; etwa 2,4 fps in der Spielwelt (gemessen am 2026-11-24); nicht spielbar | 🟡 in Arbeit |
+| GTA VI Xbox Series 1.0.2.1 über VIctory (`third_party/victory`): erreicht die Spielwelt mit steuerbarer Figur (Tutorial „Move / Move the camera“ über schwarzem 3D-Bild); Menüs mit 30 fps; etwa 2,4 fps in der Spielwelt, etwa 3,2 im Series-S-Modus (gemessen am 2026-11-24); nicht spielbar | 🟡 in Arbeit |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
 | Dynamisches Laden einer DLL zur Laufzeit (`LoadLibrary` + `DllMain`) | ⏳ offen |
 | D3D12.X-Grafik nach Direct3D 12 / Vulkan | ⏳ offen |

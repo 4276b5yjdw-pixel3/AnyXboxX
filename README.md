@@ -11,7 +11,7 @@
 >
 > - ✅ The Xbox Series 1.0.2.1 build of GTA VI **launches** on PC: boot, profile screen, first-run settings, legal screens, loading, pause menu. Menus run at 30 fps.
 > - ✅ It reaches **the world with a controllable character**: the tutorial "Move / Move the camera" (L / R) is displayed, composed over a 3D image that is still black.
-> - ⛔ Limit for now: the world runs at about 2.4 frames per second (it was 0.2), the 3D image stays black (the scene exists at 2560x1440 but the presented target stays zero) and about 170 shaders are still untranslated in game, so it is not playable. Work in progress on lane-mask shaders and on final composition.
+> - ⛔ Limit for now: the world runs at about 2.4 frames per second in Series X mode and about 3.2 in Series S mode (it was 0.2), the 3D image stays black (the geometry exists in the G-buffer but the final colour is a uniform tint, measured on the evening of 2026-11-24) and about 130 to 170 shaders are still untranslated in game, so it is not playable. Work in progress on lane-mask shaders and on final composition.
 > - Requirements: your own copy of the game, an NVIDIA or AMD GPU with SM 6.6 and mesh shaders, Rust. No game files in this repository.
 > - How to run it: [docs/running-gta6.md](docs/running-gta6.md).
 
@@ -82,7 +82,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 649 automated tests | ✅ done |
+| 650 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice`, console `ID3D12*` interfaces and `DXGIXPresentArray`, served by TomBox's Rust `d3d12_xs.dll` (MIT, 48 implemented exports, built by `tools/build_tombox.py d3d12_xs`, loaded with `ANYXBOXX_D3D12_XS=<path>`); untestable here without a console executable | 🟡 in progress |
 | Console libraries from TomBox (Rust, GPL-3.0) for what AnyXboxX lacks: `xg_xs` (texture layouts, 23 exports) and full `xmem` (38 exports), with `ANYXBOXX_TOMBOX_DIR=<folder>`; built by `tools/build_tombox.py xg_xs xmem` | 🟡 in progress |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
@@ -109,7 +109,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Other GDK interfaces written by AnyXboxX (`XGameUi`, `XNetworking`…) | ⏳ to do |
 | RDNA 2 → DXIL shader recompiler: first programs translated to HLSL, compiled to DXIL and run on the PC's GPU with D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP without a GPU), memory identical to a wave32 reference interpreter running 599 of 1,487 encodings (scalar, VOP1/VOP2/VOPC/VOP3, memory: SMEM, LDS, GLOBAL, MUBUF with V# bounds, atomics, branches, `exec` divergence); a first vertex shader and pixel shader (EXP exports, VINTRP interpolation) drawn with D3D12, identical vertex by vertex and pixel by pixel: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in progress |
 | Shader cache: translated shaders compiled to DXIL once, then reused from disk (1.4 ms) or memory (0.8 ms) instead of dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` or `ANYXBOXX_SHADER_CACHE`, size-capped | 🟡 in progress |
-| GTA VI Xbox Series 1.0.2.1 via VIctory (`third_party/victory`): reaches the world with a controllable character (tutorial "Move / Move the camera" over a black 3D image); menus at 30 fps; about 2.4 fps in the world (measured 2026-11-24); not playable | 🟡 in progress |
+| GTA VI Xbox Series 1.0.2.1 via VIctory (`third_party/victory`): reaches the world with a controllable character (tutorial "Move / Move the camera" over a black 3D image); menus at 30 fps; about 2.4 fps in the world, about 3.2 in Series S mode (measured 2026-11-24); not playable | 🟡 in progress |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
 | Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |
