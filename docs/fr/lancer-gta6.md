@@ -22,6 +22,8 @@ Mesuré par le mainteneur le 2026-11-24 (i7-13700KF + RTX 4070 SUPER, Windows 11
 
 Le monde est atteint et affiché. Rien ici ne vient de la lecture du code du jeu.
 
+**Observé par le mainteneur (Windows 11, RTX 4070 Super).** Avec le fork `fxceless/victory-gta6` au commit `d279e69` et les réglages du lanceur, le jeu a été joué à environ 4 fps pendant environ 13 minutes dans la zone de départ (la prison) : le personnage se déplace sous le contrôle du joueur et interagit avec les premiers PNJ, puis le périphérique hôte est perdu (limite connue).
+
 **Limites connues (stabilité).** Le deuxième lancement a tenu environ 13 minutes dans le monde (premiers dessins à 19:07:27 UTC), puis a perdu le périphérique GPU à 19:20:35 UTC : « host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists », la dernière liste étant un compute shader (`c1488f485ad606fb`). Mesuré, d'après le journal de VIctory de l'essai ; la cause n'est pas connue. Comptez de quelques minutes à environ 13 minutes dans le monde avant une perte du périphérique, puis relancez. Le message cite `VICTORY_LATE_WAIT=1` alors que le lanceur pose `3` : le réglage réellement actif dans cet essai reste à vérifier.
 
 **Premier lancement à froid.** Le premier lancement avec un cache vide a planté au chargement (compilation des pipelines, puis le plantage interne du jeu suivi sous VIctory #1464). Le deuxième lancement, avec le cache rempli, a tenu. Si le premier plante, relancez.
