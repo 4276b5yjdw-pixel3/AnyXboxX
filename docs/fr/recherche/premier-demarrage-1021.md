@@ -200,7 +200,7 @@ dessus.
 | W13 | **Fait, cette PR : dépendance à l'hôte documentée dans [jour-j.md](../jour-j.md), pas de shim, voir section 7.** `GameInput.dll!#1` : AnyXboxX n'a pas de shim GameInput. L'unique appelant du titre se lie à la DLL de l'hôte. Choisir : servir l'ordinal 1 depuis le lanceur, ou documenter la dépendance à l'hôte | statique | mesuré ; version d'ABI non vérifiée |
 | W14 | Audio (`chad` 5, `xapu` 5 chez TomBox, `AcpHal` 9) : manquant, mais non établi comme bloquant au démarrage, la chaîne d'appels étant indirecte. À traiter après W1 à W8 | section 2 | supposé |
 | W15 | **Fait, cette PR : noté dans [jour-j.md](../jour-j.md), section 3.** Imports propres à l'hôte : `api-ms-win-core-psm-appnotify-*`, `ext-ms-win-rtcore-ntuser-*`, MFPlat, WS2_32 par ordinal. Le mode natif dépend d'un hôte Windows récent ; le noter dans [jour-j.md](../jour-j.md) | section 2 | mesuré sur Windows 11 seulement |
-| W16 | `__XMemAllocationHooks__` : le titre exporte un symbole de données qu'aucun source de Leonida ne lit. Si `XMemAlloc*` se comporte mal, vérifier si le runtime de la console le lit par `GetProcAddress` sur l'exécutable | table d'exports | rôle supposé |
+| W16 | **Non fait : aucune source publique, voir section 7.** `__XMemAllocationHooks__` : le titre exporte un symbole de données qu'aucun source de Leonida ne lit. Si `XMemAlloc*` se comporte mal, vérifier si le runtime de la console le lit par `GetProcAddress` sur l'exécutable | table d'exports | rôle supposé |
 
 W1, W3, W7, W8, W9, W10, W11 et W12 se font à partir de la documentation publique et de tests synthétiques. W5 et
 W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
@@ -302,6 +302,10 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
   `api-ms-win-core-psm-appnotify-l1-1-0`/`-l1-1-1`
   ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/api/appnotify/nf-appnotify-registerappstatechangenotification)) ;
   les éditions N n'ont pas Media Foundation sans le Media Feature Pack. Documentation seulement, sans test.
+- **W16.** Non fait. Les pages de référence `xmem` du GDK (`XMemSetAllocationHooks` et la macro associée) ne sont
+  servies par Microsoft Learn qu'aux programmes de développeurs sous NDA (vérifié le 2026-11-24) : ce n'est donc pas une
+  source publique au sens de la règle 2, et aucune page publique ni aucun code open source trouvé ne lit cet export. La
+  ligne reste ouverte jusqu'à une source publique ou une mesure sur le titre.
 
 ## Sources et crédits
 
