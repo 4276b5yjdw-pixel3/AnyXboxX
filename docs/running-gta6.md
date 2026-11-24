@@ -4,11 +4,33 @@
 
 This guide installs and starts the project, and lists everything you need to repeat our tests on the Xbox Series 1.0.2.1 build of GTA VI, up to where we are today: the first cutscene. It does not provide the game and does not explain how to get it: you bring your own copy. Never put game files in this repository or attach them to an issue.
 
-The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), tracked here as the `third_party/victory` submodule, pinned to the fork [fxceless/victory-gta6](https://github.com/fxceless/victory-gta6) (GPL-3.0) at commit `7b0f736`. The script `tools/lancer_victory.ps1` builds it and starts it on your game folder.
+The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), tracked here as the `third_party/victory` submodule, pinned to the branch `anyxboxx/fork-7b0-lot5` of the maintainer's fork [LooperSalty/victory](https://github.com/LooperSalty/victory), which assembles the fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0) at `7b0f736` and seven of its pull requests (see below), at commit `fd021bf`. The script `tools/lancer_victory.ps1` builds it and starts it on your game folder.
 
-## Pinned fork (24 November, night)
+## Pinned branch: fork plus seven pull requests (24 November, night)
 
-`third_party/victory` points to `fxceless/victory-gta6` at commit `7b0f736` ("Shader tests: recognise the software adapter from the device's own adapter"). It was first pinned at `d279e69` ("Make host pipeline waits configurable and prewarm pending requests (#1)", contributed by ZazaJr24); `7b0f736` adds `e9765a7` ("Fix the device loss introduced by the wave64 update") and `004bf69`. Newer commits, from `1684989` on, are not taken: the maintainer judged them a regression. The fork is not a GitHub fork attached to VIctory; its licence is GPL-3.0, compatible with AnyXboxX (GPL-3.0 or later). It replaces our former `anyxboxx/stable` integration.
+`third_party/victory` now points to the branch `anyxboxx/fork-7b0-lot5` of the maintainer's VIctory fork [LooperSalty/victory](https://github.com/LooperSalty/victory), at commit `fd021bf26a7003749d668e5d9bf6b234bfab2e47`. That branch assembles the fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0, formerly `fxceless/victory-gta6`) at `7b0f736` and seven of its pull requests that were still open, cherry-picked with `-x`:
+
+| Fork pull request | Author | What it does | Commit |
+| --- | --- | --- | --- |
+| #63 | arminkhaleghirod | Textures that changed lately are hashed at every check (fixes the startup flicker) | `d9770b9` |
+| #71 | MartinIndra02 | D3D12 COPY queue for the relay card-copy fetches, parallel `CARD_COMPARE` | `5e758c7` |
+| #32 | arminkhaleghirod | 16-bit float RGBA stands in for R9G9B9E5 render targets | `d214807`, `0e2c46a` |
+| #82 | Kaivyyy | Depth bounds test passed through to host pipelines and command lists | `35cdf6f` |
+| #83 | ryotdev | Keep empty-EXEC branches that can reactivate lanes | `194c736` |
+| #81 | undeadhuman37 | A descriptor only read as data of eight dwords is a measured image | `6119c21` |
+| #77 | m335671 | `v_fma_mixlo/mixhi` over an f16 first interpolation half keeps zero | `fd021bf` |
+
+Measured or observed by the maintainer (Windows 11, RTX 4070 Super), from the VIctory log `victory-fork-lot5.log`, with the launcher settings of `main` (PR #172: no DRED, loop limit 256, `VICTORY_LATE_WAIT=3`, `VICTORY_WIDE_BACK=1`, card buffers) and **without** `VICTORY_RELAY`:
+
+- Startup: no flicker. Observed.
+- World after 2 min: 5.4 fps and 6,449 draws per frame (reference `main`: about 5.5 fps, about 4,410 draws; batch 4 with `VICTORY_RELAY=2`: 6.6 fps, 5,986 draws); 363 draws lost without a pipeline; 9 untranslated shaders (13 in batch 4); 16 pipelines refused by the driver (6 in batch 4); no device loss in about 2 min 30. Measured.
+- Maintainer's opinion: "much better", the best lighting and graphics so far. Graphic problems remain on Lucia's face.
+
+`VICTORY_RELAY` is no longer set by the launcher: the run judged best had it off, and the fork's issue #89 reports that it makes the characters' skin disappear and overlaps the subtitles. Known limits: ray tracing absent, shaders still untranslated, long-run stability not measured (our run lasted about 2 min 30). Progress of 24 November, from the VIctory logs: `d279e69` about 4 fps (13 min in the prison, then device lost) → `7b0f736` + `VICTORY_RELAY=2` about 4.5 fps → settings of PR #172 about 5.5 fps → batch 4 about 6.6 fps with `VICTORY_RELAY=2`, startup flicker fixed → this branch about 5.4 fps with more draws and the best image so far. Authors are credited in [THIRD_PARTY.md](../THIRD_PARTY.md).
+
+## Previous pin: fork `7b0f736` (24 November, night)
+
+`third_party/victory` points to `fxceless/victory-fork` at commit `7b0f736` ("Shader tests: recognise the software adapter from the device's own adapter"). It was first pinned at `d279e69` ("Make host pipeline waits configurable and prewarm pending requests (#1)", contributed by ZazaJr24); `7b0f736` adds `e9765a7` ("Fix the device loss introduced by the wave64 update") and `004bf69`. Newer commits, from `1684989` on, are not taken: the maintainer judged them a regression. The fork is not a GitHub fork attached to VIctory; its licence is GPL-3.0, compatible with AnyXboxX (GPL-3.0 or later). It replaces our former `anyxboxx/stable` integration.
 
 Measured by the maintainer on 2026-11-24 (i7-13700KF + RTX 4070 SUPER, Windows 11) by running our own copy of the 1.0.2.1 build, from the VIctory log of the run (frame rate and draw counters as the program prints them), against our former `last` integration:
 
@@ -22,7 +44,7 @@ Measured by the maintainer on 2026-11-24 (i7-13700KF + RTX 4070 SUPER, Windows 1
 
 The world is reached and displayed. Nothing here comes from reading the game's code.
 
-**Observed by the maintainer (Windows 11, RTX 4070 Super).** With the `fxceless/victory-gta6` fork at commit `d279e69` and the launcher settings, the game was played at about 4 fps for about 13 minutes in the starting area (the prison): the character moves under the player's control and interacts with the first NPCs, then the host device is lost (known limit).
+**Observed by the maintainer (Windows 11, RTX 4070 Super).** With the `fxceless/victory-fork` fork at commit `d279e69` and the launcher settings, the game was played at about 4 fps for about 13 minutes in the starting area (the prison): the character moves under the player's control and interacts with the first NPCs, then the host device is lost (known limit).
 
 **Measured on `7b0f736` (maintainer, same machine, from the VIctory log of the run `victory-fork-7b0-relay.log`).** With `VICTORY_RELAY=2` and the launcher settings, pipeline cache already filled: world reached in about 1 min 25 s; 3.5 fps on the first frame of the world, then 4.5 fps after 2 min, about 4,975 draws per frame, 346 draws lost without a host pipeline; no device loss during about 2 min 40 s in the world, after which the maintainer closed the window. An earlier run of `7b0f736` without `VICTORY_RELAY`: 5.4 fps at about 3 min, no loss, window closed. The maintainer's opinion: "slightly better" than `d279e69`. Reference `d279e69`: 4.0 to 4.3 fps, about 4,580 draws, about 430 lost.
 
@@ -140,7 +162,7 @@ The script sets the variables below (unless you pass `-NoTunedSettings`, which k
 | `VICTORY_SHADER_LOOP_LIMIT` | `256` | Translated shader loops were almost endless, so they are cut. At 32 (the former value) hair is drawn as glowing strands and the scene is darker; at 1024 the device was lost on an RTX 3060 Ti with the default 2-second timeout; 256 held (fork issue #18, and observed on Linux in runs 3 and 4 below). |
 | `VICTORY_LATE_WAIT` | `3` | Host pipeline wait setting of the fork's pull request #1. |
 | `VICTORY_WIDE_BACK` | `1` | Fork option, on in the measured run. |
-| `VICTORY_RELAY` | `2` | Fork option, on in the measured run of `7b0f736`. |
+| `VICTORY_RELAY` | not set | Fork option, no longer set by default (fork issue #89: skin disappears, subtitles overlap); `2` was on in the measured runs of `7b0f736` and batch 4. |
 | `VICTORY_CARD_BUFFERS_MIN_MB`, `VICTORY_CARD_BUFFERS_MB` | `1`, `1024` | Card buffer sizing, in MB. |
 
 The former defaults `VICTORY_RT_MISS`, `VICTORY_WAVE32_READFIRSTLANE`, `VICTORY_WAVE32_CROSSLANE`, `VICTORY_SKIP_BVH_BUILDER` and `VICTORY_CAPPED_DYNAMIC` are gone: no file of the pinned commit reads them (the BVH builder is off unless `VICTORY_BVH_BUILDER=1`). `tests/test_lanceur_victory.py` now checks that VIctory reads every variable the launcher sets.

@@ -1,4 +1,4 @@
-"""Mise à jour automatique des voisins : TomBox et Xbox2Windows (VIctory est épinglé à la main sur le fork fxceless/victory-gta6).
+"""Mise à jour automatique des voisins : TomBox et Xbox2Windows (VIctory est épinglé à la main sur le fork fxceless/victory-fork).
 
     python -I tools/sync_voisins.py [--appliquer] [--rapport FICHIER] [--message FICHIER]
 
@@ -53,7 +53,7 @@ VOISINS = (
     Voisin("Xbox2Windows", "R0Y00/Xbox2Windows", "third_party/xbox2windows",
            portes=("src/era_heap.cpp", "src/era_heap.h", "src/era_query.cpp", "tools/bc7_blocks.py",
                    "tools/bc7_tiles.py")),
-    # VIctory (fork fxceless/victory-gta6) n'est pas suivi : il est épinglé à la main sur un commit mesuré.
+    # VIctory (fork fxceless/victory-fork) n'est pas suivi : il est épinglé à la main sur un commit mesuré.
 )
 
 

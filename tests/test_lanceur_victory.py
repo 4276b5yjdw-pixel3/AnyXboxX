@@ -1,4 +1,4 @@
-"""Épinglage de VIctory sur le fork fxceless/victory-gta6 et réglages par défaut du lanceur."""
+"""Épinglage de VIctory sur la branche anyxboxx/fork-7b0-lot5 de LooperSalty/victory (fork fxceless/victory-fork plus sept PR) et réglages par défaut du lanceur."""
 import configparser
 import re
 import subprocess
@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 
 RACINE = Path(__file__).resolve().parents[1]
-COMMIT_FORK = "7b0f736"
+COMMIT_FORK = "fd021bf26a7003749d668e5d9bf6b234bfab2e47"
 REGLAGES = (
-    "VICTORY_SHADER_LOOP_LIMIT", "VICTORY_LATE_WAIT", "VICTORY_WIDE_BACK", "VICTORY_RELAY",
+    "VICTORY_SHADER_LOOP_LIMIT", "VICTORY_LATE_WAIT", "VICTORY_WIDE_BACK",
     "VICTORY_CARD_BUFFERS_MIN_MB", "VICTORY_CARD_BUFFERS_MB",
 )
 # Absentes du code de VIctory au commit épinglé : les poser ne change rien.
@@ -30,11 +30,11 @@ def _variables_posees(texte):
     return noms | set(re.findall(r"\$env:(VICTORY_[A-Z0-9_]+)\s*=", texte))
 
 
-def test_gitmodules_points_victory_to_the_fork():
+def test_gitmodules_points_victory_to_the_maintainers_fork():
     declares = configparser.ConfigParser()
     declares.read(RACINE / ".gitmodules", encoding="utf-8")
     urls = {declares[s]["path"]: declares[s]["url"] for s in declares.sections()}
-    assert urls["third_party/victory"].removesuffix(".git") == "https://github.com/fxceless/victory-gta6"
+    assert urls["third_party/victory"].removesuffix(".git") == "https://github.com/LooperSalty/victory"
 
 
 def test_gitlink_is_pinned_to_the_measured_commit():
@@ -50,6 +50,11 @@ def test_launcher_sets_the_tuned_settings_and_can_turn_them_off():
     for nom in REGLAGES:
         assert nom in texte, nom
     assert "$NoTunedSettings" in texte and "-not $NoTunedSettings" in texte
+
+
+def test_launcher_does_not_set_the_relay():
+    # Fork issue #89: the relay hides the characters' skin and overlaps the subtitles.
+    assert "VICTORY_RELAY" not in _variables_posees(_lanceur())
 
 
 def test_launcher_leaves_out_variables_victory_does_not_read():
