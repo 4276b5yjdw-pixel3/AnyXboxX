@@ -2,6 +2,8 @@
 
 Merci de ton intérêt. Ces règles s'appliquent à toute personne autre que le mainteneur.
 
+**Ta copie du jeu est la bienvenue en local.** Tu peux lancer, mesurer, déboguer et analyser ta propre copie de l'exécutable et du build du jeu pour orienter tes PR. Ce qui reste interdit : ajouter au dépôt des fichiers du jeu ou de la console (voir « Ce qui est refusé »).
+
 ## Règle principale : tout passe par une pull request
 
 La branche `main` est protégée. **Personne ne peut y pousser directement.** Pour proposer un changement :
@@ -34,16 +36,16 @@ Avant d'écrire du code, tu peux ouvrir une issue :
 
 Pour un changement important, ouvre d'abord une issue pour en discuter.
 
-## Sources et constats d'interopérabilité
+## Sources et usage de ta copie du jeu
 
 L'implémentation s'appuie sur des sources publiques : documentation ISA RDNA 2 d'AMD, Microsoft Learn (GDK, Win32, D3D12), tests de LLVM, et code libre sous licence compatible, crédité dans [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Les constats d'interopérabilité obtenus sur une copie d'un titre que tu possèdes légalement, mesurés à l'exécution ou lus statiquement, peuvent être documentés dans `docs/research/` (version française dans `docs/fr/recherche/`) et servir à écrire des tests, dans ces limites : noms d'exports et d'imports, noms publics de types et d'interfaces du SDK, numéros de slots de vtable, formes d'arguments et dispositions de structures, valeurs de flags, de HRESULT et d'IID, et comptes. Chaque constat dit comment il a été obtenu (mesuré, lu statiquement, supposé). Ne jamais ajouter de code, d'octets, d'adresses ou de RVA, de chaînes, de noms ou d'empreintes de shaders, de journaux ou de dumps d'un titre, ni d'implémentation qui ne marche que parce qu'elle copie un comportement privé d'un titre sans base publique ou mesurée.
+Tu peux utiliser ta propre copie de l'exécutable et du build du jeu : le lancer (natif, VIctory via `tools/lancer_victory.ps1`, AnyXboxX), mesurer, déboguer, l'analyser statiquement et dynamiquement, et t'en servir pour orienter tes PR. Les mesures et constats tirés de l'exécution (journaux résumés, comptes, identifiants techniques comme des empreintes de shaders ou des noms de passes, résultats de tests) peuvent être cités dans les PR et dans la doc, avec la manière dont ils ont été obtenus (mesuré, lu statiquement, supposé). La seule limite : aucun fichier, code, octet ni asset du jeu ou de la console dans le dépôt.
 
 ## Ce qui est refusé
 
-- Tout contenu protégé : jeux, fichiers système ou clés de la console, exécutables commerciaux, même partiels.
-- Des adresses, RVA, chaînes, noms ou empreintes de shaders, journaux ou dumps tirés d'un jeu, même relevés sur une copie légitime.
+- Tout fichier du jeu ou de la console ajouté au dépôt : exécutables, DLL, archives `.rpf`, shaders extraits, textures, sons, sauvegardes, dumps, clés, même partiels et même dans les tests.
+- Du code, des octets ou des assets copiés du jeu, même relevés sur une copie légitime.
 - Les liens vers des copies illégales de jeux.
 - Le code sans test pour une nouvelle fonction émulée.
 
