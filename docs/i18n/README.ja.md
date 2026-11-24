@@ -8,8 +8,8 @@
 > i7-13700KF + RTX 4070 SUPER、Windows 11 で計測。VIctory の安定版統合（`third_party/victory`、フォーク `LooperSalty/victory` のブランチ `anyxboxx/stable`）を `tools/lancer_victory.ps1 -GameDir <ゲームのフォルダー>` で起動しています。
 >
 > - ✅ GTA VI の Xbox Series 1.0.2.1 ビルドは PC で**起動します**。起動、プロフィール画面、初回設定、法的画面、ロード、ポーズメニューまで動作し、メニューは 30 fps です。
-> - ✅ **最初のカットシーン**（ミッション 1 の冒頭、オープニングクレジット表示）まで進みます。ワールド内で 5 分間 GPU ハングは発生していません。
-> - ⛔ 現時点の限界: 3D シーンは黒いままで（ライティングパスがまだ変換されていません）、ワールドは毎秒 0.3〜0.5 フレームのためプレイできません。実験ブランチ（`anyxboxx/essai`）の GPU ハングとライティングに取り組み中です。
+> - ✅ **操作可能なキャラクターがいるワールド**に到達します。チュートリアル「Move / Move the camera」（L / R）が表示され、まだ黒い 3D 画像の上に合成されています。
+> - ⛔ 現時点の限界: ワールドは毎秒約 2.4 フレーム（以前は 0.2）で、3D 画像は黒いままです（シーンは 2560x1440 で存在しますが、表示されるターゲットはゼロのままです）。ゲーム内で約 170 のシェーダーが未変換のため、プレイできません。レーンマスクのシェーダーと最終合成に取り組み中です。
 > - 必要なもの: ご自身のゲームのコピー、SM 6.6 とメッシュシェーダー対応の NVIDIA または AMD の GPU、Rust。このリポジトリにゲームファイルは含まれません。
 > - 起動方法: [docs/running-gta6.md](../running-gta6.md)。
 
@@ -107,7 +107,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | AnyXboxX が自前で書くその他の GDK のインターフェース（`XGameUi`、`XNetworking`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー：最初のプログラムを HLSL に変換し、DXIL にコンパイルして D3D12 で PC の GPU 上で実行（`--hlsl`、`anyxboxx_gpu_run.exe`、GPU がなければ WARP）、メモリは 1,487 エンコーディング中 599 を実行する wave32 リファレンスインタープリター（スカラー、VOP1/VOP2/VOPC/VOP3、メモリ：SMEM、LDS、GLOBAL、V# 境界付き MUBUF、アトミック、分岐、`exec` による分岐）の結果と一致；最初の頂点シェーダーとピクセルシェーダー（EXP エクスポート、VINTRP 補間）を D3D12 で描画し、頂点ごと・ピクセルごとに一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 進行中 |
 | シェーダーキャッシュ：変換したシェーダーを一度だけ DXIL にコンパイルし、以後は dxc（22 ms）の代わりにディスク（1.4 ms）またはメモリ（0.8 ms）から再利用。`%LOCALAPPDATA%\AnyXboxX\shader-cache` または `ANYXBOXX_SHADER_CACHE`、サイズ上限あり | 🟡 進行中 |
-| VIctory 経由の GTA VI Xbox Series 1.0.2.1（`third_party/victory`）：最初のカットシーン（ミッション 1 の冒頭クレジット）に到達。メニューは 30 fps。ワールドで 5 分間 GPU の取り外しなし。シーンはまだ黒（ライティングパス未変換）、0.3〜0.5 fps。プレイ不可 | 🟡 進行中 |
+| VIctory 経由の GTA VI Xbox Series 1.0.2.1（`third_party/victory`）：操作可能なキャラクターがいるワールドに到達（チュートリアル「Move / Move the camera」が黒い 3D 画像の上に表示）。メニューは 30 fps。ワールドで約 2.4 fps（2026-11-24 に計測）。プレイ不可 | 🟡 進行中 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
 | 実行中の DLL の動的読み込み（`LoadLibrary` + `DllMain`） | ⏳ 未着手 |
 | D3D12.X から Direct3D 12 / Vulkan へのグラフィックス変換 | ⏳ 未着手 |

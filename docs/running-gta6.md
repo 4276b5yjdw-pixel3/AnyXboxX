@@ -8,13 +8,46 @@ The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak
 
 ## What you get today
 
-Measured on 2026-11-24 on an i7-13700KF + RTX 4070 SUPER, Windows 11:
+Measured on 2026-11-24 on an i7-13700KF + RTX 4070 SUPER, Windows 11, with the stable integration:
 
 - Boot, profile screen, first-run settings, legal screens, loading and the pause menu work, at 30 fps in the menus.
 - The first cutscene (opening credits of mission 1) is reached.
-- The 3D scene behind the credits is black (the lighting passes are not translated yet).
+- The 3D scene behind the credits is black.
 - In the world the game runs at 0.3 to 0.6 frames per second.
 - It is not playable.
+
+The section below describes a more advanced state, measured the same afternoon on a local integration branch that is not yet what `third_party/victory` pins.
+
+## State on 24 November (afternoon)
+
+Measured by running our own copy of the 1.0.2.1 build under VIctory, on a local integration branch (VIctory `main` + about 40 pull requests + local fixes not yet published), i7-13700KF + RTX 4070 SUPER. Nothing here comes from reading the game's code: these are run measurements (fps, timings, counts) and the output of `victory translate` on the shaders of our own copy.
+
+- **World reached, character controllable (observed).** The tutorial "Move / Move the camera" (L / R) is displayed. The interface is composed over a 3D image that is still black.
+- **Speed in the world (measured): 0.2 fps, then 2.3 to 2.5 fps.** Causes and fixes:
+  - `VICTORY_D3D12_DRED=1` cost about 2.5x (text formatting and a `VirtualQuery` per draw). Only turn it on to investigate a device removed.
+  - The copy back to the title spent 66% of the submission thread in `WriteProcessMemory`, itself in `NtQueryVirtualMemory` (about 2 ms per call). A direct `NtWriteVirtualMemory` brings it from 1.5 s to 0.13 s per frame.
+  - Copies no longer call `VirtualQuery` first; the texture snapshot, comparison and hashing are spread over a thread pool.
+  - What remains per frame (about 410 ms): GPU about 145 ms, copy back about 73 ms, hashing 20 to 60 ms, snapshot about 50 ms.
+- **Untranslated shaders in game: 456 in the morning, about 170 in the afternoon (measured by the in-game count).** On the game's corpus (26,084 programs, `victory translate`) the emitted programs are: VS/PS 13,480 of 14,038, CS 2,212, MS 8,654 of 8,765 (counts as printed by the tool). Patterns solved during the day: descriptor read as data, scalar memory read as data, buffer of unknown stride, wave prefix in divergent flow (the InstanceCulling passes), mask kept in a VGPR lane, `readfirstlane` of a uniform address (ColorDownsample). What remains is mostly lane masks: "lane mask read as data" (586 programs) and "holding lanes elsewhere" (282) on the corpus.
+- **Ray tracing.** The title's BVH builder causes a TDR (GPU timeout recovery); it is skipped with `VICTORY_SKIP_BVH_BUILDER=1`. The new local diagnostic option `VICTORY_RT_MISS=1` makes every ray miss: 36 of 47 ray-tracing containers are emitted instead of 18. A Codex analysis found that `ConstructBVH4` contains a bounded polling loop (256 iterations) on a value another pass produces.
+- **Final composition.** As in VIctory #841, the scene exists at 2560x1440 but the presented target stays zero.
+
+### Useful variables
+
+All are diagnostics: they need the `diag` build (the `diagnostics` feature). Provenance, checked in the code of the integration worktree and against VIctory `main` on 2026-11-24:
+
+| Variable | Effect | Where it comes from |
+| --- | --- | --- |
+| `VICTORY_KEYS` | Scripted key presses (see below). | VIctory `main` |
+| `VICTORY_SHADER_LOOP_LIMIT=32` | Translated loops stop after that many iterations (decimal or `0x` hex, at least 1). | VIctory `main` |
+| `VICTORY_D3D12_DRED=1` | Device-removed data. **Warning: any value turns it on, and it slows the world by about 2.5x; use it only to investigate a device removed.** | VIctory `main` |
+| `VICTORY_SHOW_TARGET=busiest` | Shows the busiest render target instead of the final image. | Open pull request #638 (`Marvisak/VIctory`), in our integration |
+| `VICTORY_CAPTURE_BUSY=<draws>[,<count>]` | Captures frames busier than that many draws (2 frames by default). | Open pull request #638 |
+| `VICTORY_PRODUCERS=1` | Logs a pass that reads what only dropped (untranslated or skipped) work writes, with the dropped shader. | Open pull request #638 |
+| `VICTORY_CAPPED_DYNAMIC=262144` | More dynamic descriptor slots on a capped heap (NVIDIA), at the cost of the title's highest slots. | Local experiment, published only on our fork (`anyxboxx/essai`, `anyxboxx/stable`) |
+| `VICTORY_SKIP_BVH_BUILDER=1` | Leaves out the shaders of the title's BVH builder. | Our fork only (`anyxboxx/essai`), not proposed upstream |
+| `VICTORY_PROFILE=<ms>` | Sampling profiler of the whole process; logs the busiest call stacks every 5 s (sampling period in ms, 4 by default). | Local, not published |
+| `VICTORY_RT_MISS=1` | Every ray misses (ray-tracing diagnostic, off by default). | Local, not published |
 
 ## Requirements
 
@@ -107,7 +140,7 @@ These need the `diag` build.
 | `VICTORY_KEYS=40:Enter,55:Enter,70:Enter` | Presses the keys at those seconds, with or without focus. |
 | `VICTORY_CAPTURE=<folder>` and `VICTORY_CAPTURE_FRAMES=<list>` | Saves the presented frames (those frame numbers). |
 | `VICTORY_SHOW_TARGET=busiest` | Shows the busiest render target instead of the final image (for example the G-buffer). |
-| `VICTORY_D3D12_DRED=1` | On a GPU failure, reports the commands in flight. |
+| `VICTORY_D3D12_DRED=1` | On a GPU failure, reports the commands in flight. It slows the world by about 2.5x: turn it on only to investigate a device removed. |
 | `VICTORY_D3D12_DEBUG=1` | D3D12 debug layer (Graphics Tools required). |
 | `VICTORY_GPU_TIMING=1` | Times each command list and logs the slow ones. |
 | `VICTORY_SKIP_PIPELINES=<hash,...>` | Omits the draws and dispatches that use the listed 16-digit shader hashes. |
