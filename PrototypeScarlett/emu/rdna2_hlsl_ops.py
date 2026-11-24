@@ -57,11 +57,11 @@ uint PermB32(uint a, uint b, uint c) {
     uint bt = 0xFFu;
     if (sel < 4u) bt = (b >> (sel * 8u)) & 0xFFu;
     else if (sel < 8u) bt = (a >> ((sel - 4u) * 8u)) & 0xFFu;
-    else if (sel == 8u) bt = 0u;
-    else if (sel == 9u) bt = (b & 0x00008000u) != 0u ? 0xFFu : 0u;
-    else if (sel == 10u) bt = (b & 0x80000000u) != 0u ? 0xFFu : 0u;
-    else if (sel == 11u) bt = (a & 0x00008000u) != 0u ? 0xFFu : 0u;
-    else if (sel == 12u) bt = (a & 0x80000000u) != 0u ? 0xFFu : 0u;
+    else if (sel == 8u) bt = (b & 0x00008000u) != 0u ? 0xFFu : 0u;
+    else if (sel == 9u) bt = (b & 0x80000000u) != 0u ? 0xFFu : 0u;
+    else if (sel == 10u) bt = (a & 0x00008000u) != 0u ? 0xFFu : 0u;
+    else if (sel == 11u) bt = (a & 0x80000000u) != 0u ? 0xFFu : 0u;
+    else if (sel == 12u) bt = 0u;
     r |= bt << (i * 8u);
   }
   return r;

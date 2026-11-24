@@ -45,27 +45,31 @@ def test_v_perm_b32_all_selector_modes():
     src0 = 0x80_7F_02_01    # bytes 4..7: b4=0x01, b5=0x02, b6=0x7F, b7=0x80 (sign bits: b5=0, b7=1)
     src1 = 0x70_80_AB_CD    # bytes 0..3: b0=0xCD, b1=0xAB, b2=0x80, b3=0x70 (sign bits: b1=1, b3=0)
     sel_bytes = 0x07_04_02_00      # [b0=CD, b2=80, b4=01, b7=80] -> 0x800180CD
-    sel_special = 0x0D_0A_09_08    # [0x00, sign(b1)=0xFF, sign(b3)=0x00, 0xFF] -> 0xFF00FF00
-    sel_sign_hi = 0x0C_0B_0C_08    # [0x00, sign(b7)=0xFF, sign(b5)=0x00, sign(b7)=0xFF] -> 0xFF00FF00
+    sel_zero_ext = 0x0C_0C_0C_00   # RDNA 2 zero-extension of byte 0 (sel 12 -> 0x00): 0x000000CD
+    sel_signs = 0x0D_0B_0A_08      # [sign(b1)=FF, sign(b5)=00, sign(b7)=FF, 13->FF] -> 0xFFFF00FF
+    sel_sign_b3 = 0x0C_09_09_0C    # [0x00, sign(b3)=00, sign(b3)=00, 0x00] -> 0x00000000
     code = program(
         vop1("v_mov_b32", 1, LITERAL), src0,
         vop1("v_mov_b32", 2, LITERAL), src1,
         vop1("v_mov_b32", 3, LITERAL), sel_bytes,
-        vop1("v_mov_b32", 4, LITERAL), sel_special,
-        vop1("v_mov_b32", 5, LITERAL), sel_sign_hi,
+        vop1("v_mov_b32", 4, LITERAL), sel_zero_ext,
+        vop1("v_mov_b32", 5, LITERAL), sel_signs,
+        vop1("v_mov_b32", 9, LITERAL), sel_sign_b3,
         *vop3("v_perm_b32", 6, V + 1, V + 2, V + 3),
         *vop3("v_perm_b32", 7, V + 1, V + 2, V + 4),
         *vop3("v_perm_b32", 8, V + 1, V + 2, V + 5),
+        *vop3("v_perm_b32", 10, V + 1, V + 2, V + 9),
     )
     wave = rdna2_exec.Wave()
     rdna2_exec.run(code, wave)
     assert wave.v[6][0] == 0x8001_80CD
-    assert wave.v[7][0] == 0xFF00_FF00
-    assert wave.v[8][0] == 0xFF00_FF00
+    assert wave.v[7][0] == 0x0000_00CD
+    assert wave.v[8][0] == 0xFFFF_00FF
+    assert wave.v[10][0] == 0x0000_0000
 
     hlsl = rdna2_hlsl.translate(code)
     assert "uint PermB32(" in hlsl
-    assert hlsl.count("PermB32(") >= 4
+    assert hlsl.count("PermB32(") >= 5
 
 
 def test_all_32bit_exec_alu_ops_are_covered_by_hlsl():
@@ -192,17 +196,41 @@ def test_extended_alu_matches_interpreter_on_gpu():
     code = with_lane_offset(
         vop1("v_mov_b32", 1, LITERAL), 0x8000_0003,
         vop1("v_mov_b32", 2, LITERAL), 0x0102_0304,
-        vop1("v_mov_b32", 3, LITERAL), 0x0D_08_05_00,
+        vop1("v_mov_b32", 3, LITERAL), 0x0D_0C_0B_00,
+        vop1("v_mov_b32", 14, LITERAL), 0x7FC0_0000,
+        vop1("v_mov_b32", 15, LITERAL), float_bits(2.5),
         *vop3("v_mul_hi_u32", 4, V + 1, V + 0, 0),
         *vop3("v_mul_hi_i32", 5, V + 1, V + 0, 0),
         *vop3("v_bfe_i32", 6, V + 1, const(0), const(4)),
         *vop3("v_alignbit_b32", 7, V + 1, V + 2, V + 0),
         *vop3("v_perm_b32", 8, V + 1, V + 2, V + 3),
-        vop2("v_mul_legacy_f32", 9, const(0), LITERAL), 0x7FC0_0000,
+        vop2("v_mul_legacy_f32", 9, const(0), 14),
         *vop3("v_subrev_co_u32", 10, const(10), V + 0, 0, sdst=12),
         *vop3("v_sub_co_ci_u32", 11, V + 0, const(10), 12, sdst=13),
+        *vop3("v_subrev_co_ci_u32", 12, V + 0, const(10), 13, sdst=14),
+        vop1("v_bfrev_b32", 13, V + 2),
+        vop1("v_ffbl_b32", 16, V + 2),
+        vop1("v_ffbh_u32", 17, V + 2),
+        vop1("v_cvt_f32_ubyte0", 18, V + 2),
+        vop1("v_cvt_f32_ubyte1", 19, V + 2),
+        vop1("v_cvt_f32_ubyte2", 20, V + 2),
+        vop1("v_cvt_f32_ubyte3", 21, V + 2),
+        vop1("v_sin_f32", 22, const(0)),
+        vop1("v_cos_f32", 23, const(0)),
+        vop1("v_rndne_f32", 24, V + 15),
+        vop2("v_xnor_b32", 25, V + 1, 2),
+        vop2("v_mul_i32_i24", 26, LITERAL, 2), 0x00FF_FFFF,
+        *vop3("v_sad_u32", 27, V + 0, const(10), const(1)),
+        *vop3("v_xad_u32", 28, V + 0, const(3), const(5)),
+        *vop3("v_add_lshl_u32", 29, V + 0, const(1), const(2)),
+        *vop3("v_fma_legacy_f32", 30, const(0), V + 14, V + 15),
         *store_lane(4, 0), *store_lane(5, 1), *store_lane(6, 2), *store_lane(7, 3),
         *store_lane(8, 4), *store_lane(9, 5), *store_lane(10, 6), *store_lane(11, 7),
+        *store_lane(12, 8), *store_lane(13, 9), *store_lane(16, 10), *store_lane(17, 11),
+        *store_lane(18, 12), *store_lane(19, 13), *store_lane(20, 14), *store_lane(21, 15),
+        *store_lane(22, 16), *store_lane(23, 17), *store_lane(24, 18), *store_lane(25, 19),
+        *store_lane(26, 20), *store_lane(27, 21), *store_lane(28, 22), *store_lane(29, 23),
+        *store_lane(30, 24),
     )
     expected, actual = compare(code)
     assert actual == expected

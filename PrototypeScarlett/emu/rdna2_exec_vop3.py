@@ -44,15 +44,15 @@ def _perm_b32(src0, src1, src2):
         elif sel < 8:
             byte = (src0 >> ((sel - 4) * 8)) & 0xFF
         elif sel == 8:
-            byte = 0x00
-        elif sel == 9:
             byte = 0xFF if src1 & 0x0000_8000 else 0x00
-        elif sel == 10:
+        elif sel == 9:
             byte = 0xFF if src1 & 0x8000_0000 else 0x00
-        elif sel == 11:
+        elif sel == 10:
             byte = 0xFF if src0 & 0x0000_8000 else 0x00
-        elif sel == 12:
+        elif sel == 11:
             byte = 0xFF if src0 & 0x8000_0000 else 0x00
+        elif sel == 12:
+            byte = 0x00
         else:
             byte = 0xFF
         out |= byte << shift
