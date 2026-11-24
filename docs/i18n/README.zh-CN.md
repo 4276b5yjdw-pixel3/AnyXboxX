@@ -113,7 +113,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 拉取请求检查：每个拉取请求都运行 lint 并核对 9 个 README 的同步（行、图片、测试数量） | ✅ 已完成 |
 | Rust 实现的主机纹理：从 Xbox2Windows（MIT）移植的 BC7 解码和 GFX10 `SW_4K_S` 去平铺，复现了参考摘要；`anyxboxx_texture bc7 <blocks.bin> <宽> <高> <out.png> [--4k-s]` | 🟡 进行中 |
 | 由 AnyXboxX 自行编写的其他 GDK 接口（`XGameUi`、`XNetworking`…） | ⏳ 待完成 |
-| RDNA 2 → DXIL 着色器重编译器：首批程序已翻译为 HLSL、编译为 DXIL 并通过 D3D12 在 PC 的 GPU 上运行（`--hlsl`、`anyxboxx_gpu_run.exe`，无 GPU 时用 WARP），内存与 wave32 参考解释器的结果完全一致，该解释器可执行 1,490 种编码中的 1,032 种（标量、VOP1/VOP2/VOPC/VOP3、内存：SMEM、LDS、GLOBAL、带 V# 边界的 MUBUF、原子操作、分支、`exec` 分歧）；首个顶点着色器和像素着色器（EXP 导出、VINTRP 插值）已用 D3D12 绘制，逐顶点、逐像素一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 进行中 |
+| RDNA 2 → DXIL 着色器重编译器：首批程序已翻译为 HLSL、编译为 DXIL 并通过 D3D12 在 PC 的 GPU 上运行（`--hlsl`、`anyxboxx_gpu_run.exe`，无 GPU 时用 WARP），内存与 wave32 参考解释器的结果完全一致，该解释器可执行 1,490 种编码中的 1,032 种（标量、VOP1/VOP2/VOPC/VOP3、内存：SMEM、LDS、GLOBAL、带 V# 边界和类型化格式的 MUBUF/MTBUF、原子操作、分支、`exec` 分歧）；首个顶点着色器和像素着色器（EXP 导出、VINTRP 插值）已用 D3D12 绘制，逐顶点、逐像素一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 进行中 |
 | 在 wave 为 32 通道的 GPU 上运行 wave64 计算程序（#70）：每个 64 通道 wave 作为一个 64 线程的线程组运行（通道掩码和通道读取通过 groupshared 内存，不用 `WaveSize`），在 RTX（32 通道 wave）和 WARP 上内存与 wave64 参考解释器完全一致；DPP 和 SDWA 比较仍按名称拒绝 | 🟡 进行中 |
 | 着色器缓存：翻译后的着色器只编译一次为 DXIL，之后从磁盘（1.4 ms）或内存（0.8 ms）复用，而不再调用 dxc（22 ms）；`%LOCALAPPDATA%\AnyXboxX\shader-cache` 或 `ANYXBOXX_SHADER_CACHE`，大小有上限 | 🟡 进行中 |
 | 通过 VIctory 运行该作品的 Xbox Series 1.0.2.1 版本（`third_party/victory`，分支 `anyxboxx/fork-7b0-lot9-murs`，提交 `80d58f8`，分支仓库 `fxceless/victory-fork` 加十六个拉取请求）：游戏世界可显示并可游玩，4.8 到 5.4 fps，每帧约 6,550 次绘制（维护者实测，Windows 11，RTX 4070 Super，VIctory 日志）；启动闪烁已修复；辐照度缓存的 shader 现已可翻译；6 个 shader 未翻译，无光线追踪照明；长时间稳定性仅测得约 4 分 20 秒 | 🟡 进行中 |
