@@ -7,13 +7,13 @@
 > [!NOTE]
 > **現在地（2026-11-24）**
 >
-> i7-13700KF + RTX 4070 SUPER、Windows 11 で計測。VIctory のフォーク `LooperSalty/victory` のコミット `0e2c46a` (branch `anyxboxx/fork-7b0-lot4`)（サブモジュール `third_party/victory`）を `tools/lancer_victory.ps1 -GameDir <ゲームのフォルダー>` で起動しています。
+> i7-13700KF + RTX 4070 SUPER、Windows 11 で計測。VIctory のフォーク `LooperSalty/victory` のコミット `fd021bf` (branch `anyxboxx/fork-7b0-lot5`)（サブモジュール `third_party/victory`）を `tools/lancer_victory.ps1 -GameDir <ゲームのフォルダー>` で起動しています。
 >
 > - ✅ GTA VI の Xbox Series 1.0.2.1 ビルドは PC で**起動します**。起動、プロフィール画面、初回設定、法的画面、ロード、ポーズメニューまで動作し、メニューは 30 fps です。
-> - ✅ **ワールドに到達して表示します**：キャラクターはプレイヤーの操作で動き、3D 画像が表示されます。2 分後で約 6.6 フレーム/秒（メンテナーが計測、Windows 11、RTX 4070 Super、VIctory ログ）。起動アニメーションはもうちらつきません（観察）。
-> - ⛔ 現在の制限：シーンは暗いまま、シェーダがまだ足りず（パイプライン不足で 337 ドロー喪失）、レイトレーシングは未対応、長時間の安定性は未計測（最初の固定 `d279e69` では約 13 分でホストデバイスを喪失、現在のものでは約 2 分 30 秒で喪失なし）。
-> - 👁 11 月 24 日の経過（メンテナーが計測または観察、VIctory ログ）：`d279e69` 約 4 fps、刑務所で 13 分後にデバイス喪失 → `7b0f736` + `VICTORY_RELAY=2` 約 4.5 fps → PR #172 のランチャー設定（DRED なし）約 5.5 fps → 今回のまとめ 約 6.6 fps、起動時のちらつきを修正。
-> - 🆕 私たちの VIctory フォーク `LooperSalty/victory` のブランチ `anyxboxx/fork-7b0-lot4` のコミット `0e2c46a` に固定（フォーク `fxceless/victory-fork` のコミット `7b0f736` に、そのフォークの未マージ pull request 3 件を追加：arminkhaleghirod による #63、最近変更されたテクスチャを毎回ハッシュし、起動アニメーションのちらつきを修正；MartinIndra02 による #71、リレーのカードコピーに D3D12 COPY キューを使用；arminkhaleghirod による #32、R9G9B9E5 レンダーターゲットの代わりに 16 ビット浮動小数点 RGBA を使用）。メンテナーが観察・計測（Windows 11、RTX 4070 Super、VIctory ログ `victory-fork-lot4.log`、`main` のランチャー設定）：起動アニメーションはもうちらつかない（観察）；2 分後のワールドは 6.6 fps、1 フレームあたり 5,986 ドロー（`main` 基準：約 5.5 fps、約 4,410 ドロー）、パイプライン不足で失われたドロー 337、約 2 分 30 秒でデバイス喪失なし（計測）；NVIDIA が描画しない 3 つの形式（67 R9G9B9E5、86、115）は置き換えられる（ログ行 "a stand-in is used"）。メンテナーの意見：「改善はある」が、シーンは暗いままでシェーダがまだ足りない；レイトレーシングは未対応；長時間の安定性は未計測。
+> - ✅ **ワールドに到達して表示します**：キャラクターはプレイヤーの操作で動き、3D 画像が表示されます。2 分後で約 5.4 フレーム/秒、1 フレームあたり 6,449 ドロー（メンテナーが計測、Windows 11、RTX 4070 Super、VIctory ログ）。起動アニメーションはもうちらつきません（観察）。メンテナーの評価は「ずっと良い」、これまでで最良の照明とグラフィックス。
+> - ⛔ 現在の制限：ルシアの顔にグラフィックの問題が残る、9 個のシェーダがまだ未翻訳、パイプライン不足で 363 ドローを喪失、ドライバが 16 パイプラインを拒否、レイトレーシングは未対応、長時間の安定性は未計測（最初の固定 `d279e69` では約 13 分でホストデバイスを喪失、現在のものでは約 2 分 30 秒で喪失なし）。`VICTORY_RELAY` は既定で無効：フォークの issue #89 によると、キャラクターの肌が消え、字幕が重なる。
+> - 👁 11 月 24 日の経過（メンテナーが計測または観察、VIctory ログ）：`d279e69` 約 4 fps、刑務所で 13 分後にデバイス喪失 → `7b0f736` + `VICTORY_RELAY=2` 約 4.5 fps → PR #172 のランチャー設定（DRED なし）約 5.5 fps → バッチ 4（pull request 3 件）`VICTORY_RELAY=2` で約 6.6 fps、起動時のちらつきを修正 → 今回のバッチ（pull request 7 件、`VICTORY_RELAY` なし）約 5.4 fps だが 1 フレーム 6,449 ドローで、これまでで最良の画像。
+> - 🆕 私たちの VIctory フォーク `LooperSalty/victory` のブランチ `anyxboxx/fork-7b0-lot5` のコミット `fd021bf` に固定：フォーク `fxceless/victory-fork` のコミット `7b0f736` に、その未マージ pull request 7 件を追加：#63（arminkhaleghirod、最近変更されたテクスチャを毎回ハッシュ、起動時のちらつきを修正）、#71（MartinIndra02、リレーのカードコピーに D3D12 COPY キュー）、#32（arminkhaleghirod、R9G9B9E5 レンダーターゲットの代わりに 16 ビット浮動小数点 RGBA）、#82（Kaivyyy、深度範囲テストをホストに引き渡す）、#83（ryotdev、レーンを再活性化しうる空 EXEC の分岐を保持）、#81（undeadhuman37、8 dword のデータとしてのみ読まれるディスクリプタは計測済みイメージ）、#77（m335671、f16 の最初の補間半分に対する `v_fma_mixlo/mixhi` はゼロを保持）。メンテナーが計測（VIctory ログ `victory-fork-lot5.log`、`VICTORY_RELAY` なしの `main` のランチャー設定）：2 分後に 5.4 fps、1 フレーム 6,449 ドロー（バッチ 4：`VICTORY_RELAY=2` で 6.6 fps；`main`：約 5.5 fps、約 4,410 ドロー）、パイプライン不足で 363 ドロー喪失、未翻訳シェーダ 9 個（バッチ 4 では 13）、ドライバが拒否したパイプライン 16 個（バッチ 4 では 6）、約 2 分 30 秒でデバイス喪失なし、起動時のちらつきなし。
 > - 必要なもの: ご自身のゲームのコピー、SM 6.6 とメッシュシェーダー対応の NVIDIA または AMD の GPU、Rust。このリポジトリにゲームファイルは含まれません。
 > - 起動方法: [docs/running-gta6.md](../running-gta6.md)。
 
@@ -84,7 +84,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | 396 個の GDK 関数の表：インターフェースとメソッド番号を `xgameruntime.lib` から抽出（`tools/gdk_interfaces.py`） | ✅ 完了 |
 | `XTaskQueue`、`XAsync`、`XThread` を AnyXboxX が提供：testgdk が Windows のランタイムなしで動作 | ✅ 完了 |
 | その他の GDK のインターフェース：Windows の GDK ランタイムに委譲し、トレースで名前を表示 | 🟡 進行中 |
-| 655 件の自動テスト | ✅ 完了 |
+| 656 件の自動テスト | ✅ 完了 |
 | D3D12.X：`D3D12XboxCreateDevice`、コンソールの `ID3D12*` インターフェース、`DXGIXPresentArray` を TomBox の Rust 製 `d3d12_xs.dll`（MIT、実装済みエクスポート 48 個、`tools/build_tombox.py d3d12_xs` でビルド、`ANYXBOXX_D3D12_XS=<パス>` で読み込み）が提供。コンソール実行ファイルがないためここでは検証不可 | 🟡 進行中 |
 | AnyXboxX にないものを補う TomBox（Rust、GPL-3.0）のコンソールライブラリ：`xg_xs`（テクスチャレイアウト、エクスポート 23 個）と完全な `xmem`（エクスポート 38 個）、`ANYXBOXX_TOMBOX_DIR=<フォルダー>` で使用。`tools/build_tombox.py xg_xs xmem` でビルド | 🟡 進行中 |
 | オフラインの `XUser`：常にサインイン済みのローカルプロファイル、変更可能なゲーマータグ（`ANYXBOXX_GAMERTAG`）、testgdk のサインイン成功 | ✅ 完了 |
@@ -111,7 +111,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | AnyXboxX が自前で書くその他の GDK のインターフェース（`XGameUi`、`XNetworking`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー：最初のプログラムを HLSL に変換し、DXIL にコンパイルして D3D12 で PC の GPU 上で実行（`--hlsl`、`anyxboxx_gpu_run.exe`、GPU がなければ WARP）、メモリは 1,487 エンコーディング中 599 を実行する wave32 リファレンスインタープリター（スカラー、VOP1/VOP2/VOPC/VOP3、メモリ：SMEM、LDS、GLOBAL、V# 境界付き MUBUF、アトミック、分岐、`exec` による分岐）の結果と一致；最初の頂点シェーダーとピクセルシェーダー（EXP エクスポート、VINTRP 補間）を D3D12 で描画し、頂点ごと・ピクセルごとに一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 進行中 |
 | シェーダーキャッシュ：変換したシェーダーを一度だけ DXIL にコンパイルし、以後は dxc（22 ms）の代わりにディスク（1.4 ms）またはメモリ（0.8 ms）から再利用。`%LOCALAPPDATA%\AnyXboxX\shader-cache` または `ANYXBOXX_SHADER_CACHE`、サイズ上限あり | 🟡 進行中 |
-| VIctory 経由の GTA VI Xbox Series 1.0.2.1（`third_party/victory`、ブランチ `anyxboxx/fork-7b0-lot4` のコミット `0e2c46a`、フォーク `fxceless/victory-fork` に pull request 3 件を追加）：ワールドが表示され、約 6.6 fps でプレイ可能（メンテナーが計測、Windows 11、RTX 4070 Super、VIctory ログ）；起動時のちらつきを修正；シーンは暗いまま、シェーダ不足、レイトレーシングなし；長時間の安定性は未計測 | 🟡 進行中 |
+| VIctory 経由の GTA VI Xbox Series 1.0.2.1（`third_party/victory`、ブランチ `anyxboxx/fork-7b0-lot5` のコミット `fd021bf`、フォーク `fxceless/victory-fork` に pull request 7 件を追加）：ワールドが表示され、約 5.4 fps、1 フレーム 6,449 ドローでプレイ可能（メンテナーが計測、Windows 11、RTX 4070 Super、VIctory ログ）；起動時のちらつきを修正；これまでで最良の画像；ルシアの顔にまだ問題、シェーダ 9 個未翻訳、レイトレーシングなし；長時間の安定性は未計測 | 🟡 進行中 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
 | 実行中の DLL の動的読み込み（`LoadLibrary` + `DllMain`） | ⏳ 未着手 |
 | D3D12.X から Direct3D 12 / Vulkan へのグラフィックス変換 | ⏳ 未着手 |

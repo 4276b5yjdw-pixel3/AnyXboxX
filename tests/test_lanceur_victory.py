@@ -1,4 +1,4 @@
-"""Épinglage de VIctory sur la branche anyxboxx/fork-7b0-lot4 de LooperSalty/victory (fork fxceless/victory-fork plus trois PR) et réglages par défaut du lanceur."""
+"""Épinglage de VIctory sur la branche anyxboxx/fork-7b0-lot5 de LooperSalty/victory (fork fxceless/victory-fork plus sept PR) et réglages par défaut du lanceur."""
 import configparser
 import re
 import subprocess
@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 
 RACINE = Path(__file__).resolve().parents[1]
-COMMIT_FORK = "0e2c46ad3bd546c85c7098f4eadaf30a34dc6644"
+COMMIT_FORK = "fd021bf26a7003749d668e5d9bf6b234bfab2e47"
 REGLAGES = (
-    "VICTORY_SHADER_LOOP_LIMIT", "VICTORY_LATE_WAIT", "VICTORY_WIDE_BACK", "VICTORY_RELAY",
+    "VICTORY_SHADER_LOOP_LIMIT", "VICTORY_LATE_WAIT", "VICTORY_WIDE_BACK",
     "VICTORY_CARD_BUFFERS_MIN_MB", "VICTORY_CARD_BUFFERS_MB",
 )
 # Absentes du code de VIctory au commit épinglé : les poser ne change rien.
@@ -50,6 +50,11 @@ def test_launcher_sets_the_tuned_settings_and_can_turn_them_off():
     for nom in REGLAGES:
         assert nom in texte, nom
     assert "$NoTunedSettings" in texte and "-not $NoTunedSettings" in texte
+
+
+def test_launcher_does_not_set_the_relay():
+    # Fork issue #89: the relay hides the characters' skin and overlaps the subtitles.
+    assert "VICTORY_RELAY" not in _variables_posees(_lanceur())
 
 
 def test_launcher_leaves_out_variables_victory_does_not_read():
