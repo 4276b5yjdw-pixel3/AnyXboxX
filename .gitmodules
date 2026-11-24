@@ -4,5 +4,5 @@
 	ignore = dirty
 [submodule "third_party/leonida-src"]
 	path = third_party/leonida-src
-	url = https://github.com/ItsNotRexed/Leonida.git
+	url = https://github.com/LooperSalty/Leonida.git
 	ignore = dirty
