@@ -40,12 +40,13 @@ Pour un changement important, ouvre d'abord une issue pour en discuter.
 
 L'implémentation s'appuie sur des sources publiques : documentation ISA RDNA 2 d'AMD, Microsoft Learn (GDK, Win32, D3D12), tests de LLVM, et code libre sous licence compatible, crédité dans [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Tu peux utiliser ta propre copie de l'exécutable et du build du jeu : le lancer (natif, VIctory via `tools/lancer_victory.ps1`, AnyXboxX), mesurer, déboguer, l'analyser statiquement et dynamiquement, et t'en servir pour orienter tes PR. Les mesures et constats tirés de l'exécution (journaux résumés, comptes, identifiants techniques comme des empreintes de shaders ou des noms de passes, résultats de tests) peuvent être cités dans les PR et dans la doc, avec la manière dont ils ont été obtenus (mesuré, lu statiquement, supposé). La seule limite : aucun fichier, code, octet ni asset du jeu ou de la console dans le dépôt.
+Tu peux utiliser ta propre copie de l'exécutable et du build du jeu : le lancer (natif, VIctory via `tools/lancer_victory.ps1`, AnyXboxX), mesurer, déboguer, l'analyser statiquement et dynamiquement, et t'en servir pour orienter tes PR. Les mesures et constats tirés de l'exécution (journaux résumés, comptes, identifiants techniques comme des empreintes de shaders ou des noms de passes, résultats de tests) peuvent être cités dans les PR et dans la doc, avec la manière dont ils ont été obtenus (mesuré, lu statiquement, supposé). La limite : aucun fichier, code ni asset du jeu ou de la console dans le dépôt. Trois choses tirées du jeu sont autorisées, comme dans la politique de VIctory (`docs/asset-policy.md` de VIctory) : les signatures d'octets (motifs courts écrits par nous, avec masques) qui localisent des fonctions ou des données dans l'exécutable, les offsets par build des fonctions qu'on intercepte (sous des noms qu'on choisit), et l'empreinte du build (hash de l'exe, GUID/âge CodeView).
 
 ## Ce qui est refusé
 
 - Tout fichier du jeu ou de la console ajouté au dépôt : exécutables, DLL, archives `.rpf`, shaders extraits, textures, sons, sauvegardes, dumps, clés, même partiels et même dans les tests.
-- Du code, des octets ou des assets copiés du jeu, même relevés sur une copie légitime.
+- Du code du jeu (sections, routines, code décompilé ou désassemblé au-delà des signatures autorisées) ou des assets copiés du jeu, même relevés sur une copie légitime.
+- Les tables de données propriétaires, sauf exception décidée par le mainteneur : seules des tables constantes sans lesquelles un format ne peut pas être décodé et qu'on ne peut pas recalculer (comme les tables BCPack de VIctory) peuvent être ajoutées, chacune listée nommément dans le registre d'exceptions de `THIRD_PARTY.md`, et la licence du dépôt ne les couvre pas.
 - Les liens vers des copies illégales de jeux.
 - Le code sans test pour une nouvelle fonction émulée.
 
