@@ -4,6 +4,7 @@ Signatures : XGameInvite.h, XGameActivation.h, XGameProtocol.h et XError.h du GD
 Hors ligne, aucune invitation ni activation n'arrive : l'abonnement réussit, le rappel ne part jamais.
 """
 import ctypes
+import sys
 
 import pytest
 
@@ -15,8 +16,10 @@ PENDING_INVITE = ("0651AAE2-4012-4077-BF84-8B9097090E2C", "014D1CC3-BCFE-41FF-B2
 ACTIVATION = ("7F0FE8B8-E075-49AB-9AA7-A1E065489A9E", "2E4F76FE-0FC7-461E-AB4D-A4499434C3CF")
 PROTOCOL = ("95FD18D2-74DD-4D7C-AA1B-0B51827665D6", "026B010C-06C3-4CDD-BBCB-43F229DB1CFF")
 ERROR = ("8CA467F7-22E8-4096-8456-BB8AA13F79D8",) * 2
-EVENT_CALLBACK = ctypes.WINFUNCTYPE(None, ctypes.c_void_p, ctypes.c_char_p)
-ERROR_CALLBACK = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_int32, ctypes.c_char_p, ctypes.c_void_p)
+EVENT_CALLBACK = (ctypes.WINFUNCTYPE(None, ctypes.c_void_p, ctypes.c_char_p)
+                if sys.platform == "win32" else None)
+ERROR_CALLBACK = (ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_int32, ctypes.c_char_p, ctypes.c_void_p)
+                 if sys.platform == "win32" else None)
 
 
 def subscription(runtime_dir, interface, register, unregister):

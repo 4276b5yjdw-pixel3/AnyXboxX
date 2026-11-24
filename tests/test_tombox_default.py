@@ -1,11 +1,18 @@
 """Ordre de chargement des DLL de TomBox : emplacement par défaut, variable d'environnement, absence."""
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
 
 from emu import tombox_paths
-from emu.native import runtime
+
+if sys.platform == "win32":
+    from emu.native import runtime
+else:
+    runtime = None
+
+pytestmark = pytest.mark.skipif(runtime is None, reason="exécution native sous Windows")
 
 ROOT = Path(__file__).resolve().parents[1]
 CI_CRATES = ("d3d12_xs", "xg_xs", "xmem", "d3d12_x", "xaudio2_9", "xapu", "xgs12")
