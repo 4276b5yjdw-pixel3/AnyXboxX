@@ -4,7 +4,29 @@
 
 Ce guide explique comment installer et lancer le projet, et tout ce qu'il faut installer pour refaire nos essais sur le build Xbox Series 1.0.2.1 de GTA VI, jusqu'au point où nous en sommes : la première cinématique. Il ne fournit pas le jeu et n'explique pas comment l'obtenir : vous apportez votre propre copie. Ne mettez jamais de fichier du jeu dans ce dépôt et ne les joignez à aucune issue.
 
-Le lancement passe par [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou ultérieure), suivi ici comme sous-module `third_party/victory` (fork `LooperSalty/victory`, branche `anyxboxx/stable`). Le script `tools/lancer_victory.ps1` le compile et le lance sur votre dossier du jeu.
+Le lancement passe par [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou ultérieure), suivi ici comme sous-module `third_party/victory`, épinglé sur le fork [fxceless/victory-gta6](https://github.com/fxceless/victory-gta6) (GPL-3.0) au commit `d279e69`. Le script `tools/lancer_victory.ps1` le compile et le lance sur votre dossier du jeu.
+
+## Fork épinglé (24 novembre, nuit)
+
+`third_party/victory` pointe vers `fxceless/victory-gta6` au commit `d279e69` (« Make host pipeline waits configurable and prewarm pending requests (#1) », contribué par ZazaJr24). Ce fork n'est pas un fork GitHub rattaché à VIctory ; sa licence est GPL-3.0, compatible avec AnyXboxX (GPL-3.0 ou ultérieure). Il remplace notre ancienne intégration `anyxboxx/stable`.
+
+Mesuré par le mainteneur le 2026-11-24 (i7-13700KF + RTX 4070 SUPER, Windows 11) en lançant notre propre copie du build 1.0.2.1, d'après le journal de VIctory de l'essai (fréquence d'images et compteurs de dessins tels que le programme les affiche), contre notre ancienne intégration `last` :
+
+| | fork `d279e69` | ancienne intégration `last` |
+| --- | --- | --- |
+| Fréquence dans le monde | 4,0 à 4,3 fps | 2,3 fps |
+| Dessins par image | environ 4 580 | environ 2 860 |
+| Dessins perdus sans pipeline | 428 | 400 |
+| Dessins indirects perdus | 3 | 86 |
+| Perte du périphérique | aucune pendant environ 13 minutes, puis perdu (voir limites connues) | non relevée |
+
+Le monde est atteint et affiché. Rien ici ne vient de la lecture du code du jeu.
+
+**Limites connues (stabilité).** Le deuxième lancement a tenu environ 13 minutes dans le monde (premiers dessins à 19:07:27 UTC), puis a perdu le périphérique GPU à 19:20:35 UTC : « host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists », la dernière liste étant un compute shader (`c1488f485ad606fb`). Mesuré, d'après le journal de VIctory de l'essai ; la cause n'est pas connue. Comptez de quelques minutes à environ 13 minutes dans le monde avant une perte du périphérique, puis relancez. Le message cite `VICTORY_LATE_WAIT=1` alors que le lanceur pose `3` : le réglage réellement actif dans cet essai reste à vérifier.
+
+**Premier lancement à froid.** Le premier lancement avec un cache vide a planté au chargement (compilation des pipelines, puis le plantage interne du jeu suivi sous VIctory #1464). Le deuxième lancement, avec le cache rempli, a tenu. Si le premier plante, relancez.
+
+Les réglages de l'essai réussi sont maintenant ceux par défaut de `tools/lancer_victory.ps1` (tableau de la section Lancement). Ils demandent la compilation `diag` (`--profile diag --features diagnostics`). Passez `-NoTunedSettings` pour les désactiver.
 
 ## Ce que vous obtenez aujourd'hui
 
@@ -106,13 +128,22 @@ Le profil `diag` est nécessaire pour les touches scriptées, les captures d'ima
 .\tools\lancer_victory.ps1 -GameDir <dossier du jeu>
 ```
 
-Le script règle trois variables puis exécute `victory.exe run <dossier du jeu>\game_scarlett_master.exe --execute` :
+Le script règle les variables ci-dessous (sauf avec `-NoTunedSettings`, qui ne garde que `VICTORY_GAME_DIR`) puis exécute `victory.exe run <dossier du jeu>\game_scarlett_master.exe --execute` :
 
 | Variable | Valeur | Pourquoi |
 | --- | --- | --- |
 | `VICTORY_GAME_DIR` | votre dossier du jeu | Aucun `victory.toml` n'est nécessaire. |
 | `VICTORY_CAPPED_DYNAMIC` | `262144` | NVIDIA plafonne le tas de descripteurs à 1 000 000 d'entrées. Avec la plage dynamique par défaut, environ 720 dessins indirects par image étaient abandonnés ; avec 262 144 emplacements, ils ne le sont plus. |
 | `VICTORY_SHADER_LOOP_LIMIT` | `32` | Les boucles des shaders traduits étaient quasi infinies ; avec une limite de 32 itérations, le GPU est environ 6 fois plus rapide. |
+| `VICTORY_RT_MISS` | `1` | Tous les rayons ratent (diagnostic du ray tracing) : plus de programmes de ray tracing se traduisent. |
+| `VICTORY_WAVE32_READFIRSTLANE`, `VICTORY_WAVE32_CROSSLANE` | `approx` | `readfirstlane` et opérations inter-voies approchés en wave32. |
+| `VICTORY_SKIP_BVH_BUILDER` | `1` | Écarte le constructeur BVH du jeu, qui provoque un délai GPU (TDR). |
+| `VICTORY_D3D12_DRED` | `1` | Données de périphérique perdu. Actif dans l'essai mesuré ; il ralentit le monde, désactivez-le (`-NoTunedSettings`) si seule la vitesse compte. |
+| `VICTORY_LATE_WAIT` | `3` | Réglage d'attente des pipelines côté hôte, de la pull request n°1 du fork. |
+| `VICTORY_WIDE_BACK` | `1` | Option du fork, active dans l'essai mesuré. |
+| `VICTORY_CARD_BUFFERS_MIN_MB`, `VICTORY_CARD_BUFFERS_MB` | `1`, `1024` | Dimensionnement des tampons de carte, en Mo. |
+
+Le premier lancement à froid peut planter pendant la compilation des pipelines : relancez une fois le cache rempli.
 
 `-SkipPipelines <hash,...>` est transmis à `VICTORY_SKIP_PIPELINES` (voir plus bas).
 
@@ -164,14 +195,9 @@ Ils demandent le build `diag`.
 
 Pour arrêter le jeu : `taskkill /F /IM victory.exe`. La commande `timeout` de Git Bash ne tue pas l'exécutable.
 
-## Branche expérimentale
+## Anciennes branches
 
-```powershell
-git -C third_party/victory fetch origin anyxboxx/essai
-git -C third_party/victory checkout FETCH_HEAD
-```
-
-C'est la branche `anyxboxx/essai` du fork : la stable plus la prise en charge des UAV racine et des accès LDS octet et demi-mot. Lancez-la avec `VICTORY_SKIP_BVH_BUILDER=1` : le constructeur BVH du ray tracing du jeu, traduit à moitié, bloquait le GPU au début de la cinématique. Sans cette option, `DXGI_ERROR_DEVICE_HUNG` est garanti à ce moment. Ensuite, revenez à la branche stable (`git -C third_party/victory checkout anyxboxx/stable`).
+Les branches `anyxboxx/stable` et `anyxboxx/essai` de `LooperSalty/victory` ne sont plus l'épinglage : le fork ci-dessus les remplace. Les sections qui les citent décrivent des mesures antérieures.
 
 ## Sécurité
 

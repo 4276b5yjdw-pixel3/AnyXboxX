@@ -4,7 +4,29 @@
 
 This guide installs and starts the project, and lists everything you need to repeat our tests on the Xbox Series 1.0.2.1 build of GTA VI, up to where we are today: the first cutscene. It does not provide the game and does not explain how to get it: you bring your own copy. Never put game files in this repository or attach them to an issue.
 
-The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), tracked here as the `third_party/victory` submodule (fork `LooperSalty/victory`, branch `anyxboxx/stable`). The script `tools/lancer_victory.ps1` builds it and starts it on your game folder.
+The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), tracked here as the `third_party/victory` submodule, pinned to the fork [fxceless/victory-gta6](https://github.com/fxceless/victory-gta6) (GPL-3.0) at commit `d279e69`. The script `tools/lancer_victory.ps1` builds it and starts it on your game folder.
+
+## Pinned fork (24 November, night)
+
+`third_party/victory` points to `fxceless/victory-gta6` at commit `d279e69` ("Make host pipeline waits configurable and prewarm pending requests (#1)", contributed by ZazaJr24). The fork is not a GitHub fork attached to VIctory; its licence is GPL-3.0, compatible with AnyXboxX (GPL-3.0 or later). It replaces our former `anyxboxx/stable` integration.
+
+Measured by the maintainer on 2026-11-24 (i7-13700KF + RTX 4070 SUPER, Windows 11) by running our own copy of the 1.0.2.1 build, from the VIctory log of the run (frame rate and draw counters as the program prints them), against our former `last` integration:
+
+| | fork `d279e69` | former `last` integration |
+| --- | --- | --- |
+| Frame rate in the world | 4.0 to 4.3 fps | 2.3 fps |
+| Draws per frame | about 4,580 | about 2,860 |
+| Draws lost without a pipeline | 428 | 400 |
+| Indirect draws lost | 3 | 86 |
+| Device lost | none for about 13 minutes, then lost (see known limits) | not recorded |
+
+The world is reached and displayed. Nothing here comes from reading the game's code.
+
+**Known limits (stability).** The second run held about 13 minutes in the world (first draws at 19:07:27 UTC), then lost the GPU device at 19:20:35 UTC: "host GPU device removed after 15 submissions sent ahead (VICTORY_LATE_WAIT=1) of 82 lists", the last list being a compute shader (`c1488f485ad606fb`). Measured, from the VIctory log of the run; the cause is not known. Plan on a few minutes to about 13 minutes in the world before a device loss, and relaunch. The message names `VICTORY_LATE_WAIT=1` while the launcher sets `3`: the setting actually in force in that run is to be checked.
+
+**First cold launch.** The first launch with an empty cache crashed at loading (pipeline compilation, then the game's internal crash tracked as VIctory #1464). The second launch, with the cache filled, held. If the first launch crashes, launch again.
+
+The settings of the successful run are now the defaults of `tools/lancer_victory.ps1` (table in the Run section). They need the `diag` build (`--profile diag --features diagnostics`). Pass `-NoTunedSettings` to turn them off.
 
 ## What you get today
 
@@ -106,13 +128,22 @@ The `diag` profile is required for the scripted keys, the frame captures and the
 .\tools\lancer_victory.ps1 -GameDir <game folder>
 ```
 
-The script sets three variables and then runs `victory.exe run <game folder>\game_scarlett_master.exe --execute`:
+The script sets the variables below (unless you pass `-NoTunedSettings`, which keeps only `VICTORY_GAME_DIR`) and then runs `victory.exe run <game folder>\game_scarlett_master.exe --execute`:
 
 | Variable | Value | Why |
 | --- | --- | --- |
 | `VICTORY_GAME_DIR` | your game folder | No `victory.toml` is needed. |
 | `VICTORY_CAPPED_DYNAMIC` | `262144` | NVIDIA caps the descriptor heap at 1,000,000 entries. With the default dynamic range, about 720 indirect draws per frame were dropped; with 262,144 slots they are not. |
 | `VICTORY_SHADER_LOOP_LIMIT` | `32` | Translated shader loops were almost endless; with a limit of 32 iterations the GPU is about 6 times faster. |
+| `VICTORY_RT_MISS` | `1` | Every ray misses (ray-tracing diagnostic): more ray-tracing programs translate. |
+| `VICTORY_WAVE32_READFIRSTLANE`, `VICTORY_WAVE32_CROSSLANE` | `approx` | Approximate `readfirstlane` and cross-lane operations on wave32. |
+| `VICTORY_SKIP_BVH_BUILDER` | `1` | Leaves out the title's BVH builder, which causes a GPU timeout (TDR). |
+| `VICTORY_D3D12_DRED` | `1` | Device-removed data. On in the measured run; it slows the world, so turn it off (`-NoTunedSettings`) when you only want speed. |
+| `VICTORY_LATE_WAIT` | `3` | Host pipeline wait setting of the fork's pull request #1. |
+| `VICTORY_WIDE_BACK` | `1` | Fork option, on in the measured run. |
+| `VICTORY_CARD_BUFFERS_MIN_MB`, `VICTORY_CARD_BUFFERS_MB` | `1`, `1024` | Card buffer sizing, in MB. |
+
+The first cold launch may crash while the pipelines compile: launch again once the cache is filled.
 
 `-SkipPipelines <hash,...>` is passed to `VICTORY_SKIP_PIPELINES` (see below).
 
@@ -164,14 +195,9 @@ These need the `diag` build.
 
 To stop the game: `taskkill /F /IM victory.exe`. The `timeout` command of Git Bash does not kill the executable.
 
-## Experimental branch
+## Former branches
 
-```powershell
-git -C third_party/victory fetch origin anyxboxx/essai
-git -C third_party/victory checkout FETCH_HEAD
-```
-
-This is the fork's `anyxboxx/essai` branch: the stable one plus root UAV support and byte and half-word LDS accesses. Start it with `VICTORY_SKIP_BVH_BUILDER=1`: the game's ray-tracing BVH builder, only half translated, blocked the GPU at the start of the cutscene. Without this option, `DXGI_ERROR_DEVICE_HUNG` is certain at that moment. When you are done, go back to the stable branch (`git -C third_party/victory checkout anyxboxx/stable`).
+The branches `anyxboxx/stable` and `anyxboxx/essai` of `LooperSalty/victory` are no longer the pin: the fork above replaces them. The sections above that mention them describe earlier measurements.
 
 ## Safety
 
