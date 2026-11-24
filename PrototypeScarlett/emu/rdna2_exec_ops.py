@@ -241,6 +241,7 @@ VECTOR = {
     "v_sub_f32": _binary_float(lambda x, y: x - y),
     "v_subrev_f32": _binary_float(lambda x, y: y - x),
     "v_mul_f32": _binary_float(lambda x, y: x * y),
+    "v_mul_legacy_f32": _binary_float(lambda x, y: 0.0 if x == 0.0 or y == 0.0 else x * y),
     "v_min_f32": _binary_float(min),
     "v_max_f32": _binary_float(max),
     "v_fmac_f32": lambda a, b, d, k, c: _float_op(_fma)(F(a), F(b), F(d)),
