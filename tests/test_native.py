@@ -27,12 +27,12 @@ def run(path):
         image.close()
 
 
-def test_entry_point_runs_on_real_cpu(tmp_path):
+def test_entry_point_runs_on_real_cpu(tmp_path, runtime_dir):
     exe = build_pe(tmp_path / "answer.exe", lambda iat: Asm().mov_eax(42).ret().build(), dll=False)
     assert run(exe)[0] == 42
 
 
-def test_import_is_bound_to_real_windows_function(tmp_path):
+def test_import_is_bound_to_real_windows_function(tmp_path, runtime_dir):
     def code(iat):
         return Asm().frame().call_iat(iat[("kernel32.dll", "GetCurrentProcessId")]).unframe().ret().build()
 
@@ -40,7 +40,7 @@ def test_import_is_bound_to_real_windows_function(tmp_path):
     assert run(exe)[0] == os.getpid()
 
 
-def test_module_handle_of_game_is_its_own_base(tmp_path):
+def test_module_handle_of_game_is_its_own_base(tmp_path, runtime_dir):
     def code(iat):
         return (Asm().frame().zero_rcx()
                 .call_iat(iat[("kernel32.dll", "GetModuleHandleW")]).unframe().ret().build())
@@ -69,7 +69,7 @@ def test_xgameruntime_is_served_by_anyxboxx(tmp_path, runtime_dir):
     assert run(exe)[0] == E_NOINTERFACE
 
 
-def test_relocated_when_preferred_base_is_taken(tmp_path):
+def test_relocated_when_preferred_base_is_taken(tmp_path, runtime_dir):
     from emu.native import NativeImage
 
     first = build_pe(tmp_path / "a.exe", lambda iat: Asm().mov_eax(1).ret().build(), dll=False)
@@ -101,7 +101,7 @@ def test_game_sees_its_own_command_line(tmp_path):
     assert out == [r'"C:\Jeux\jeu.exe"'] * 2
 
 
-def test_game_runs_from_its_own_folder(tmp_path, monkeypatch):
+def test_game_runs_from_its_own_folder(tmp_path, monkeypatch, runtime_dir):
     from emu import native
 
     monkeypatch.chdir(os.path.dirname(__file__))
