@@ -17,8 +17,13 @@ def is_ext(family, src0):
     return family in ("VOP1", "VOP2", "VOPC") and src0 in EXT_CODES
 
 
-def _is_float_op(name):
-    return "_f32" in name and not name.startswith(("v_cvt_u32", "v_cvt_i32"))
+def _operand_float_flags(name):
+    """Return (src_is_f32, dst_is_f32) from the instruction's operand types."""
+    if name.startswith("v_cvt_"):
+        parts = name.split("_")
+        return len(parts) >= 4 and parts[3] == "f32", len(parts) >= 3 and parts[2] == "f32"
+    is_f32 = name.endswith("_f32")
+    return is_f32, is_f32
 
 
 def _extract_sel(val, sel, sext):
@@ -96,7 +101,9 @@ def _dpp16_source_lane(lane, ctrl):
 
 
 def _exec_sdwa(wave, family, name, fields, ext):
-    is_float = _is_float_op(name)
+    from emu.rdna2_exec import Untranslated
+
+    src_is_float, dst_is_float = _operand_float_flags(name)
     s0_code = ext & 0xFF
     s0_scalar = (ext >> 23) & 1
     s0_sel, s0_sext, s0_neg, s0_abs = (ext >> 16) & 7, (ext >> 19) & 1, (ext >> 20) & 1, (ext >> 21) & 1
@@ -106,8 +113,8 @@ def _exec_sdwa(wave, family, name, fields, ext):
 
     def read_src(code, is_scalar, sel, sext, neg, absolute, lane):
         raw = wave.read_scalar(code, None) if is_scalar else wave.v[code][lane]
-        val = _extract_sel(raw, sel, 0 if is_float else sext)
-        return _apply_float_mods(val, absolute, neg) if is_float else val
+        val = _extract_sel(raw, sel, 0 if src_is_float else sext)
+        return _apply_float_mods(val, absolute, neg) if src_is_float else val
 
     if family == "VOPC":
         test, writes_exec = VECTOR_COMPARE[name]
@@ -130,12 +137,14 @@ def _exec_sdwa(wave, family, name, fields, ext):
     dst_unused = (ext >> 11) & 3
     clamp = (ext >> CLAMP_BIT) & 1
     omod = (ext >> OMOD_SHIFT) & 3
+    if not dst_is_float and clamp:
+        raise Untranslated(f"SDWA clamp non pris en charge sur opération entière : {name}")
     destination = wave.v[fields["vdst"]]
     for lane in wave.active():
         a = read_src(s0_code, s0_scalar, s0_sel, s0_sext, s0_neg, s0_abs, lane)
         b = read_src(s1_code, s1_scalar, s1_sel, s1_sext, s1_neg, s1_abs, lane) if "vsrc1" in fields else 0
         res = operation(a, b, destination[lane], None, wave.vcc >> lane & 1) & MASK32
-        if is_float:
+        if dst_is_float:
             res = _apply_omod_clamp(res, omod, clamp)
         destination[lane] = _place_dst(res, destination[lane], dst_sel, dst_unused)
 
@@ -146,7 +155,7 @@ def _exec_dpp16(wave, name, fields, ext):
     ctrl = (ext >> 8) & 0x1FF
     if _dpp16_source_lane(0, ctrl)[0] is None:
         raise Untranslated(f"dpp_ctrl réservé : 0x{ctrl:X}")
-    is_float = _is_float_op(name)
+    src_is_float, _ = _operand_float_flags(name)
     src0_reg = ext & 0xFF
     src0_snap = list(wave.v[src0_reg])
     src1_snap = list(wave.v[fields["vsrc1"]]) if "vsrc1" in fields else None
@@ -168,7 +177,7 @@ def _exec_dpp16(wave, name, fields, ext):
             continue
         a = src0_snap[src_lane] if valid else 0
         b = src1_snap[lane] if src1_snap is not None else 0
-        if is_float:
+        if src_is_float:
             a = _apply_float_mods(a, s0_abs, s0_neg)
             b = _apply_float_mods(b, s1_abs, s1_neg)
         destination[lane] = operation(a, b, destination[lane], None, wave.vcc >> lane & 1) & MASK32

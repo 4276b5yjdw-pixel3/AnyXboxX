@@ -203,3 +203,34 @@ def test_sdwa_and_dpp_on_gpu_match_interpreter():
     )
     expected, actual = compare(code)
     assert actual == expected
+
+
+def test_sdwa_integer_clamp_raises_and_cvt_sext_works():
+    ins_clamp = program(
+        vop2("v_add_nc_u32", 2, SDWA, 1),
+        sdwa_word(1, dst_sel=DWORD, clamp=1, src0_sel=DWORD, src1_sel=DWORD),
+    )
+    with pytest.raises(rdna2_exec.Untranslated, match="v_add_nc_u32"):
+        rdna2_exec.run(ins_clamp)
+    with pytest.raises(rdna2_hlsl.Untranslatable, match="v_add_nc_u32"):
+        rdna2_hlsl.translate(ins_clamp)
+
+    # v_cvt_f32_i32_sdwa with sext(BYTE_0) on 0x0000_00FE -> -2 -> -2.0f
+    wave = run_wave(
+        (vop1("v_cvt_f32_i32", 2, SDWA), sdwa_word(1, dst_sel=DWORD, src0_sel=BYTE_0, src0_sext=1)),
+        init_v={1: [0x1234_56FE] * 32},
+    )
+    assert wave.v[2][0] == float_bits(-2.0)
+
+
+@gpu
+def test_sdwa_cvt_f32_i32_sext_negative_byte_matches_gpu():
+    code = with_lane_offset(
+        vop1("v_mov_b32", 1, 255),
+        0x1234_56FE,
+        vop1("v_cvt_f32_i32", 2, SDWA),
+        sdwa_word(1, dst_sel=DWORD, src0_sel=BYTE_0, src0_sext=1),
+        *store_lane(2, 0),
+    )
+    expected, actual = compare(code)
+    assert actual == expected
