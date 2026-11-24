@@ -78,6 +78,28 @@ def test_scalar_loop_and_divergence_match():
 
 
 @gpu
+def test_wave32_ballot_used_as_scalar_data_matches_interpreter():
+    expected, actual = compare(with_lane_offset(
+        vop2("v_and_b32", 1, const(7), 0),
+        vopc("v_cmp_eq_u32", const(7), 1),                           # VCC : lignes 7, 15, 23 et 31
+        sop2("s_and_b32", 4, VCC_LO, LITERAL), 0x8000_8000,         # garder les lignes 15 et 31
+        sop2("s_or_b32", 5, 4, const(1)),                            # ajouter la ligne 0
+        sop1("s_bcnt1_i32_b32", 6, 5),
+        sop2("s_cselect_b32", 7, const(1), const(0)),                 # SCC du décompte non nul
+        vopc("v_cmp_eq_u32", const(32), 0),                          # aucune ligne : VCC est vide
+        sop1("s_bcnt1_i32_b32", 8, VCC_LO),
+        sop2("s_cselect_b32", 9, const(1), const(0)),                 # SCC doit retomber à zéro
+        vop1("v_mov_b32", 2, 5), *store_lane(2, 0),
+        vop1("v_mov_b32", 2, 6), *store_lane(2, 1),
+        vop1("v_mov_b32", 2, 7), *store_lane(2, 2),
+        vop1("v_mov_b32", 2, 8), *store_lane(2, 3),
+        vop1("v_mov_b32", 2, 9), *store_lane(2, 4)))
+    assert actual == expected
+    for slot, value in enumerate((0x8000_8001, 3, 1, 0, 0)):
+        assert struct.unpack_from("<32I", actual, OUTPUT + slot * 128) == (value,) * 32
+
+
+@gpu
 def test_lds_and_buffer_match():
     memory = bytearray(BUFFER + 20)
     memory[BUFFER:] = struct.pack("<5I", 10, 20, 30, 40, 50)
