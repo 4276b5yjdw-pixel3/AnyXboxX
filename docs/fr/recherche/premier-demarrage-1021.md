@@ -199,7 +199,7 @@ dessus.
 | W12 | **Observabilité.** Le lanceur natif n'a aucun gestionnaire pour `0x80000003` : un `int3` du titre finit en simple code de sortie (arrêt 0). Ajouter un gestionnaire vectoriel qui journalise l'adresse du premier `int3` ou de la première exception et le module, pour qu'un bisect donne un arrêt et non un code de sortie | arrêt 0 | mesuré |
 | W13 | **Fait, cette PR : dépendance à l'hôte documentée dans [jour-j.md](../jour-j.md), pas de shim, voir section 7.** `GameInput.dll!#1` : AnyXboxX n'a pas de shim GameInput. L'unique appelant du titre se lie à la DLL de l'hôte. Choisir : servir l'ordinal 1 depuis le lanceur, ou documenter la dépendance à l'hôte | statique | mesuré ; version d'ABI non vérifiée |
 | W14 | Audio (`chad` 5, `xapu` 5 chez TomBox, `AcpHal` 9) : manquant, mais non établi comme bloquant au démarrage, la chaîne d'appels étant indirecte. À traiter après W1 à W8 | section 2 | supposé |
-| W15 | Imports propres à l'hôte : `api-ms-win-core-psm-appnotify-*`, `ext-ms-win-rtcore-ntuser-*`, MFPlat, WS2_32 par ordinal. Le mode natif dépend d'un hôte Windows récent ; le noter dans [jour-j.md](../jour-j.md) | section 2 | mesuré sur Windows 11 seulement |
+| W15 | **Fait, cette PR : noté dans [jour-j.md](../jour-j.md), section 3.** Imports propres à l'hôte : `api-ms-win-core-psm-appnotify-*`, `ext-ms-win-rtcore-ntuser-*`, MFPlat, WS2_32 par ordinal. Le mode natif dépend d'un hôte Windows récent ; le noter dans [jour-j.md](../jour-j.md) | section 2 | mesuré sur Windows 11 seulement |
 | W16 | `__XMemAllocationHooks__` : le titre exporte un symbole de données qu'aucun source de Leonida ne lit. Si `XMemAlloc*` se comporte mal, vérifier si le runtime de la console le lit par `GetProcAddress` sur l'exécutable | table d'exports | rôle supposé |
 
 W1, W3, W7, W8, W9, W10, W11 et W12 se font à partir de la documentation publique et de tests synthétiques. W5 et
@@ -229,7 +229,7 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
   d'erreur sans écrire `*out`. Observé dans le source, pas mesuré sur le titre. La correction relève de l'amont, puisque
   `third_party/` n'est pas modifié ici.
 
-## 7. Résultats de W9, W10, W11 et W13 (cette PR ; W12 est traité dans l'issue #113)
+## 7. Résultats de W9, W10, W11, W13 et W15 (cette PR ; W12 est traité dans l'issue #113)
 
 - **W9.** `tests/test_gdk_boot.py` fabrique un titre (avec `tests/pe_builder.py`) dans son propre dossier, loin du
   runtime et sans `xgameruntime.dll` à côté, et rejoue les étapes 6 à 8 : `GetModuleFileNameW(NULL)` avec le nom de
@@ -294,6 +294,14 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
   objet (ignoré sur un hôte sans GameInput), et qu'une bibliothèque de l'hôte à laquelle manque un import par ordinal
   arrête le lanceur en nommant l'import (`dll!#1`), jamais un thunk muet. `tests/test_native_services.py` vérifiait
   déjà la même liaison en mode natif Python. [jour-j.md](../jour-j.md) dit quoi installer quand GameInput manque.
+- **W15.** [jour-j.md](../jour-j.md) liste désormais, sous « Ce que l'hôte Windows doit fournir », GameInput (W13) et
+  les imports propres à l'hôte de la section 2, avec ce qu'on en sait : mesurés sous Windows 11 seulement ; la
+  présence d'un API set se décide appareil par appareil, quel que soit le préfixe `api-` ou `ext-`
+  ([Windows API sets](https://learn.microsoft.com/en-us/windows/win32/apiindex/windows-apisets)) ;
+  `RegisterAppStateChangeNotification` est hébergé par `twinapi.core.dll` derrière
+  `api-ms-win-core-psm-appnotify-l1-1-0`/`-l1-1-1`
+  ([Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/api/appnotify/nf-appnotify-registerappstatechangenotification)) ;
+  les éditions N n'ont pas Media Foundation sans le Media Feature Pack. Documentation seulement, sans test.
 
 ## Sources et crédits
 
