@@ -47,6 +47,34 @@ uint SatF32ToU32(uint a) {
   if ((a & 0x7FFFFFFFu) > 0x7F800000u || x <= 0.0f) return 0u;
   return x >= 4294967296.0f ? 0xFFFFFFFFu : (uint)x;
 }
+uint SBfeU32(uint v, uint c) {
+  uint w = (c >> 16) & 0x7Fu;
+  if (w == 0u) return 0u;
+  uint field = v >> (c & 31u);
+  return w >= 32u ? field : field & ((1u << w) - 1u);
+}
+uint SBfeI32(uint v, uint c) {
+  uint w = (c >> 16) & 0x7Fu;
+  if (w == 0u) return 0u;
+  int field = asint(v) >> (c & 31u);
+  if (w >= 32u) return asuint(field);
+  uint shift = 32u - w;
+  return asuint((field << shift) >> shift);
+}
+uint WqmB32(uint v) {
+  uint r = 0u;
+  [unroll] for (uint q = 0u; q < 32u; q += 4u) { if (((v >> q) & 0xFu) != 0u) r |= 0xFu << q; }
+  return r;
+}
+uint QuadMaskB32(uint v) {
+  uint r = 0u;
+  [unroll] for (uint q = 0u; q < 8u; ++q) { if (((v >> (q * 4u)) & 0xFu) != 0u) r |= 1u << q; }
+  return r;
+}
+uint LeadingSignsI32(uint v) {
+  uint x = (v & 0x80000000u) != 0u ? ~v : v;
+  return x == 0u ? 0xFFFFFFFFu : 31u - firstbithigh(x);
+}
 uint AlignBit(uint hi, uint lo, uint s) {
   s &= 31u;
   return s == 0u ? lo : ((hi << (32u - s)) | (lo >> s));
@@ -154,11 +182,32 @@ SCALAR = {
     "s_abs_i32": "{{ int x = asint({a}); scc = x != 0; {d} = asuint(x < 0 ? -x : x); }}",
     "s_bitcmp0_b32": "scc = (({a} >> ({b} & 31u)) & 1u) == 0u;",
     "s_bitcmp1_b32": "scc = (({a} >> ({b} & 31u)) & 1u) != 0u;",
-    "s_and_saveexec_b32": "{{ uint e = s[126]; s[126] = {a} & e; scc = s[126] != 0; {d} = e; }}",
-    "s_or_saveexec_b32": "{{ uint e = s[126]; s[126] = {a} | e; scc = s[126] != 0; {d} = e; }}",
-    "s_xor_saveexec_b32": "{{ uint e = s[126]; s[126] = {a} ^ e; scc = s[126] != 0; {d} = e; }}",
-    "s_andn2_saveexec_b32": "{{ uint e = s[126]; s[126] = {a} & ~e; scc = s[126] != 0; {d} = e; }}",
+    "s_bfe_u32": "{{ uint r = SBfeU32({a}, {b}); scc = r != 0u; {d} = r; }}",
+    "s_bfe_i32": "{{ uint r = SBfeI32({a}, {b}); scc = r != 0u; {d} = r; }}",
+    "s_absdiff_i32": "{{ uint x = {a} - {b}; uint r = asint(x) < 0 ? 0u - x : x; scc = r != 0u; {d} = r; }}",
+    "s_mul_hi_u32": "{d} = MulHiU32({a}, {b});",
+    "s_mul_hi_i32": "{d} = MulHiI32({a}, {b});",
+    "s_bcnt0_i32_b32": "{{ uint r = 32u - countbits({a}); scc = r != 0u; {d} = r; }}",
+    "s_ff0_i32_b32": "{d} = firstbitlow(~{a});",
+    "s_flbit_i32": "{d} = LeadingSignsI32({a});",
+    "s_wqm_b32": "{{ uint r = WqmB32({a}); scc = r != 0u; {d} = r; }}",
+    "s_quadmask_b32": "{{ uint r = QuadMaskB32({a}); scc = r != 0u; {d} = r; }}",
+    "s_bitset0_b32": "{d} = {d} & ~(1u << ({a} & 31u));",
+    "s_bitset1_b32": "{d} = {d} | (1u << ({a} & 31u));",
 }
+# (S0 << n) + S1 : SCC = retenue au-delà de 32 bits, bits sortis par le décalage compris.
+for _n in range(1, 5):
+    SCALAR[f"s_lshl{_n}_add_u32"] = (f"{{{{ uint x = {{a}}, t = x << {_n}u; uint r = t + {{b}}; "
+                                     f"scc = (x >> {32 - _n}u) != 0u || r < t; {{d}} = r; }}}}")
+# EXEC = combinaison de S0 et d'EXEC ; D = ancien EXEC (saveexec) ou nouveau (wrexec).
+EXEC_COMBINE = {"and": "{a} & e", "or": "{a} | e", "xor": "{a} ^ e", "andn2": "{a} & ~e", "orn2": "{a} | ~e",
+                "nand": "~({a} & e)", "nor": "~({a} | e)", "xnor": "~({a} ^ e)", "andn1": "~{a} & e",
+                "orn1": "~{a} | e"}
+for _op, _combine in EXEC_COMBINE.items():
+    SCALAR[f"s_{_op}_saveexec_b32"] = f"{{{{ uint e = s[126]; s[126] = {_combine}; scc = s[126] != 0; {{d}} = e; }}}}"
+for _op in ("andn1", "andn2"):
+    SCALAR[f"s_{_op}_wrexec_b32"] = (f"{{{{ uint e = s[126]; s[126] = {EXEC_COMBINE[_op]}; scc = s[126] != 0; "
+                                     f"{{d}} = s[126]; }}}}")
 for _name in ("s_nop", "s_waitcnt", "s_waitcnt_vscnt", "s_waitcnt_vmcnt", "s_waitcnt_expcnt",
               "s_waitcnt_lgkmcnt", "s_barrier", "s_sleep", "s_setprio", "s_ttracedata",
               "s_dcache_inv", "s_gl1_inv", "buffer_gl0_inv", "buffer_gl1_inv", "s_clause",
