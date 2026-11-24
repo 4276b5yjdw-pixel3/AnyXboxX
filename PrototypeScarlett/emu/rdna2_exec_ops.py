@@ -41,9 +41,33 @@ def _float_op(function):
 
 
 def _to_int(value, low, high):
+    """Conversion saturée : NaN → 0, ±infini et hors bornes → la borne la plus proche."""
     if math.isnan(value):
         return 0
+    if math.isinf(value):
+        return high if value > 0 else low
     return int(min(max(math.trunc(value), low), high))
+
+
+def _exp2(x):
+    """2^x ; au-delà du format double, +infini (Python lève OverflowError)."""
+    try:
+        return 2.0 ** x
+    except OverflowError:
+        return math.inf
+
+
+def _fract(x):
+    """x + -floor(x) (ISA) : NaN pour ±infini, où floor ne donne pas d'entier."""
+    return math.nan if math.isinf(x) else x - math.floor(x)
+
+
+def ldexp(x, exponent):
+    """x × 2^exponent ; ±infini quand le résultat dépasse le format double."""
+    try:
+        return math.ldexp(x, exponent)
+    except OverflowError:
+        return math.copysign(math.inf, x)
 
 
 def _reciprocal(x):
@@ -228,7 +252,7 @@ VECTOR = {
     "v_rcp_f32": _unary_float(_reciprocal),
     "v_rsq_f32": _unary_float(lambda x: _reciprocal(math.sqrt(x))),
     "v_sqrt_f32": _unary_float(math.sqrt),
-    "v_exp_f32": _unary_float(lambda x: 2.0 ** x),
+    "v_exp_f32": _unary_float(_exp2),
     "v_log_f32": _unary_float(_log2),
     "v_sin_f32": _unary_float(lambda x: math.sin(x * 2 * math.pi)),
     "v_cos_f32": _unary_float(lambda x: math.cos(x * 2 * math.pi)),
@@ -236,7 +260,7 @@ VECTOR = {
     "v_ceil_f32": _unary_float(lambda x: x if math.isinf(x) else float(math.ceil(x))),
     "v_trunc_f32": _unary_float(lambda x: x if math.isinf(x) else float(math.trunc(x))),
     "v_rndne_f32": _unary_float(_round_even),
-    "v_fract_f32": _unary_float(lambda x: x - math.floor(x)),
+    "v_fract_f32": _unary_float(_fract),
     "v_add_f32": _binary_float(lambda x, y: x + y),
     "v_sub_f32": _binary_float(lambda x, y: x - y),
     "v_subrev_f32": _binary_float(lambda x, y: y - x),

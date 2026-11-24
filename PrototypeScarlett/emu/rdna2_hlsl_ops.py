@@ -35,6 +35,18 @@ uint BfeI32(uint v, uint off, uint w) {
   uint shift = 32u - w;
   return asuint((asint(field) << shift) >> shift);
 }
+uint SatF32ToI32(uint a) {
+  float x = asfloat(a);
+  if ((a & 0x7FFFFFFFu) > 0x7F800000u) return 0u;          // NaN : test sur les bits, pas x != x
+  if (x >= 2147483648.0f) return 0x7FFFFFFFu;
+  if (x <= -2147483648.0f) return 0x80000000u;
+  return asuint((int)x);
+}
+uint SatF32ToU32(uint a) {
+  float x = asfloat(a);
+  if ((a & 0x7FFFFFFFu) > 0x7F800000u || x <= 0.0f) return 0u;
+  return x >= 4294967296.0f ? 0xFFFFFFFFu : (uint)x;
+}
 uint AlignBit(uint hi, uint lo, uint s) {
   s &= 31u;
   return s == 0u ? lo : ((hi << (32u - s)) | (lo >> s));
@@ -212,8 +224,8 @@ VECTOR = {
     "v_ldexp_f32": "asuint(ldexp(asfloat({a}), (float)asint({b})))",
     "v_cvt_f32_u32": "asuint((float){a})",
     "v_cvt_f32_i32": "asuint((float)asint({a}))",
-    "v_cvt_u32_f32": "(uint)max(asfloat({a}), 0.0f)",
-    "v_cvt_i32_f32": "asuint((int)asfloat({a}))",
+    "v_cvt_u32_f32": "SatF32ToU32({a})",
+    "v_cvt_i32_f32": "SatF32ToI32({a})",
     "v_cvt_f32_ubyte0": "asuint((float)({a} & 0xFFu))",
     "v_cvt_f32_ubyte1": "asuint((float)(({a} >> 8) & 0xFFu))",
     "v_cvt_f32_ubyte2": "asuint((float)(({a} >> 16) & 0xFFu))",
