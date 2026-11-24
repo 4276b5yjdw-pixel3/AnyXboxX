@@ -108,7 +108,7 @@ def translate_vertex(data, sgprs=None):
              "  o_out.bary = float2(corner == 1u ? 1.0f : 0.0f, corner == 2u ? 1.0f : 0.0f);",
              f"  uint record = {graphics.VERTEX_RECORDS}u + vertex * {graphics.VERTEX_STRIDE}u;",
              "  v[0] = vertex;"]
-    lines += body(data, sgprs, FINISH, _special("vs"))
+    lines += body(data, sgprs, "return o_out;", _special("vs"))
     return "\n".join(lines + ["  return o_out;", "}", ""])
 
 
@@ -128,5 +128,5 @@ def translate_pixel(data, width, sgprs=None):
               f"{graphics.PIXEL_STRIDE}u;",
               "  v[0] = asuint(bary.x);", "  v[1] = asuint(bary.y);",
               "  g_memory.Store4(record, uint4(1u, v[0], v[1], primitive));"]
-    lines += body(data, sgprs, FINISH, _special("ps"))
+    lines += body(data, sgprs, "return o_out;" if targets else "return;", _special("ps"))
     return "\n".join(lines + ["  return o_out;" if targets else "  return;", "}", ""])

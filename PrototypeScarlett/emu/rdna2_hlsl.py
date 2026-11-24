@@ -1,13 +1,15 @@
-"""Recompilateur RDNA 2 → HLSL (shader de calcul, puis DXIL avec dxc) : première version.
+"""Recompilateur RDNA 2 → HLSL (shader de calcul, puis DXIL avec dxc).
 
 Un programme RDNA 2 (un wave32) devient un shader de calcul HLSL d'un groupe de 32 threads.
-Le contrôle de flux est rendu par une boucle `while` + `switch (pc)` sur des blocs de base,
-car les branchements RDNA 2 sont scalaires donc uniformes pour tout le groupe. La mémoire
-du programme est le buffer brut u0 (adresses 32 bits basses). Chaque instruction traduite
-est vérifiée contre l'interpréteur de référence (emu/rdna2_exec*) ; une instruction non
-couverte lève Untranslatable en la nommant.
+Le contrôle de flux réductible est structuré en boucles `[loop] while` et gardes `if (pc == ...)`
+via `third_party/leonida/cfg_structure.py` (Leonida, GPL-3.0), avec repli sur `while` + `switch (pc)`
+pour les graphes irréductibles. La mémoire du programme est le buffer brut u0 (adresses 32 bits
+basses). Chaque instruction traduite est vérifiée contre l'interpréteur de référence
+(emu/rdna2_exec*) ; une instruction non couverte lève Untranslatable en la nommant.
 """
+from pathlib import Path
 import struct
+import sys
 
 from emu import rdna2, rdna2_hlsl_image
 from emu.rdna2_exec_ops import signed
@@ -179,11 +181,78 @@ def translate(data, sgprs=None):
     return "\n".join([prelude.rstrip("\n"), *body(data, sgprs), "}", ""])
 
 
+def _cfg_structure():
+    leonida = Path(__file__).resolve().parents[2] / "third_party" / "leonida"
+    if str(leonida) not in sys.path:
+        sys.path.insert(0, str(leonida))
+    import cfg_structure
+    return cfg_structure
+
+
+def _build_blocks(data, instructions, leaders, finish, special):
+    block_of = {offset: idx for idx, offset in enumerate(leaders)}
+    stmts = [[] for _ in leaders]
+    succ = {idx: [] for idx in range(len(leaders))}
+    cur = 0
+    for index, instruction in enumerate(instructions):
+        if instruction.offset in block_of:
+            cur = block_of[instruction.offset]
+        name = rdna2.mnemonic(instruction.family, instruction.opcode)
+        following = instructions[index + 1].offset if index + 1 < len(instructions) else None
+        if name in BRANCHES:
+            target = branch_target(data, instruction)
+            if target not in block_of or target % rdna2.DWORD:
+                raise Untranslatable(f"cible de branchement invalide : {target}")
+            tb = block_of[target]
+            if name == "s_branch":
+                stmts[cur].append(f"pc = {tb}u;")
+                succ[cur] = [tb]
+            elif following in block_of:
+                fb = block_of[following]
+                stmts[cur].append(f"if ({BRANCHES[name]}) pc = {tb}u; else pc = {fb}u;")
+                succ[cur] = [tb] if tb == fb else [tb, fb]
+            else:
+                stmts[cur].append(f"if ({BRANCHES[name]}) pc = {tb}u; else {{ {finish} }}")
+                succ[cur] = [tb]
+            continue
+        stmts[cur].extend(statements(data, instruction, finish, special))
+        if name == "s_endpgm":
+            succ[cur] = []
+        elif following in block_of:
+            fb = block_of[following]
+            stmts[cur].append(f"pc = {fb}u;")
+            succ[cur] = [fb]
+    return stmts, succ
+
+
+def _emit_tree(items, stmts, lines, indent):
+    for item in items:
+        kind = item[0]
+        if kind == "block":
+            lines.extend(f"{indent}{line}" for line in stmts[item[1]])
+        elif kind == "guard":
+            lines.append(f"{indent}if (pc == {item[1]}u) {{")
+            _emit_tree(item[2], stmts, lines, indent + "  ")
+            lines.append(f"{indent}}}")
+        elif kind == "loop":
+            lines.append(f"{indent}[loop] while (pc == {item[1]}u) {{")
+            _emit_tree(item[2], stmts, lines, indent + "  ")
+            lines.append(f"{indent}}}")
+
+
 def body(data, sgprs=None, finish="return;", special=None):
-    """Lignes du corps : SGPR initiaux puis boucle `while` + `switch (pc)` sur les blocs de base."""
+    """Lignes du corps : SGPR initiaux puis contrôle de flux structuré (repli sur switch si irréductible)."""
     instructions = [i for i in rdna2.decode(data) if i.family != "tronquée"]
     leaders = _leaders(data, instructions)
     lines = [f"  s[{number}] = {hexa(value)};" for number, value in sorted((sgprs or {}).items())]
+    stmts, succ = _build_blocks(data, instructions, leaders, finish, special)
+    tree = _cfg_structure().structure(succ)
+    if tree is not None:
+        if len(stmts) > 1:
+            lines.append("  uint pc = 0u;")
+        _emit_tree(tree, stmts, lines, "  ")
+        return lines
+
     lines += ["  uint pc = 0;", "  [loop] while (pc != END_PC) {", "    switch (pc) {"]
     for index, instruction in enumerate(instructions):
         if instruction.offset in leaders:
@@ -191,8 +260,6 @@ def body(data, sgprs=None, finish="return;", special=None):
         name = rdna2.mnemonic(instruction.family, instruction.opcode)
         if name in BRANCHES:
             target = branch_target(data, instruction)
-            if target not in leaders or target % rdna2.DWORD:
-                raise Untranslatable(f"cible de branchement invalide : {target}")
             lines.append(f"      if ({BRANCHES[name]}) {{ pc = {target}u; break; }}")
         else:
             lines += [f"      {line}" for line in statements(data, instruction, finish, special)]
