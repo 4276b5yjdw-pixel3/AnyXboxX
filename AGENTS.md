@@ -20,7 +20,7 @@ AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett
 | `third_party/leonida/` | Unchanged frozen copies of Leonida's translators, called by `PrototypeScarlett`. The Leonida project was deleted on 2026-11-24 and its submodule removed; nothing tracks it any more. |
 | `tools/` | Generators and comparison tools (GDK interface table, kernelx exports, RDNA 2 tables, TomBox comparison) |
 | `tests/` | pytest suite (about 220 tests) |
-| `docs/` | Research notes and logs, in English. `docs/fr/` holds the French version of each document (same tree). `docs/i18n/` holds the 7 README translations. |
+| `docs/` | Research notes and logs, in English. `docs/fr/` holds the French version of each document (same tree). `docs/i18n/` holds the 8 README translations. |
 
 ## Setup and commands
 
@@ -48,7 +48,7 @@ cargo build --release --manifest-path rust/Cargo.toml
 3. **No fake success.** An unimplemented function returns `E_NOTIMPL` (or the console's error) and is logged; an untranslated instruction raises an error that names it.
 4. **Verify against an oracle.** Decoder changes are checked against the LLVM tables (`python tools/rdna2_mnemonics.py <llvm .s folder> --verifier`); every HLSL translation is checked against the reference interpreter, byte for byte, on GPU or WARP.
 5. **Tests with every change.** New behaviour comes with a test that fails without it.
-6. **README in 8 languages.** `README.md` (English) and `docs/i18n/README.*.md` must stay in sync: same table rows, same test count, same images. Image text is in English.
+6. **README in 9 languages.** `README.md` (English) and `docs/i18n/README.*.md` must stay in sync: same table rows, same test count, same images. Image text is in English.
 7. **Git**: `main` is protected; work on a branch and open a pull request; CI (`.github/workflows/tests.yml`) must pass. Commit messages: `type: description` (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`), written in French like the history.
 8. **Code style**: small focused files (under about 400 lines), small functions, explicit error handling, no hidden mutation of shared state, constants instead of magic numbers where it helps reading.
 9. **Native mode runs code unsandboxed.** Only run trusted test programs with `--natif` or `anyxboxx.exe`.

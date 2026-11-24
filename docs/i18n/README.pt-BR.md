@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/badge/Discord-AnyXboxX-5865F2?logo=discord&logoColor=white)](https://discord.gg/TcX42vRyPU)
 
-[English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · **Português** · [日本語](README.ja.md) · [中文](README.zh-CN.md)
+[English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · **Português** · [日本語](README.ja.md) · [中文](README.zh-CN.md) · [Русский](README.ru.md)
 
 > [!NOTE]
 > **Onde estamos (24/11/2026)**
@@ -105,7 +105,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Segundo tradutor RDNA 2 → SPIR-V (Vulkan): o do Leonida (GPL-3.0), copiado sem alterações em `third_party/leonida/` e alimentado pelo desmontador do próprio AnyXboxX, sem `llvm-mc`; vertex, pixel e compute shaders; 51 dos 52 shaders de console incluídos em `XboxBvhBuilder.dll` do pacote são traduzidos, medição local com `tools/fssm_mesure.py` (`scarlett.py --rdna2 <shader.bin> --spirv ps`) | 🟡 em andamento |
 | TomBox atualizado para a versão mais recente (D3D12.X: 194 de 200 métodos pela contagem deles) e mais 4 bibliotecas do console compiladas e servidas a partir de `ANYXBOXX_TOMBOX_DIR`: `d3d12_x` (ESRAM), `XAudio2_9` (vozes XMA), `xapu`, `xgs12`; `tools/build_tombox.py d3d12_xs xg_xs xmem d3d12_x xaudio2_9 xapu xgs12` | 🟡 em andamento |
 | Conversão do DXIL do console em DXIL do PC (`dxil-ms-xb2` → `dxil-ms-dx`, sem passar por HLSL): a ferramenta do Xbox2Windows (MIT), copiada sem alterações com seu teste em `third_party/xbox2windows/`; `python third_party/xbox2windows/tools/dxil_retarget.py <entrada> <saída>` ou `--pe <jogo.exe>` | ✅ feito |
-| Verificações das pull requests: lint e os 8 README sincronizados (linhas, imagens, número de testes) em cada pull request | ✅ feito |
+| Verificações das pull requests: lint e os 9 README sincronizados (linhas, imagens, número de testes) em cada pull request | ✅ feito |
 | Texturas de console em Rust: decodificação BC7 e destilização GFX10 `SW_4K_S` portadas do Xbox2Windows (MIT), resumos de referência reproduzidos; `anyxboxx_texture bc7 <blocos.bin> <l> <a> <saida.png> [--4k-s]` | 🟡 em andamento |
 | Outras interfaces do GDK escritas pelo AnyXboxX (`XGameUi`, `XNetworking`…) | ⏳ a fazer |
 | Recompilador de shaders RDNA 2 → DXIL: primeiros programas traduzidos para HLSL, compilados para DXIL e executados na GPU do PC com D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP sem GPU), memória idêntica a um interpretador de referência wave32 que executa 599 de 1.487 codificações (escalares, VOP1/VOP2/VOPC/VOP3, memória: SMEM, LDS, GLOBAL, MUBUF com limites V#, atômicas, desvios, divergência por `exec`); um primeiro vertex shader e pixel shader (exportações EXP, interpolação VINTRP) desenhados com D3D12, idênticos vértice a vértice e pixel a pixel: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 em andamento |

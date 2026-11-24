@@ -1,4 +1,4 @@
-"""Les 8 README (anglais + 7 traductions) restent synchronisés (règle 6 d'AGENTS.md)."""
+"""Les 9 README (anglais + 8 traductions) restent synchronisés (règle 6 d'AGENTS.md)."""
 import re
 from pathlib import Path
 
@@ -6,11 +6,11 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 READMES = [REPO / "README.md", *sorted((REPO / "docs" / "i18n").glob("README.*.md"))]
-LANGUAGE_COUNT = 8
+LANGUAGE_COUNT = 9
 # Libellé de la ligne « N tests automatisés » dans chaque langue.
 TEST_COUNT_ROW = re.compile(
     r"^\| *(\d+) *(?:automated tests|automatisierte Tests|pruebas automatizadas|tests automatisés"
-    r"|test automatizzati|件の自動テスト|testes automatizados|个自动化测试) *\|", re.M)
+    r"|test automatizzati|件の自動テスト|testes automatizados|个自动化测试|автоматических тестов) *\|", re.M)
 IMAGE = re.compile(r"\(([^()\s]*\.(?:svg|png))\)")
 
 
@@ -33,7 +33,7 @@ def texts():
     return {path.relative_to(REPO).as_posix(): path.read_text(encoding="utf-8") for path in READMES}
 
 
-def test_eight_languages(texts):
+def test_nine_languages(texts):
     assert len(texts) == LANGUAGE_COUNT, sorted(texts)
 
 
