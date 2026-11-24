@@ -8,7 +8,7 @@ Since 23 November, AnyXboxX first aims to run this build: we contribute to Leoni
 
 ## What we take
 
-- **The whole repository**, as the submodule `third_party/leonida-src` (pinned commit, unchanged). The `voisins` workflow advances it every hour on the branch `auto/voisins`, like TomBox.
+- **The whole repository**: the upstream repository was deleted on 2026-11-24 and its submodule was removed; only the frozen copies in `third_party/leonida/` remain.
 - **The copies of the translator** RDNA 2 → SPIR-V in `third_party/leonida/`: `PrototypeScarlett/emu/rdna2_spirv.py` calls them. They do not change.
 
 ## Where Leonida stands (from their README)
