@@ -8,7 +8,7 @@ qui les nomme, ce qui mesure ce qui reste à traduire.
 """
 import struct
 
-from emu import rdna2, rdna2_exec_graphics, rdna2_exec_image, rdna2_exec_memory, rdna2_exec_vop3
+from emu import rdna2, rdna2_exec_ext, rdna2_exec_graphics, rdna2_exec_image, rdna2_exec_memory, rdna2_exec_vop3
 from emu.rdna2_exec_ops import SCALAR, VECTOR, VECTOR_COMPARE, BRANCHES, float_bits
 
 LANES = 32
@@ -129,6 +129,8 @@ def step(wave, data):
             next_pc = wave.pc + rdna2.DWORD + _signed16(fields["simm16"]) * rdna2.DWORD
     elif name in SCALAR:
         SCALAR[name](wave, fields, literal)
+    elif rdna2_exec_ext.is_ext(family, fields.get("src0")):
+        rdna2_exec_ext.execute(wave, family, name, fields, literal or 0)
     elif name in VECTOR:
         _vector(wave, name, fields, literal)
     elif name in VECTOR_COMPARE:
