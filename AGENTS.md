@@ -17,7 +17,7 @@ AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett
 | `runtime/` | C++ runtime DLLs (`xgameruntime`, `xmem`, `d3d12_xs`, `kernelx`, `anyxboxx_tls`), native launcher `anyxboxx.exe`, GPU runner `anyxboxx_gpu_run.exe` |
 | `rust/` | Rust workspace. `anyxboxx-rdna2` bridges to TomBox's RDNA 2 decoder; `anyxboxx-texture` decodes BC7 and GFX10 `SW_4K_S` tiles (ported from Xbox2Windows); `anyxboxx-audio` decodes XMA2 with TomBox's FFmpeg port. |
 | `third_party/tombox/` | Git submodule: [omonkeyz/xbox-emulator](https://github.com/omonkeyz/xbox-emulator) (TomBox continuation, GPL-3.0-or-later since its commit `51f5319`, MIT OR Apache-2.0 before), pinned commit. Do not edit; propose changes upstream. |
-| `third_party/leonida-src/` | Git submodule: the whole [ItsNotRexed/Leonida](https://github.com/ItsNotRexed/Leonida) repository (GPL-3.0; static recompilation of the Xbox Series 1.0.2.1 build: `gta6rt` runtime, GDK shims, D3D12 → Vulkan, asset tools), pinned commit, advanced hourly by the `voisins` workflow. Do not edit; propose changes upstream. `third_party/leonida/` keeps the unchanged translator copies that `PrototypeScarlett` calls. |
+| `third_party/leonida/` | Unchanged frozen copies of Leonida's translators, called by `PrototypeScarlett`. The Leonida project was deleted on 2026-11-24 and its submodule removed; nothing tracks it any more. |
 | `tools/` | Generators and comparison tools (GDK interface table, kernelx exports, RDNA 2 tables, TomBox comparison) |
 | `tests/` | pytest suite (about 220 tests) |
 | `docs/` | Research notes and logs, in English. `docs/fr/` holds the French version of each document (same tree). `docs/i18n/` holds the 7 README translations. |

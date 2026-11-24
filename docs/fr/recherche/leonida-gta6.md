@@ -8,7 +8,7 @@ Depuis le 23 novembre, AnyXboxX vise d'abord à faire tourner ce build : nous co
 
 ## Ce que nous récupérons
 
-- **Le dépôt complet**, en sous-module `third_party/leonida-src` (commit épinglé, non modifié). Le workflow `voisins` l'avance chaque heure sur la branche `auto/voisins`, comme TomBox.
+- **Le dépôt complet** : le dépôt amont a été supprimé le 2026-11-24 et son sous-module retiré ; il ne reste que les copies figées de `third_party/leonida/`.
 - **Les copies du traducteur** RDNA 2 → SPIR-V dans `third_party/leonida/` : ce sont elles qu'appelle `PrototypeScarlett/emu/rdna2_spirv.py`. Elles ne changent pas.
 
 ## Où en est Leonida (d'après leur README)
