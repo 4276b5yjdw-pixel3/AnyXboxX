@@ -1,5 +1,7 @@
 # AnyXboxX — émulateur Xbox Series X (prototype)
 
+[![Discord](https://img.shields.io/badge/Discord-AnyXboxX-5865F2?logo=discord&logoColor=white)](https://discord.gg/TcX42vRyPU)
+
 [English](../../README.md) · **Français** · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
 > [!NOTE]
@@ -226,6 +228,8 @@ def XSystemGetDeviceType(c):
 ## Contribuer
 
 La branche `main` est protégée : toute contribution passe par une pull request relue, et les tests doivent passer. Les bogues et les fonctions à émuler se signalent dans les issues. Les règles complètes sont dans [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
+Discussion, aide et rapports de test : [Discord](https://discord.gg/TcX42vRyPU)
 
 ## Licence
 
