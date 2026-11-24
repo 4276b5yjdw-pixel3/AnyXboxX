@@ -25,3 +25,26 @@ Banc : i7-13700KF, RTX 4070 SUPER, Windows 11. VIctory `main` plus sa pull reque
 ## Ce que cela signifie pour AnyXboxX
 
 Nos issues [#68](https://github.com/LooperSalty/AnyXboxX/issues/68) (contrôle de flux structuré et masques de lanes) et [#70](https://github.com/LooperSalty/AnyXboxX/issues/70) (wave64) sont exactement ces manques : masques de lignes lus comme données et select sur masque non suivi relèvent de #68 ; les 119 compute shaders refusés relèvent de #70. On réutilise plutôt que de réécrire, selon l'approche « ce qu'il faut reprendre » de [voisins.md](voisins.md) : l'approche wave64-sur-32 de xcl (deux moitiés, lue comme conception, non copiée à cause de la licence) et les PR VIctory #223 et #233 (GPL-3.0 ou ultérieure, reprises avec crédit).
+
+## Intégration (2026-11-24)
+
+Notre intégration est publiée sur le fork [LooperSalty/victory](https://github.com/LooperSalty/victory) et suivie par ce dépôt comme sous-module `third_party/victory` (`tools/lancer_victory.ps1` le compile et le lance sur votre propre dossier de jeu ; le workflow horaire des voisins suit la branche stable).
+
+- Branche `anyxboxx/stable` : VIctory `main` plus les 24 pull requests créditées dans [THIRD_PARTY.md](../../../THIRD_PARTY.md), avec des adaptations locales (conflits résolus, plages mémoire déjà à jour dédupliquées, réglage `VICTORY_CAPPED_DYNAMIC` pour la plage de descripteurs dynamiques sur un tas plafonné NVIDIA). C'est la branche que nous épinglons.
+- Branche `anyxboxx/essai` : la branche stable plus quatre pull requests (#294, #709, #571, #452). **Expérimentale seulement** : elle provoque encore des blocages du GPU.
+
+Résultats sur la branche stable, i7-13700KF, RTX 4070 SUPER, Windows 11. Toutes les lignes sont **mesurées**.
+
+- Mesuré : menus, écrans de première exécution, écrans légaux et menu pause à 30 i/s ; entrée dans le monde et **première cinématique (ouverture de la mission 1, crédits d'ouverture affichés)**.
+- Mesuré : aucun retrait du GPU pendant 5 minutes dans le monde (avant : `DXGI_ERROR_DEVICE_HUNG` environ 2 minutes après).
+- Mesuré : la scène 3D est présente dans le G-buffer mais l'image finale reste noire (passes d'éclairage non traduites) ; 0,3 à 0,5 image par seconde dans le monde. Pas jouable.
+
+Causes trouvées, une à une :
+
+- (a) Mesuré : le pilote NVIDIA refuse les compute shaders wave64 ; l'émulation du wave64 sur des vagues de 32 lignes (#189) règle le problème.
+- (b) Mesuré : le `DEVICE_HUNG` sur `DispatchMesh` disparaît avec #493 et #206.
+- (c) Mesuré : la plage de descripteurs dynamiques était trop petite sur un tas plafonné à 1 000 000 de descripteurs (65 536 slots) ; avec 262 144 slots, environ 720 dispatchs mesh indirects abandonnés par image disparaissent.
+- (d) Mesuré : les boucles des shaders traduits étaient quasi infinies ; avec une limite de 32 itérations, le temps GPU par image passe de 1,1 s à 0,2 s.
+- (e) Mesuré : le coût CPU de la surveillance de la mémoire du titre passe de 413 à 224 ms par image avec #393 et la déduplication des plages.
+- (f) Mesuré : le G-buffer est rempli mais l'éclairage est bloqué par des compute shaders pas encore traduits (root UAV, accès LDS octet et demi-mot, chargement de tampon non signé 16 bits).
+- (g) Mesuré : la branche expérimentale débloque les root UAV, mais certains compute shaders ainsi débloqués bloquent encore le GPU.

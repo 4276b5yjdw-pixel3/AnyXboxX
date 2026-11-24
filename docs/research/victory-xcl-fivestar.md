@@ -25,3 +25,26 @@ Setup: i7-13700KF, RTX 4070 SUPER, Windows 11. VIctory `main` plus its pull requ
 ## What it means for AnyXboxX
 
 Our issues [#68](https://github.com/LooperSalty/AnyXboxX/issues/68) (structured control flow and lane masks) and [#70](https://github.com/LooperSalty/AnyXboxX/issues/70) (wave64) are exactly these gaps: lane masks read as data and selects on untracked masks are #68; the 119 refused compute shaders are #70. We reuse instead of rewriting, following the "what to take" approach of [neighbors.md](neighbors.md): xcl's wave64-on-wave32 approach (two halves, read as a design, not copied because of the licence) and VIctory's pull requests #223 and #233 (GPL-3.0 or later, reusable with credit).
+
+## Integration (2026-11-24)
+
+Our integration is published on the fork [LooperSalty/victory](https://github.com/LooperSalty/victory) and tracked by this repository as the `third_party/victory` submodule (`tools/lancer_victory.ps1` builds and launches it on your own game folder; the hourly neighbours workflow follows the stable branch).
+
+- Branch `anyxboxx/stable`: VIctory `main` plus the 24 pull requests credited in [THIRD_PARTY.md](../../THIRD_PARTY.md), with local adaptations (conflicts resolved, memory ranges that were already up to date deduplicated, a `VICTORY_CAPPED_DYNAMIC` setting for the dynamic descriptor range on a capped NVIDIA heap). This is the branch we pin.
+- Branch `anyxboxx/essai`: the stable branch plus four more pull requests (#294, #709, #571, #452). **Experimental only**: it still causes GPU hangs.
+
+Results on the stable branch, i7-13700KF, RTX 4070 SUPER, Windows 11. All lines are **measured**.
+
+- Measured: menus, first-run screens, legal screens and the pause menu at 30 fps; entry into the world and the **first cutscene (opening of mission 1, opening credits shown)**.
+- Measured: no GPU removal during 5 minutes in the world (before: `DXGI_ERROR_DEVICE_HUNG` about 2 minutes later).
+- Measured: the 3D scene is present in the G-buffer but the final image is still black (lighting passes not translated); 0.3 to 0.5 frames per second in the world. Not playable.
+
+Causes found, one by one:
+
+- (a) Measured: the NVIDIA driver refuses wave64 compute shaders; emulating wave64 on 32-lane waves (#189) fixes it.
+- (b) Measured: the `DEVICE_HUNG` on `DispatchMesh` goes away with #493 and #206.
+- (c) Measured: the dynamic descriptor range was too small on a heap capped at 1,000,000 descriptors (65,536 slots); with 262,144 slots about 720 abandoned indirect mesh dispatches per frame disappear.
+- (d) Measured: translated shader loops were almost endless; with a limit of 32 iterations the GPU time per frame goes from 1.1 s to 0.2 s.
+- (e) Measured: the CPU cost of watching the title's memory goes from 413 ms to 224 ms per frame with #393 plus the deduplication of ranges.
+- (f) Measured: the G-buffer is filled but lighting is blocked by compute shaders that are not translated yet (root UAV, byte and half-word LDS accesses, a 16-bit unsigned buffer load).
+- (g) Measured: the experimental branch unblocks the root UAVs, but some compute shaders unblocked that way still hang the GPU.
