@@ -2,6 +2,8 @@
 
 Merci de ton intérêt. Ces règles s'appliquent à toute personne autre que le mainteneur.
 
+Discussion, aide et rapports de test : [Discord](https://discord.gg/TcX42vRyPU)
+
 **Ta copie du jeu est la bienvenue en local.** Tu peux lancer, mesurer, déboguer et analyser ta propre copie de l'exécutable et du build du jeu pour orienter tes PR. Ce qui reste interdit : ajouter au dépôt des fichiers du jeu ou de la console (voir « Ce qui est refusé »).
 
 ## Règle principale : tout passe par une pull request

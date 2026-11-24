@@ -1,5 +1,7 @@
 # AnyXboxX — Xbox Series X エミュレーター（プロトタイプ）
 
+[![Discord](https://img.shields.io/badge/Discord-AnyXboxX-5865F2?logo=discord&logoColor=white)](https://discord.gg/TcX42vRyPU)
+
 [English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · **日本語** · [中文](README.zh-CN.md)
 
 > [!NOTE]
@@ -224,6 +226,8 @@ def XSystemGetDeviceType(c):
 ## コントリビュート
 
 `main` ブランチは保護されています。すべての貢献はレビューされるプルリクエストを経由し、テストに合格する必要があります。バグやエミュレートすべき関数は issue で報告してください。詳しいルールは [CONTRIBUTING.md](../../CONTRIBUTING.md)（フランス語）にあります。
+
+議論、サポート、テスト報告：[Discord](https://discord.gg/TcX42vRyPU)。
 
 ## ライセンス
 

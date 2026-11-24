@@ -1,5 +1,7 @@
 # AnyXboxX — Xbox Series X 模拟器（原型）
 
+[![Discord](https://img.shields.io/badge/Discord-AnyXboxX-5865F2?logo=discord&logoColor=white)](https://discord.gg/TcX42vRyPU)
+
 [English](../../README.md) · [Français](README.fr.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [Italiano](README.it.md) · [Português](README.pt-BR.md) · [日本語](README.ja.md) · **中文**
 
 > [!NOTE]
@@ -224,6 +226,8 @@ def XSystemGetDeviceType(c):
 ## 参与贡献
 
 `main` 分支受到保护：所有贡献都必须经过审阅的 pull request，并且测试必须通过。缺陷和需要模拟的函数请在 issue 中提交。完整规则见 [CONTRIBUTING.md](../../CONTRIBUTING.md)（法语）。
+
+讨论、求助和测试报告：[Discord](https://discord.gg/TcX42vRyPU)。
 
 ## 许可证
 
