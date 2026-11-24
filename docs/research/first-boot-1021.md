@@ -189,7 +189,7 @@ Order of work, by the measured stops. "Assumed" items need a test before anyone 
 | W7 | **Done, this PR: minimal `XCRDAPI.dll`.** **`DStorageGetFactory`** is missing from AnyXboxX and TomBox. A minimal `XCRDAPI.dll` must write the output pointer, return 0, and expose the method at `+0x40` returning a non-negative HRESULT; file reads can answer `E_NOTIMPL` as #4348 does. Leonida's #4348 is GPL-3.0, reusable with credit (rule 2) | static, stop 24 | measured |
 | W8 | **Blocked, see section 6.** **`xg_xs`**: `XGSuggestSwizzleMode` is missing. `XGCreateTextureComputer` must hand back an object whose slot 8 exists even if it writes no tiled data, and no stub may leave an output pointer unset. `anyxboxx-texture` (SW_4K_S) is the natural back end | stop 22 (KkelebekK) | measured by others |
 | W9 | **Done, this PR: `tests/test_gdk_boot.py`; return type kept, see section 7.** `xgameruntime`: `XErrorReport` is exported with a `void` return (`runtime/xgameruntime/xgameruntime.def`); the title only tests the pointer, so this looks harmless. Add a launcher test that the six `GetProcAddress` names resolve, that the options bits `2`, `4`, `8` are accepted, and that `xgameruntime.dll` loads by full path when the game executable sits in another folder | steps 6 to 8 | harmless return type assumed |
-| W10 | `ConsoleMode`: `runtime/xgameruntime/registry.cpp` serves `0x64`, which converts to 7 and passes the title's test. Keep a test pinning `0x64`, and the `RegOpenKeyW` variant (the title uses it) | step 9 | measured and consistent |
+| W10 | **Done, this PR: see section 7.** `ConsoleMode`: `runtime/xgameruntime/registry.cpp` serves `0x64`, which converts to 7 and passes the title's test. Keep a test pinning `0x64`, and the `RegOpenKeyW` variant (the title uses it) | step 9 | measured and consistent |
 | W11 | **TLS**: check that `anyxboxx_tls.dll` calls the title's callback 1 with reason 2 for every thread, existing or new, and that the index in the file is overwritten. The block (5,248 bytes) fits the 256 KiB capacity | step 4 | measured size; thread coverage not tested |
 | W12 | **Observability.** The native launcher has no handler for `0x80000003`: a title `int3` ends in a bare exit code (stop 0). Add a vectored handler that logs the address of the first `int3` or exception and the module, so a bisect gives a stop instead of an exit code | stop 0 | measured |
 | W13 | `GameInput.dll!#1`: AnyXboxX has no GameInput shim. The title's single caller binds to the host DLL. Choose: serve ordinal 1 from the launcher, or document the host dependency | static | measured; ABI version unchecked |
@@ -242,6 +242,13 @@ need TomBox's sources only. None of them needs to read the game again.
   pointer (static, section 3). Its `(HRESULT, const char*)` parameters follow the first two of the documented
   [XErrorCallback](https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/system/xerror/functions/xerrorcallback).
   The decision is written next to the function in `runtime/xgameruntime/xgameruntime.cpp`.
+- **W10.** `0x64` is pinned twice. `tests/test_runtime_cpp.py` opens the OEM key through `AnyXboxX_RegOpenKeyW`
+  (with and without a leading backslash, any case) and reads `ConsoleMode` as `REG_DWORD` `0x64`, with
+  `ERROR_MORE_DATA` and the size 4 for a 2-byte buffer; `XSystemGetDeviceType` stays 7. `tests/test_gdk_boot.py`
+  builds a title that imports `ADVAPI32!RegOpenKeyW`, `RegQueryValueExW` and `RegCloseKey`, as the title does, and
+  reads `0x64` under `anyxboxx.exe` and under the Python native mode. Without the `RegOpenKeyW` redirection the same
+  program reads 0 on a PC (checked by mutating the Python redirect list). The conversion of `0x64` to 7 happens in
+  the title's `xgameruntime.lib` and is not testable here (static reading, section 3).
 
 ## Sources and credits
 

@@ -113,3 +113,50 @@ def test_native_mode_serves_the_same_gdk_loader(title_elsewhere):
         assert image.call_entry() & 0xFFFF_FFFF == EXPECTED
     finally:
         image.close()
+
+
+# Étape 9 : le titre lit HKLM\...\CurrentVersion\OEM, DWORD ConsoleMode, par RegOpenKeyW (pas Ex).
+# 0x64 se convertit en 7 (XboxScarlettAnaconda) dans xgameruntime.lib : seules 1, 6, 7 et 8 passent.
+SCARLETT_CONSOLE_MODE = 0x64
+OEM_KEY = r"Software\Microsoft\Windows NT\CurrentVersion\OEM"
+WIDE_KEY, WIDE_VALUE = 0x100, 0x200
+REGISTRY_IMPORTS = [("ADVAPI32.dll", "RegOpenKeyW"), ("ADVAPI32.dll", "RegQueryValueExW"),
+                    ("ADVAPI32.dll", "RegCloseKey")]
+
+
+def console_mode_reader(iat):
+    """RegOpenKeyW(HKLM, OEM, &key) ; RegQueryValueExW(key, "ConsoleMode", …) ; rend la valeur lue (0 sinon)."""
+    asm = Asm().raw(b"\x48\x83\xec\x48")                                     # sub rsp, 0x48
+    asm.raw(b"\x48\xc7\x44\x24\x30" + bytes(4)).raw(b"\xc7\x44\x24\x38" + bytes(4))   # key = 0, valeur = 0
+    asm.raw(b"\x48\xc7\xc1\x02\x00\x00\x80").lea_rdx(WIDE_KEY)               # rcx = HKEY_LOCAL_MACHINE
+    asm.raw(b"\x4c\x8d\x44\x24\x30").call_iat(iat[REGISTRY_IMPORTS[0]])      # r8 = &key
+    asm.raw(b"\x48\x8b\x4c\x24\x30").lea_rdx(WIDE_VALUE).raw(b"\x45\x31\xc0\x45\x31\xc9")
+    asm.raw(b"\x48\x8d\x44\x24\x38\x48\x89\x44\x24\x20")                    # 5e argument : &valeur
+    asm.raw(b"\x48\x8d\x44\x24\x3c\x48\x89\x44\x24\x28")                    # 6e argument : &taille
+    asm.raw(b"\xc7\x44\x24\x3c\x04\x00\x00\x00").call_iat(iat[REGISTRY_IMPORTS[1]])
+    asm.raw(b"\x48\x8b\x4c\x24\x30").call_iat(iat[REGISTRY_IMPORTS[2]])
+    asm.raw(b"\x8b\x44\x24\x38\x48\x83\xc4\x48").ret()                      # mov eax, valeur
+    asm.at(WIDE_KEY).raw(OEM_KEY.encode("utf-16-le") + b"\0\0")
+    return asm.at(WIDE_VALUE).raw("ConsoleMode".encode("utf-16-le") + b"\0\0").build()
+
+
+@pytest.fixture
+def console_mode_title(tmp_path, runtime_dir):
+    return build_pe(tmp_path / "consolemode.exe", console_mode_reader, imports=REGISTRY_IMPORTS, dll=False,
+                    base=0x1_5900_0000)
+
+
+def test_launcher_answers_console_mode_through_reg_open_key(console_mode_title, runtime_dir):
+    result = subprocess.run([str(runtime_dir / "anyxboxx.exe"), str(console_mode_title)], capture_output=True,
+                            text=True, timeout=30)
+    assert result.returncode == SCARLETT_CONSOLE_MODE, (hex(result.returncode), result.stderr)
+
+
+def test_native_mode_answers_console_mode_through_reg_open_key(console_mode_title):
+    from emu.native import NativeImage
+
+    image = NativeImage(console_mode_title)
+    try:
+        assert image.call_entry() & 0xFFFF_FFFF == SCARLETT_CONSOLE_MODE
+    finally:
+        image.close()
