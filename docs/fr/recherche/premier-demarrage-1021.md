@@ -195,7 +195,7 @@ dessus.
 | W8 | **Bloqué, voir section 6.** **`xg_xs`** : `XGSuggestSwizzleMode` manque. `XGCreateTextureComputer` doit rendre un objet dont le slot 8 existe même s'il n'écrit aucune donnée tuilée, et aucun stub ne doit laisser un pointeur de sortie non écrit. `anyxboxx-texture` (SW_4K_S) est le moteur naturel | arrêt 22 (KkelebekK) | mesuré par d'autres |
 | W9 | **Fait, cette PR : `tests/test_gdk_boot.py` ; type de retour gardé, voir section 7.** `xgameruntime` : `XErrorReport` est exporté avec un retour `void` (`runtime/xgameruntime/xgameruntime.def`) ; le titre ne teste que le pointeur, donc cela paraît sans effet. Ajouter un test du lanceur : les six noms de `GetProcAddress` se résolvent, les bits d'options `2`, `4`, `8` sont acceptés, et `xgameruntime.dll` se charge par chemin complet quand l'exécutable du jeu est dans un autre dossier | étapes 6 à 8 | innocuité du type de retour supposée |
 | W10 | **Fait, cette PR : voir section 7.** `ConsoleMode` : `runtime/xgameruntime/registry.cpp` sert `0x64`, qui se convertit en 7 et passe le test du titre. Garder un test qui fige `0x64`, et la variante `RegOpenKeyW` (celle du titre) | étape 9 | mesuré et cohérent |
-| W11 | **TLS** : vérifier qu'`anyxboxx_tls.dll` appelle le callback 1 du titre avec la raison 2 pour chaque thread, existant ou nouveau, et que l'indice du fichier est écrasé. Le bloc (5 248 octets) tient dans la capacité de 256 Kio | étape 4 | taille mesurée ; couverture des threads non testée |
+| W11 | **Fait, cette PR : nouveaux threads vérifiés ; les threads antérieurs à l'installation ne reçoivent pas la raison 2, comme sous Windows, voir section 7.** **TLS** : vérifier qu'`anyxboxx_tls.dll` appelle le callback 1 du titre avec la raison 2 pour chaque thread, existant ou nouveau, et que l'indice du fichier est écrasé. Le bloc (5 248 octets) tient dans la capacité de 256 Kio | étape 4 | taille mesurée ; couverture des threads non testée |
 | W12 | **Observabilité.** Le lanceur natif n'a aucun gestionnaire pour `0x80000003` : un `int3` du titre finit en simple code de sortie (arrêt 0). Ajouter un gestionnaire vectoriel qui journalise l'adresse du premier `int3` ou de la première exception et le module, pour qu'un bisect donne un arrêt et non un code de sortie | arrêt 0 | mesuré |
 | W13 | `GameInput.dll!#1` : AnyXboxX n'a pas de shim GameInput. L'unique appelant du titre se lie à la DLL de l'hôte. Choisir : servir l'ordinal 1 depuis le lanceur, ou documenter la dépendance à l'hôte | statique | mesuré ; version d'ABI non vérifiée |
 | W14 | Audio (`chad` 5, `xapu` 5 chez TomBox, `AcpHal` 9) : manquant, mais non établi comme bloquant au démarrage, la chaîne d'appels étant indirecte. À traiter après W1 à W8 | section 2 | supposé |
@@ -255,6 +255,27 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
   comme le titre, et lit `0x64` sous `anyxboxx.exe` et sous le mode natif Python. Sans la redirection de
   `RegOpenKeyW`, le même programme lit 0 sur un PC (vérifié en mutant la liste de redirections Python). La conversion
   de `0x64` en 7 se fait dans le `xgameruntime.lib` du titre et n'est pas testable ici (lecture statique, section 3).
+- **W11.** `tests/test_native_tls_callbacks.py` charge un titre dont le callback TLS compte chaque raison, garde son
+  premier argument et, pour la seule raison 2, écrit un marqueur dans la copie TLS du thread appelant, comme le
+  `__dyn_tls_init` de MSVC le fait avec ses initialiseurs. Vérifié : le `_tls_index` de l'image est écrasé (il ne vaut
+  plus `0xFFFFFFFF`) ; le callback reçoit la base de l'image et `DLL_PROCESS_ATTACH` une fois, à l'installation ;
+  chaque nouveau thread l'exécute avec la raison 2 sur ce thread, après le remplissage de sa zone et avec le bon
+  indice (chacun de quatre threads lit le marqueur), et avec la raison 3 à sa sortie. Avec l'appel de raison 2
+  d'`anyxboxx_tls.dll` mis en commentaire, le test des nouveaux threads échoue (mutation du runtime C++, recompilé).
+  Aucun changement C++ n'a été nécessaire.
+  Deux threads ne reçoivent pas la raison 2 d'AnyXboxX, volontairement. Le thread qui installe l'image reçoit
+  `DLL_PROCESS_ATTACH`, comme Windows le donne au thread principal d'un exécutable ; le démarrage du CRT MSVC du titre
+  appelle ensuite lui-même son callback TLS dynamique avec `DLL_THREAD_ATTACH` pour ce thread (`exe_common.inl` et
+  `tlsdyn.cpp` dans les sources du CRT livrées avec Visual Studio). Un thread né avant l'installation reçoit le modèle
+  copié dans sa zone, mais aucun callback : Windows fait de même pour une DLL chargée après le démarrage de ses threads
+  ([DllMain](https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain), `DLL_THREAD_ATTACH`), et le code compilé
+  avec [`/Zc:tlsGuards`](https://learn.microsoft.com/en-us/cpp/build/reference/zc-tlsguards) (actif par défaut depuis
+  Visual Studio 2019 16.5) initialise ses variables `thread_local` au premier usage sur ces threads, car le modèle
+  copié laisse la garde à faux. Exécuter du code sur un autre thread pour lui livrer la raison 2 demanderait de
+  détourner ce thread, ce que nous ne faisons pas. Que le titre soit compilé avec les gardes TLS est supposé (sa chaîne
+  d'outils est récente, section 1, mais la garde n'a pas été cherchée). Le lanceur installe la TLS avant le point
+  d'entrée du titre, sur le même thread : dans `anyxboxx.exe`, les threads antérieurs à l'installation sont seulement
+  ceux du lanceur et du chargeur de Windows.
 
 ## Sources et crédits
 
