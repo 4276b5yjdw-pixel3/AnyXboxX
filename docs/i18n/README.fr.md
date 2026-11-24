@@ -11,6 +11,7 @@
 > - ✅ Il va jusqu'à **la première cinématique** (ouverture de la mission 1, génériques d'ouverture affichés). Aucun blocage du GPU en 5 minutes dans le monde.
 > - ⛔ Limite pour l'instant : la scène 3D reste noire (les passes d'éclairage ne sont pas encore traduites) et le monde tourne à 0,3 à 0,5 image par seconde, donc pas jouable. Travail en cours sur les blocages du GPU de la branche expérimentale (`anyxboxx/essai`) et sur l'éclairage.
 > - Prérequis : votre propre copie du jeu, un GPU NVIDIA ou AMD avec SM 6.6 et mesh shaders, Rust. Aucun fichier du jeu dans ce dépôt.
+> - Comment le lancer : [docs/fr/lancer-gta6.md](../fr/lancer-gta6.md).
 
 AnyXboxX charge des exécutables Xbox GDK (format PE32+ x86-64) et exécute leur code avec Unicorn. Les fonctions système de la console sont remplacées par un runtime C++ en mode natif, et par du code Python dans la machine isolée (émulation de haut niveau, comme WinDurango ou Wine). Le programme se présente comme une Xbox Series X : `XSystemGetDeviceType` renvoie `XboxScarlettAnaconda`.
 

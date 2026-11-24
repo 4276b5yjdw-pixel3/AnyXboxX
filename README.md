@@ -11,6 +11,7 @@
 > - ✅ It goes as far as **the first cutscene** (opening of mission 1, opening credits shown). No GPU hang in 5 minutes in the world.
 > - ⛔ Limit for now: the 3D scene stays black (the lighting passes are not translated yet) and the world runs at 0.3 to 0.5 frames per second, so it is not playable. Work in progress on the GPU hangs of the experimental branch (`anyxboxx/essai`) and on lighting.
 > - Requirements: your own copy of the game, an NVIDIA or AMD GPU with SM 6.6 and mesh shaders, Rust. No game files in this repository.
+> - How to run it: [docs/running-gta6.md](docs/running-gta6.md).
 
 AnyXboxX loads Xbox GDK executables (PE32+ x86-64 format) and runs their code with Unicorn. The console's system functions are replaced by a C++ runtime in native mode, and by Python code in the isolated machine (high-level emulation, like WinDurango or Wine). The program presents itself as an Xbox Series X: `XSystemGetDeviceType` returns `XboxScarlettAnaconda`.
 

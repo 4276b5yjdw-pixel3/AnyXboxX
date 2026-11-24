@@ -11,6 +11,7 @@
 > - ✅ Er kommt bis zur **ersten Zwischensequenz** (Eröffnung von Mission 1, Vorspann angezeigt). Kein GPU-Hänger in 5 Minuten in der Spielwelt.
 > - ⛔ Grenze im Moment: Die 3D-Szene bleibt schwarz (die Beleuchtungs-Passes sind noch nicht übersetzt) und die Spielwelt läuft mit 0,3 bis 0,5 Bildern pro Sekunde, ist also nicht spielbar. Arbeit läuft an den GPU-Hängern des experimentellen Branches (`anyxboxx/essai`) und an der Beleuchtung.
 > - Voraussetzungen: eine eigene Kopie des Spiels, eine NVIDIA- oder AMD-GPU mit SM 6.6 und Mesh Shaders, Rust. Keine Spieldateien in diesem Repository.
+> - So startest du es: [docs/running-gta6.md](../running-gta6.md).
 
 AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren Code mit Unicorn aus. Die Systemfunktionen der Konsole werden im nativen Modus durch eine C++-Runtime und in der isolierten Maschine durch Python-Code ersetzt (High-Level-Emulation, wie bei WinDurango oder Wine). Das Programm gibt sich als Xbox Series X aus: `XSystemGetDeviceType` liefert `XboxScarlettAnaconda` zurück.
 

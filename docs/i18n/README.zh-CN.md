@@ -11,6 +11,7 @@
 > - ✅ 最远能到**第一段过场动画**（任务 1 的开场，显示开场字幕）。在世界中 5 分钟内没有 GPU 挂起。
 > - ⛔ 目前的限制：3D 场景仍是黑的（光照 pass 尚未翻译），世界中的帧率为每秒 0.3 到 0.5 帧，无法游玩。正在处理实验分支（`anyxboxx/essai`）的 GPU 挂起问题和光照。
 > - 要求：你自己的游戏副本、支持 SM 6.6 和 mesh shader 的 NVIDIA 或 AMD GPU、Rust。本仓库不包含任何游戏文件。
+> - 运行方法：[docs/running-gta6.md](../running-gta6.md)。
 
 AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unicorn 执行其代码。主机的系统函数在原生模式下由 C++ 运行时替代，在隔离的虚拟机中由 Python 代码替代（高级别模拟，与 WinDurango 或 Wine 类似）。该程序会表现为一台 Xbox Series X：`XSystemGetDeviceType` 返回 `XboxScarlettAnaconda`。
 
