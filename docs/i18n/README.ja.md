@@ -7,11 +7,12 @@
 > [!NOTE]
 > **現在地（2026-11-24）**
 >
-> i7-13700KF + RTX 4070 SUPER、Windows 11 で計測。VIctory の安定版統合（`third_party/victory`、フォーク `LooperSalty/victory` のブランチ `anyxboxx/stable`）を `tools/lancer_victory.ps1 -GameDir <ゲームのフォルダー>` で起動しています。
+> i7-13700KF + RTX 4070 SUPER、Windows 11 で計測。VIctory のフォーク `fxceless/victory-gta6` のコミット `d279e69`（サブモジュール `third_party/victory`）を `tools/lancer_victory.ps1 -GameDir <ゲームのフォルダー>` で起動しています。
 >
 > - ✅ GTA VI の Xbox Series 1.0.2.1 ビルドは PC で**起動します**。起動、プロフィール画面、初回設定、法的画面、ロード、ポーズメニューまで動作し、メニューは 30 fps です。
-> - ✅ **操作可能なキャラクターがいるワールド**に到達します。チュートリアル「Move / Move the camera」（L / R）が表示され、まだ黒い 3D 画像の上に合成されています。
-> - ⛔ 現時点の限界: ワールドはSeries X モードで毎秒約 2.4 フレーム、Series S モードで約 3.2 フレーム（以前は 0.2）で、3D 画像は黒いままです（ジオメトリは G-buffer に存在しますが、最終色は均一な色調です。11/24 夜に計測）。ゲーム内で約 130〜170 のシェーダーが未変換のため、プレイできません。レーンマスクのシェーダーと最終合成に取り組み中です。
+> - ✅ **ワールドに到達して表示します**。キャラクターはプレイヤーの操作で動き、3D 画像が表示され、毎秒約 4 フレームで動作します（メンテナーが観察、Windows 11、RTX 4070 Super）。
+> - ⛔ 現在の制限：ワールド内で数分から約 13 分後にホストデバイスが失われるため、安定していません。以前の統合は毎秒約 2.4 フレームで 3D 画像が出ませんでしたが、固定したフォークではワールドが表示され、毎秒約 4 フレームでプレイできます。
+> - 👁 メンテナーが観察（Windows 11、RTX 4070 Super）：フォーク `fxceless/victory-gta6` のコミット `d279e69` とランチャーの設定で、開始エリア（刑務所）を約 4 fps で約 13 分間プレイしました。キャラクターはプレイヤーの操作で動き、最初の NPC とやり取りできましたが、その後ホストデバイスが失われます（既知の制限）。
 > - 必要なもの: ご自身のゲームのコピー、SM 6.6 とメッシュシェーダー対応の NVIDIA または AMD の GPU、Rust。このリポジトリにゲームファイルは含まれません。
 > - 起動方法: [docs/running-gta6.md](../running-gta6.md)。
 
@@ -19,7 +20,7 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 
 ## 対象と現状
 
-AnyXboxX は 1 つのビルドに特化しています: **Xbox Series 版 Grand Theft Auto VI、バージョン 1.0.2.1**。このゲームが必要とするもの（インポートするシステム関数、使用するシェーダーと Direct3D 12.x メソッド）だけを変換します。ほかのゲームは、この変換が完了してから試します。本プロジェクトは同じビルドを対象とする [VIctory](https://github.com/Marvisak/VIctory)（Marvisak、GPL-3.0 以降）を土台にしています。VIctory とコミュニティの 24 件のプルリクエストを統合したものがサブモジュール `third_party/victory`（フォーク `LooperSalty/victory`、ブランチ `anyxboxx/stable`）です。Marvisak と各プルリクエストの作者に感謝します。個別のクレジットは [THIRD_PARTY.md](../../THIRD_PARTY.md) にあります。
+AnyXboxX は 1 つのビルドに特化しています: **Xbox Series 版 Grand Theft Auto VI、バージョン 1.0.2.1**。このゲームが必要とするもの（インポートするシステム関数、使用するシェーダーと Direct3D 12.x メソッド）だけを変換します。ほかのゲームは、この変換が完了してから試します。本プロジェクトは同じビルドを対象とする [VIctory](https://github.com/Marvisak/VIctory)（Marvisak、GPL-3.0 以降）を土台にしています。VIctory は、フォーク `fxceless/victory-gta6`（GPL-3.0）のコミット `d279e69` に固定したサブモジュール `third_party/victory`です。Marvisak と各プルリクエストの作者に感謝します。個別のクレジットは [THIRD_PARTY.md](../../THIRD_PARTY.md) にあります。
 
 > [!IMPORTANT]
 > **ゲームはプレイできません。** 現在地はこのページ上部のボックスを参照してください。このリポジトリにはゲームファイル、鍵、実行ファイルは含まれず、その入手方法も説明しません。
@@ -82,7 +83,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | 396 個の GDK 関数の表：インターフェースとメソッド番号を `xgameruntime.lib` から抽出（`tools/gdk_interfaces.py`） | ✅ 完了 |
 | `XTaskQueue`、`XAsync`、`XThread` を AnyXboxX が提供：testgdk が Windows のランタイムなしで動作 | ✅ 完了 |
 | その他の GDK のインターフェース：Windows の GDK ランタイムに委譲し、トレースで名前を表示 | 🟡 進行中 |
-| 648 件の自動テスト | ✅ 完了 |
+| 652 件の自動テスト | ✅ 完了 |
 | D3D12.X：`D3D12XboxCreateDevice`、コンソールの `ID3D12*` インターフェース、`DXGIXPresentArray` を TomBox の Rust 製 `d3d12_xs.dll`（MIT、実装済みエクスポート 48 個、`tools/build_tombox.py d3d12_xs` でビルド、`ANYXBOXX_D3D12_XS=<パス>` で読み込み）が提供。コンソール実行ファイルがないためここでは検証不可 | 🟡 進行中 |
 | AnyXboxX にないものを補う TomBox（Rust、GPL-3.0）のコンソールライブラリ：`xg_xs`（テクスチャレイアウト、エクスポート 23 個）と完全な `xmem`（エクスポート 38 個）、`ANYXBOXX_TOMBOX_DIR=<フォルダー>` で使用。`tools/build_tombox.py xg_xs xmem` でビルド | 🟡 進行中 |
 | オフラインの `XUser`：常にサインイン済みのローカルプロファイル、変更可能なゲーマータグ（`ANYXBOXX_GAMERTAG`）、testgdk のサインイン成功 | ✅ 完了 |
@@ -109,7 +110,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | AnyXboxX が自前で書くその他の GDK のインターフェース（`XGameUi`、`XNetworking`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー：最初のプログラムを HLSL に変換し、DXIL にコンパイルして D3D12 で PC の GPU 上で実行（`--hlsl`、`anyxboxx_gpu_run.exe`、GPU がなければ WARP）、メモリは 1,487 エンコーディング中 599 を実行する wave32 リファレンスインタープリター（スカラー、VOP1/VOP2/VOPC/VOP3、メモリ：SMEM、LDS、GLOBAL、V# 境界付き MUBUF、アトミック、分岐、`exec` による分岐）の結果と一致；最初の頂点シェーダーとピクセルシェーダー（EXP エクスポート、VINTRP 補間）を D3D12 で描画し、頂点ごと・ピクセルごとに一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 進行中 |
 | シェーダーキャッシュ：変換したシェーダーを一度だけ DXIL にコンパイルし、以後は dxc（22 ms）の代わりにディスク（1.4 ms）またはメモリ（0.8 ms）から再利用。`%LOCALAPPDATA%\AnyXboxX\shader-cache` または `ANYXBOXX_SHADER_CACHE`、サイズ上限あり | 🟡 進行中 |
-| VIctory 経由の GTA VI Xbox Series 1.0.2.1（`third_party/victory`）：操作可能なキャラクターがいるワールドに到達（チュートリアル「Move / Move the camera」が黒い 3D 画像の上に表示）。メニューは 30 fps。ワールドで約 2.4 fps、Series S モードで約 3.2 fps（2026-11-24 に計測）。プレイ不可 | 🟡 進行中 |
+| VIctory 経由の GTA VI Xbox Series 1.0.2.1（`third_party/victory`、フォーク `fxceless/victory-gta6` のコミット `d279e69`）：ワールドが表示され、約 4 fps でプレイ可能（メンテナーが観察、Windows 11、RTX 4070 Super）。数分から約 13 分後にホストデバイスが失われる | 🟡 進行中 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
 | 実行中の DLL の動的読み込み（`LoadLibrary` + `DllMain`） | ⏳ 未着手 |
 | D3D12.X から Direct3D 12 / Vulkan へのグラフィックス変換 | ⏳ 未着手 |

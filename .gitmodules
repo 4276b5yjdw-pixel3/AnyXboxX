@@ -4,6 +4,5 @@
 	ignore = dirty
 [submodule "third_party/victory"]
 	path = third_party/victory
-	url = https://github.com/LooperSalty/victory.git
-	branch = anyxboxx/stable
+	url = https://github.com/fxceless/victory-gta6.git
 	ignore = dirty
