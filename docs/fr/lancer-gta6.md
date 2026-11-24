@@ -8,13 +8,46 @@ Le lancement passe par [VIctory](https://github.com/Marvisak/VIctory) (Marvisak,
 
 ## Ce que vous obtenez aujourd'hui
 
-Mesuré le 2026-11-24 sur i7-13700KF + RTX 4070 SUPER, Windows 11 :
+Mesuré le 2026-11-24 sur i7-13700KF + RTX 4070 SUPER, Windows 11, avec l'intégration stable :
 
 - Le démarrage, l'écran de profil, les réglages de première exécution, les écrans légaux, le chargement et le menu pause fonctionnent, à 30 i/s dans les menus.
 - La première cinématique (crédits d'ouverture de la mission 1) est atteinte.
-- La scène 3D derrière les crédits est noire (les passes d'éclairage ne sont pas encore traduites).
+- La scène 3D derrière les crédits est noire.
 - Dans le monde, le jeu tourne à 0,3 à 0,6 image par seconde.
 - Il n'est pas jouable.
+
+La section suivante décrit un état plus avancé, mesuré le même après-midi sur une branche d'intégration locale qui n'est pas encore ce que pointe `third_party/victory`.
+
+## État au 24 novembre (après-midi)
+
+Mesuré en lançant notre propre copie du build 1.0.2.1 sous VIctory, sur une branche d'intégration locale (`main` de VIctory + environ 40 pull requests + correctifs locaux pas encore publiés), i7-13700KF + RTX 4070 SUPER. Rien ici ne vient de la lecture du code du jeu : ce sont des mesures d'exécution (i/s, temps, comptes) et la sortie de `victory translate` sur les shaders de notre copie.
+
+- **Monde atteint, personnage contrôlable (observé).** Le tutoriel « Move / Move the camera » (L / R) s'affiche. L'interface est composée par-dessus une image 3D encore noire.
+- **Vitesse dans le monde (mesurée) : 0,2 i/s, puis 2,3 à 2,5 i/s.** Causes et correctifs :
+  - `VICTORY_D3D12_DRED=1` coûtait environ 2,5 fois (mise en forme de texte et un `VirtualQuery` par draw). Ne l'activer que pour enquêter sur un device removed.
+  - La copie retour vers le titre passait 66 % du thread de soumission dans `WriteProcessMemory`, lui-même dans `NtQueryVirtualMemory` (environ 2 ms par appel). Une écriture directe `NtWriteVirtualMemory` fait passer de 1,5 s à 0,13 s par image.
+  - Les copies n'appellent plus `VirtualQuery` au préalable ; l'instantané, la comparaison et le hachage des textures sont répartis sur un pool de threads.
+  - Reste par image (environ 410 ms) : GPU environ 145 ms, copie retour environ 73 ms, hachage 20 à 60 ms, instantané environ 50 ms.
+- **Shaders non traduits en jeu : 456 le matin, environ 170 l'après-midi (compte mesuré en jeu).** Sur le corpus du jeu (26 084 programmes, `victory translate`), les programmes émis sont : VS/PS 13 480 sur 14 038, CS 2 212, MS 8 654 sur 8 765 (comptes tels qu'affichés par l'outil). Motifs résolus dans la journée : descripteur lu comme donnée, mémoire scalaire lue comme donnée, buffer de stride inconnue, préfixe de vague en flot divergent (passes InstanceCulling), masque rangé dans une lane de VGPR, `readfirstlane` d'une adresse uniforme (ColorDownsample). Restent surtout les masques de lanes : « lane mask read as data » (586 programmes) et « holding lanes elsewhere » (282) sur le corpus.
+- **Ray tracing.** Le constructeur de BVH du titre provoque un TDR (récupération après dépassement de délai du GPU) ; on le saute avec `VICTORY_SKIP_BVH_BUILDER=1`. La nouvelle option de diagnostic locale `VICTORY_RT_MISS=1` fait manquer tous les rayons : 36 conteneurs de ray tracing sur 47 sont émis au lieu de 18. Une analyse de Codex a trouvé que `ConstructBVH4` contient une scrutation bornée (256 itérations) sur une valeur produite par une autre passe.
+- **Composition finale.** Comme dans VIctory #841, la scène existe en 2560x1440 mais la cible présentée reste à zéro.
+
+### Variables utiles
+
+Toutes sont des diagnostics : elles demandent le build `diag` (la fonctionnalité `diagnostics`). Provenance, vérifiée dans le code du worktree d'intégration et contre le `main` de VIctory le 2026-11-24 :
+
+| Variable | Effet | D'où elle vient |
+| --- | --- | --- |
+| `VICTORY_KEYS` | Appuis de touches scriptés (voir plus bas). | `main` de VIctory |
+| `VICTORY_SHADER_LOOP_LIMIT=32` | Les boucles traduites s'arrêtent après ce nombre d'itérations (décimal ou hexadécimal `0x`, au moins 1). | `main` de VIctory |
+| `VICTORY_D3D12_DRED=1` | Données de device removed. **Attention : n'importe quelle valeur l'active, et le monde ralentit d'environ 2,5 fois ; ne l'utiliser que pour enquêter sur un device removed.** | `main` de VIctory |
+| `VICTORY_SHOW_TARGET=busiest` | Affiche la cible de rendu la plus chargée au lieu de l'image finale. | Pull request ouverte #638 (`Marvisak/VIctory`), dans notre intégration |
+| `VICTORY_CAPTURE_BUSY=<draws>[,<nombre>]` | Capture les images de plus de ce nombre de draws (2 images par défaut). | Pull request ouverte #638 |
+| `VICTORY_PRODUCERS=1` | Journalise une passe qui lit ce que seul du travail abandonné (non traduit ou sauté) écrit, avec le shader abandonné. | Pull request ouverte #638 |
+| `VICTORY_CAPPED_DYNAMIC=262144` | Plus d'emplacements de descripteurs dynamiques sur un tas plafonné (NVIDIA), au prix des plus hauts emplacements du titre. | Essai local, publié seulement sur notre fork (`anyxboxx/essai`, `anyxboxx/stable`) |
+| `VICTORY_SKIP_BVH_BUILDER=1` | Écarte les shaders du constructeur de BVH du titre. | Notre fork seulement (`anyxboxx/essai`), pas proposé en amont |
+| `VICTORY_PROFILE=<ms>` | Profileur à échantillonnage de tout le processus ; journalise les piles d'appels les plus fréquentes toutes les 5 s (période en ms, 4 par défaut). | Local, non publié |
+| `VICTORY_RT_MISS=1` | Tous les rayons manquent (diagnostic de ray tracing, désactivé par défaut). | Local, non publié |
 
 ## Prérequis
 
@@ -107,7 +140,7 @@ Ils demandent le build `diag`.
 | `VICTORY_KEYS=40:Enter,55:Enter,70:Enter` | Appuie sur les touches à ces secondes, avec ou sans focus. |
 | `VICTORY_CAPTURE=<dossier>` et `VICTORY_CAPTURE_FRAMES=<liste>` | Enregistre les images présentées (ces numéros d'image). |
 | `VICTORY_SHOW_TARGET=busiest` | Affiche la cible de rendu la plus chargée à la place de l'image finale (par exemple le G-buffer). |
-| `VICTORY_D3D12_DRED=1` | En cas de panne du GPU, donne les commandes en cours. |
+| `VICTORY_D3D12_DRED=1` | En cas de panne du GPU, donne les commandes en cours. Ralentit le monde d'environ 2,5 fois : à n'activer que pour enquêter sur un device removed. |
 | `VICTORY_D3D12_DEBUG=1` | Couche de débogage D3D12 (Graphics Tools requis). |
 | `VICTORY_GPU_TIMING=1` | Chronomètre chaque liste de commandes et journalise les lentes. |
 | `VICTORY_SKIP_PIPELINES=<hash,...>` | Omet les dessins et dispatchs qui utilisent les hash de shader à 16 chiffres listés. |

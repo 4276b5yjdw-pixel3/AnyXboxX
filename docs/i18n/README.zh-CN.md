@@ -8,8 +8,8 @@
 > 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的稳定版整合（`third_party/victory`，分支仓库 `LooperSalty/victory` 的 `anyxboxx/stable` 分支），通过 `tools/lancer_victory.ps1 -GameDir <游戏文件夹>` 启动：
 >
 > - ✅ GTA VI 的 Xbox Series 1.0.2.1 版本**可以在 PC 上启动**：启动、档案界面、首次运行设置、法律声明界面、加载、暂停菜单。菜单为 30 fps。
-> - ✅ 最远能到**第一段过场动画**（任务 1 的开场，显示开场字幕）。在世界中 5 分钟内没有 GPU 挂起。
-> - ⛔ 目前的限制：3D 场景仍是黑的（光照 pass 尚未翻译），世界中的帧率为每秒 0.3 到 0.5 帧，无法游玩。正在处理实验分支（`anyxboxx/essai`）的 GPU 挂起问题和光照。
+> - ✅ 能到达**有可控角色的世界**：显示教程“Move / Move the camera”（L / R），合成在仍然是黑色的 3D 图像之上。
+> - ⛔ 目前的限制：世界中的帧率约为每秒 2.4 帧（此前为 0.2），3D 图像仍是黑的（场景以 2560x1440 存在，但呈现的目标仍为零），游戏中仍有约 170 个着色器未翻译，无法游玩。正在处理 lane 掩码着色器和最终合成。
 > - 要求：你自己的游戏副本、支持 SM 6.6 和 mesh shader 的 NVIDIA 或 AMD GPU、Rust。本仓库不包含任何游戏文件。
 > - 运行方法：[docs/running-gta6.md](../running-gta6.md)。
 
@@ -107,7 +107,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 由 AnyXboxX 自行编写的其他 GDK 接口（`XGameUi`、`XNetworking`…） | ⏳ 待完成 |
 | RDNA 2 → DXIL 着色器重编译器：首批程序已翻译为 HLSL、编译为 DXIL 并通过 D3D12 在 PC 的 GPU 上运行（`--hlsl`、`anyxboxx_gpu_run.exe`，无 GPU 时用 WARP），内存与 wave32 参考解释器的结果完全一致，该解释器可执行 1,487 种编码中的 599 种（标量、VOP1/VOP2/VOPC/VOP3、内存：SMEM、LDS、GLOBAL、带 V# 边界的 MUBUF、原子操作、分支、`exec` 分歧）；首个顶点着色器和像素着色器（EXP 导出、VINTRP 插值）已用 D3D12 绘制，逐顶点、逐像素一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 进行中 |
 | 着色器缓存：翻译后的着色器只编译一次为 DXIL，之后从磁盘（1.4 ms）或内存（0.8 ms）复用，而不再调用 dxc（22 ms）；`%LOCALAPPDATA%\AnyXboxX\shader-cache` 或 `ANYXBOXX_SHADER_CACHE`，大小有上限 | 🟡 进行中 |
-| 通过 VIctory 运行 GTA VI Xbox Series 1.0.2.1（`third_party/victory`）：到达第一段过场动画（任务 1 开场字幕）；菜单 30 fps；世界中 5 分钟内 GPU 未被移除；画面仍是黑的（光照 pass 尚未翻译），0.3-0.5 fps；无法游玩 | 🟡 进行中 |
+| 通过 VIctory 运行 GTA VI Xbox Series 1.0.2.1（`third_party/victory`）：到达有可控角色的世界（教程“Move / Move the camera”显示在黑色 3D 图像上）；菜单 30 fps；世界中约 2.4 fps（2026-11-24 测得）；无法游玩 | 🟡 进行中 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
 | 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |

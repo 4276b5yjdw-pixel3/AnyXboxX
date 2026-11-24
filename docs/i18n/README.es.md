@@ -8,8 +8,8 @@
 > Medido en un i7-13700KF + RTX 4070 SUPER, Windows 11, con la integración estable de VIctory (`third_party/victory`, rama `anyxboxx/stable` del fork `LooperSalty/victory`) iniciada con `tools/lancer_victory.ps1 -GameDir <carpeta del juego>`:
 >
 > - ✅ La versión 1.0.2.1 de Xbox Series de GTA VI **se inicia** en PC: arranque, pantalla de perfil, ajustes del primer inicio, pantallas legales, carga, menú de pausa. Los menús van a 30 fps.
-> - ✅ Llega hasta **la primera cinemática** (apertura de la misión 1, créditos de apertura mostrados). Sin bloqueo de la GPU en 5 minutos en el mundo.
-> - ⛔ Límite por ahora: la escena 3D sigue negra (las pasadas de iluminación aún no están traducidas) y el mundo va a 0,3 a 0,5 imágenes por segundo, así que no es jugable. Trabajo en curso sobre los bloqueos de la GPU de la rama experimental (`anyxboxx/essai`) y sobre la iluminación.
+> - ✅ Llega **al mundo con un personaje controlable**: se muestra el tutorial «Move / Move the camera» (L / R), compuesto sobre una imagen 3D todavía negra.
+> - ⛔ Límite por ahora: el mundo va a unas 2,4 imágenes por segundo (antes 0,2), la imagen 3D sigue negra (la escena existe en 2560x1440 pero el objetivo presentado sigue a cero) y unos 170 shaders siguen sin traducir en el juego, así que no es jugable. Trabajo en curso sobre los shaders de máscaras de lanes y sobre la composición final.
 > - Requisitos: tu propia copia del juego, una GPU NVIDIA o AMD con SM 6.6 y mesh shaders, Rust. Ningún archivo del juego en este repositorio.
 > - Cómo ejecutarlo: [docs/running-gta6.md](../running-gta6.md).
 
@@ -107,7 +107,7 @@ Los dos juegos de prueba funcionan sin sincronización vertical: unos 11 700 f/s
 | Otras interfaces GDK escritas por AnyXboxX (`XGameUi`, `XNetworking`…) | ⏳ pendiente |
 | Recompilador de shaders RDNA 2 → DXIL: primeros programas traducidos a HLSL, compilados a DXIL y ejecutados en la GPU del PC con D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP sin GPU), memoria idéntica a un intérprete de referencia wave32 que ejecuta 599 de 1.487 codificaciones (escalares, VOP1/VOP2/VOPC/VOP3, memoria: SMEM, LDS, GLOBAL, MUBUF con límites V#, atómicas, saltos, divergencia con `exec`); un primer vertex shader y pixel shader (exportaciones EXP, interpolación VINTRP) dibujados con D3D12, idénticos vértice a vértice y píxel a píxel: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 en curso |
 | Caché de shaders: los shaders traducidos se compilan una vez a DXIL y luego se reutilizan desde disco (1,4 ms) o memoria (0,8 ms) en lugar de dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` o `ANYXBOXX_SHADER_CACHE`, tamaño limitado | 🟡 en curso |
-| GTA VI Xbox Series 1.0.2.1 con VIctory (`third_party/victory`): llega a la primera cinemática (créditos de apertura de la misión 1); menús a 30 fps; sin retirada de la GPU en 5 min en el mundo; escena aún negra (pasadas de iluminación sin traducir todavía), 0,3-0,5 fps; no jugable | 🟡 en curso |
+| GTA VI Xbox Series 1.0.2.1 con VIctory (`third_party/victory`): llega al mundo con un personaje controlable (tutorial «Move / Move the camera» sobre una imagen 3D negra); menús a 30 fps; unos 2,4 fps en el mundo (medido el 2026-11-24); no jugable | 🟡 en curso |
 | Excepciones SEH x64 (`.pdata`), múltiples hilos | ⏳ pendiente |
 | Carga dinámica de una DLL durante la ejecución (`LoadLibrary` + `DllMain`) | ⏳ pendiente |
 | Gráficos D3D12.X hacia Direct3D 12 / Vulkan | ⏳ pendiente |
