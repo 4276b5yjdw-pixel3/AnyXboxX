@@ -114,6 +114,7 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | Rust によるコンソールテクスチャ：Xbox2Windows（MIT）から移植した BC7 デコードと GFX10 `SW_4K_S` タイル解除、参照ダイジェストを再現；`anyxboxx_texture bc7 <blocks.bin> <幅> <高さ> <out.png> [--4k-s]` | 🟡 進行中 |
 | AnyXboxX が自前で書くその他の GDK のインターフェース（`XGameUi`、`XNetworking`…） | ⏳ 未着手 |
 | RDNA 2 → DXIL のシェーダー再コンパイラー：最初のプログラムを HLSL に変換し、DXIL にコンパイルして D3D12 で PC の GPU 上で実行（`--hlsl`、`anyxboxx_gpu_run.exe`、GPU がなければ WARP）、メモリは 1,487 エンコーディング中 1,015 を実行する wave32 リファレンスインタープリター（スカラー、VOP1/VOP2/VOPC/VOP3、メモリ：SMEM、LDS、GLOBAL、V# 境界付き MUBUF、アトミック、分岐、`exec` による分岐）の結果と一致；最初の頂点シェーダーとピクセルシェーダー（EXP エクスポート、VINTRP 補間）を D3D12 で描画し、頂点ごと・ピクセルごとに一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 進行中 |
+| 32 レーンの wave を持つ GPU 上での wave64 コンピュートプログラム（#70）：64 レーンの wave を 64 スレッドの 1 グループとして実行（レーンマスクとレーン読み出しは groupshared メモリ経由、`WaveSize` なし）、RTX（32 レーンの wave）と WARP でメモリが wave64 のリファレンスインタープリターと一致；DPP と SDWA 比較は名前付きで拒否 | 🟡 進行中 |
 | シェーダーキャッシュ：変換したシェーダーを一度だけ DXIL にコンパイルし、以後は dxc（22 ms）の代わりにディスク（1.4 ms）またはメモリ（0.8 ms）から再利用。`%LOCALAPPDATA%\AnyXboxX\shader-cache` または `ANYXBOXX_SHADER_CACHE`、サイズ上限あり | 🟡 進行中 |
 | VIctory 経由でのタイトルの Xbox Series 1.0.2.1 ビルド（`third_party/victory`、ブランチ `anyxboxx/fork-7b0-lot9-murs`、コミット `80d58f8`、フォーク `fxceless/victory-fork` に 16 件のプルリクエスト）：ワールドが表示され、4.8〜5.4 fps、1 フレームあたり約 6,550 ドローでプレイ可能（メンテナーが計測、Windows 11、RTX 4070 Super、VIctory ログ）。起動時のちらつきは修正済み。イラディアンスキャッシュのシェーダーが変換可能に。変換できないシェーダー 6 個、レイトレーシングによる照明なし。長時間の安定性は約 4 分 20 秒のみ計測 | 🟡 進行中 |
 | x64 SEH 例外（`.pdata`）、マルチスレッド | ⏳ 未着手 |
