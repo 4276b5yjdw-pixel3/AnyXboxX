@@ -7,12 +7,13 @@
 > [!NOTE]
 > **当前进展（2026-11-24）**
 >
-> 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的分支仓库 `fxceless/victory-gta6` 的提交 `d279e69`（子模块 `third_party/victory`），通过 `tools/lancer_victory.ps1 -GameDir <游戏文件夹>` 启动：
+> 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的分支仓库 `fxceless/victory-gta6` 的提交 `7b0f736`（子模块 `third_party/victory`），通过 `tools/lancer_victory.ps1 -GameDir <游戏文件夹>` 启动：
 >
 > - ✅ GTA VI 的 Xbox Series 1.0.2.1 版本**可以在 PC 上启动**：启动、档案界面、首次运行设置、法律声明界面、加载、暂停菜单。菜单为 30 fps。
 > - ✅ 能到达**世界并显示出来**：角色可在玩家控制下移动，3D 图像可显示，帧率约为每秒 4 帧（维护者观察到，Windows 11，RTX 4070 Super）。
 > - ⛔ 当前限制：在世界中经过几分钟到约 13 分钟后主机设备会丢失，因此并不稳定。之前的集成停留在约每秒 2.4 帧且没有 3D 图像；使用固定的分支后，世界可以显示并以约每秒 4 帧游玩。
 > - 👁 维护者观察到（Windows 11，RTX 4070 Super）：使用 `fxceless/victory-gta6` 分支的提交 `d279e69` 和启动器设置，游戏在起始区域（监狱）以约 4 fps 运行了约 13 分钟。角色可在玩家控制下移动并与最初的 NPC 互动，随后主机设备丢失（已知限制）。
+> - 🆕 自提交 `7b0f736`（包含 `e9765a7`，"Fix the device loss introduced by the wave64 update"）起固定。维护者观察到（Windows 11，RTX 4070 Super），来自该次运行的 VIctory 日志，使用 `VICTORY_RELAY=2` 和启动器设置，管线缓存已填满：约 1 分 25 秒进入世界，首帧 3.5 fps，2 分钟后 4.5 fps（每帧约 4,975 次 draw，因缺少主机管线丢失 346 次），在世界中约 2 分 40 秒内未丢失设备（随后窗口被关闭）。不使用 `VICTORY_RELAY` 时：约 3 分钟时 5.4 fps，无丢失。维护者认为比 `d279e69` “略好”。我们尚未测量：超过 13 分钟的稳定性；该分支的 issue #26 报告在 RTX 4060 Ti 上使用 `VICTORY_RELAY=2` 稳定运行 21.5 分钟（第三方报告）。
 > - 要求：你自己的游戏副本、支持 SM 6.6 和 mesh shader 的 NVIDIA 或 AMD GPU、Rust。本仓库不包含任何游戏文件。
 > - 运行方法：[docs/running-gta6.md](../running-gta6.md)。
 
@@ -20,7 +21,7 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 
 ## 目标与现状
 
-AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，版本 1.0.2.1**。只翻译这款游戏需要的部分（它导入的系统函数、它使用的着色器和 Direct3D 12.x 方法）。待这部分翻译完成后，再尝试其他游戏。本项目基于面向同一版本的 [VIctory](https://github.com/Marvisak/VIctory)（Marvisak，GPL-3.0 或更高版本）：子模块 `third_party/victory` 固定在分支仓库 `fxceless/victory-gta6`（GPL-3.0）的提交 `d279e69`。感谢 Marvisak 和这些 pull request 的作者，逐一致谢见 [THIRD_PARTY.md](../../THIRD_PARTY.md)。
+AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，版本 1.0.2.1**。只翻译这款游戏需要的部分（它导入的系统函数、它使用的着色器和 Direct3D 12.x 方法）。待这部分翻译完成后，再尝试其他游戏。本项目基于面向同一版本的 [VIctory](https://github.com/Marvisak/VIctory)（Marvisak，GPL-3.0 或更高版本）：子模块 `third_party/victory` 固定在分支仓库 `fxceless/victory-gta6`（GPL-3.0）的提交 `7b0f736`。感谢 Marvisak 和这些 pull request 的作者，逐一致谢见 [THIRD_PARTY.md](../../THIRD_PARTY.md)。
 
 > [!IMPORTANT]
 > **游戏目前无法游玩。** 当前进展见本页顶部的方框。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。
@@ -110,7 +111,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 由 AnyXboxX 自行编写的其他 GDK 接口（`XGameUi`、`XNetworking`…） | ⏳ 待完成 |
 | RDNA 2 → DXIL 着色器重编译器：首批程序已翻译为 HLSL、编译为 DXIL 并通过 D3D12 在 PC 的 GPU 上运行（`--hlsl`、`anyxboxx_gpu_run.exe`，无 GPU 时用 WARP），内存与 wave32 参考解释器的结果完全一致，该解释器可执行 1,487 种编码中的 599 种（标量、VOP1/VOP2/VOPC/VOP3、内存：SMEM、LDS、GLOBAL、带 V# 边界的 MUBUF、原子操作、分支、`exec` 分歧）；首个顶点着色器和像素着色器（EXP 导出、VINTRP 插值）已用 D3D12 绘制，逐顶点、逐像素一致：`scarlett.py --rdna2 <shader.bin> --executer` | 🟡 进行中 |
 | 着色器缓存：翻译后的着色器只编译一次为 DXIL，之后从磁盘（1.4 ms）或内存（0.8 ms）复用，而不再调用 dxc（22 ms）；`%LOCALAPPDATA%\AnyXboxX\shader-cache` 或 `ANYXBOXX_SHADER_CACHE`，大小有上限 | 🟡 进行中 |
-| 通过 VIctory 运行 GTA VI Xbox Series 1.0.2.1（`third_party/victory`，分支仓库 `fxceless/victory-gta6` 的提交 `d279e69`）：世界可显示，约 4 fps 可游玩（维护者观察到，Windows 11，RTX 4070 Super）；几分钟到约 13 分钟后主机设备会丢失 | 🟡 进行中 |
+| 通过 VIctory 运行 GTA VI Xbox Series 1.0.2.1（`third_party/victory`，分支仓库 `fxceless/victory-gta6` 的提交 `7b0f736`）：世界可显示，约 4 fps 可游玩（维护者观察到，Windows 11，RTX 4070 Super）；几分钟到约 13 分钟后主机设备会丢失 | 🟡 进行中 |
 | x64 SEH 异常（`.pdata`）、多线程 | ⏳ 待完成 |
 | 在运行时动态加载 DLL（`LoadLibrary` + `DllMain`） | ⏳ 待完成 |
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |

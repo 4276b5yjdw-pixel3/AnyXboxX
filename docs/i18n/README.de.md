@@ -7,12 +7,13 @@
 > [!NOTE]
 > **Wo wir stehen (24.11.2026)**
 >
-> Gemessen auf einem i7-13700KF + RTX 4070 SUPER, Windows 11, mit dem VIctory-Fork `fxceless/victory-gta6` im Commit `d279e69` (Submodul `third_party/victory`), gestartet mit `tools/lancer_victory.ps1 -GameDir <Spielordner>`:
+> Gemessen auf einem i7-13700KF + RTX 4070 SUPER, Windows 11, mit dem VIctory-Fork `fxceless/victory-gta6` im Commit `7b0f736` (Submodul `third_party/victory`), gestartet mit `tools/lancer_victory.ps1 -GameDir <Spielordner>`:
 >
 > - ✅ Der Xbox-Series-Build 1.0.2.1 von GTA VI **startet** auf dem PC: Boot, Profilbildschirm, Einstellungen beim ersten Start, rechtliche Bildschirme, Ladevorgang, Pausenmenü. Die Menüs laufen mit 30 fps.
 > - ✅ Er erreicht **die Spielwelt und zeigt sie an**: Die Figur bewegt sich unter Kontrolle des Spielers und das 3D-Bild wird dargestellt, mit etwa 4 Bildern pro Sekunde (vom Maintainer beobachtet, Windows 11, RTX 4070 Super).
 > - ⛔ Aktuelle Grenze: Das Host-Gerät geht nach einigen Minuten bis etwa 13 Minuten in der Spielwelt verloren, es ist also nicht stabil. Die frühere Integration blieb bei etwa 2,4 Bildern pro Sekunde ohne 3D-Bild; mit dem festgelegten Fork wird die Welt angezeigt und ist mit etwa 4 Bildern pro Sekunde spielbar.
 > - 👁 Vom Maintainer beobachtet (Windows 11, RTX 4070 Super), mit dem Fork `fxceless/victory-gta6` im Commit `d279e69` und den Einstellungen des Launchers: Das Spiel wurde etwa 13 Minuten lang mit rund 4 fps im Startbereich (dem Gefängnis) gespielt. Die Figur bewegt sich unter Kontrolle des Spielers und interagiert mit den ersten NPCs, dann geht das Host-Gerät verloren (bekannte Grenze).
+> - 🆕 Festgelegt seit dem Commit `7b0f736` (enthält `e9765a7`, "Fix the device loss introduced by the wave64 update"). Vom Maintainer beobachtet (Windows 11, RTX 4070 Super), laut VIctory-Log des Laufs, mit `VICTORY_RELAY=2` und den Einstellungen des Launchers, Pipeline-Cache bereits gefüllt: Die Welt wird nach etwa 1 min 25 s erreicht, 3,5 fps im ersten Bild, nach 2 min 4,5 fps (etwa 4.975 Draws pro Bild, 346 mangels Host-Pipeline verloren), kein Geräteverlust während etwa 2 min 40 s in der Welt (das Fenster wurde danach geschlossen). Ohne `VICTORY_RELAY`: 5,4 fps nach etwa 3 min, kein Verlust. Der Maintainer findet ihn etwas besser als `d279e69`. Von uns noch nicht gemessen: Stabilität über 13 Minuten hinaus; Issue 26 des Forks berichtet von 21,5 stabilen Minuten auf einer RTX 4060 Ti mit `VICTORY_RELAY=2` (Bericht Dritter).
 > - Voraussetzungen: eine eigene Kopie des Spiels, eine NVIDIA- oder AMD-GPU mit SM 6.6 und Mesh Shaders, Rust. Keine Spieldateien in diesem Repository.
 > - So startest du es: [docs/running-gta6.md](../running-gta6.md).
 
@@ -20,7 +21,7 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 
 ## Ziel und Stand
 
-AnyXboxX ist auf einen einzigen Build spezialisiert: **Grand Theft Auto VI für Xbox Series, Version 1.0.2.1**. Übersetzt wird nur, was dieses Spiel braucht (die importierten Systemfunktionen, die verwendeten Shader und Direct3D-12.x-Methoden). Andere Spiele werden erprobt, sobald diese Übersetzung vollständig ist. Das Projekt baut auf [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 oder neuer) auf, das denselben Build anvisiert: das Submodul `third_party/victory` ist auf den Fork `fxceless/victory-gta6` (GPL-3.0) im Commit `d279e69` festgelegt. Dank an Marvisak und an die Autoren dieser Pull Requests, einzeln aufgeführt in [THIRD_PARTY.md](../../THIRD_PARTY.md).
+AnyXboxX ist auf einen einzigen Build spezialisiert: **Grand Theft Auto VI für Xbox Series, Version 1.0.2.1**. Übersetzt wird nur, was dieses Spiel braucht (die importierten Systemfunktionen, die verwendeten Shader und Direct3D-12.x-Methoden). Andere Spiele werden erprobt, sobald diese Übersetzung vollständig ist. Das Projekt baut auf [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 oder neuer) auf, das denselben Build anvisiert: das Submodul `third_party/victory` ist auf den Fork `fxceless/victory-gta6` (GPL-3.0) im Commit `7b0f736` festgelegt. Dank an Marvisak und an die Autoren dieser Pull Requests, einzeln aufgeführt in [THIRD_PARTY.md](../../THIRD_PARTY.md).
 
 > [!IMPORTANT]
 > **Das Spiel ist nicht spielbar.** Den aktuellen Stand zeigt der Kasten oben auf dieser Seite. Dieses Repository enthält keine Spieldateien, Schlüssel oder ausführbaren Dateien und erklärt nicht, wie man sie erhält.
@@ -110,7 +111,7 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | Übrige von AnyXboxX geschriebene GDK-Schnittstellen (`XGameUi`, `XNetworking`…) | ⏳ offen |
 | Shader-Rekompilierer RDNA 2 → DXIL: erste Programme nach HLSL übersetzt, zu DXIL kompiliert und mit D3D12 auf der GPU des PCs ausgeführt (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP ohne GPU), Speicher identisch mit einem wave32-Referenzinterpreter, der 599 von 1.487 Kodierungen ausführt (skalar, VOP1/VOP2/VOPC/VOP3, Speicher: SMEM, LDS, GLOBAL, MUBUF mit V#-Grenzen, Atomics, Sprünge, `exec`-Divergenz); ein erster Vertex- und Pixel-Shader (EXP-Exporte, VINTRP-Interpolation) mit D3D12 gezeichnet, Vertex für Vertex und Pixel für Pixel identisch: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in Arbeit |
 | Shader-Cache: übersetzte Shader einmal zu DXIL kompiliert, danach von der Festplatte (1,4 ms) oder aus dem Speicher (0,8 ms) statt mit dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` oder `ANYXBOXX_SHADER_CACHE`, Größe begrenzt | 🟡 in Arbeit |
-| GTA VI Xbox Series 1.0.2.1 über VIctory (`third_party/victory`, Fork `fxceless/victory-gta6` im Commit `d279e69`): Die Spielwelt wird angezeigt und ist mit etwa 4 fps spielbar (vom Maintainer beobachtet, Windows 11, RTX 4070 Super); das Host-Gerät geht nach einigen Minuten bis etwa 13 Minuten verloren | 🟡 in Arbeit |
+| GTA VI Xbox Series 1.0.2.1 über VIctory (`third_party/victory`, Fork `fxceless/victory-gta6` im Commit `7b0f736`): Die Spielwelt wird angezeigt und ist mit etwa 4 fps spielbar (vom Maintainer beobachtet, Windows 11, RTX 4070 Super); das Host-Gerät geht nach einigen Minuten bis etwa 13 Minuten verloren | 🟡 in Arbeit |
 | x64-SEH-Ausnahmen (`.pdata`), mehrere Threads | ⏳ offen |
 | Dynamisches Laden einer DLL zur Laufzeit (`LoadLibrary` + `DllMain`) | ⏳ offen |
 | D3D12.X-Grafik nach Direct3D 12 / Vulkan | ⏳ offen |
