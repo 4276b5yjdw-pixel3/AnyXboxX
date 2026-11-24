@@ -170,6 +170,8 @@ def modified(code, index, fields, literal, is_float):
 
 
 def _vop3(name, opcode, fields, literal, active=ACTIVE):
+    if name in rdna2_hlsl_f16.TEMPLATES:
+        return rdna2_hlsl_f16.vop3(name, fields, literal, active)
     is_float = float_result(name)
     a, b, c = (modified(code, i, fields, literal, float_inputs(name)) for i, code in enumerate(fields.sources))
     if opcode < 0x100 and is_compare(name):
@@ -238,7 +240,7 @@ def statements(data, instruction, finish="return;", special=None, active=ACTIVE)
         fields = _fields(family, first)
         lit = _literal(data, instruction, 1)
         if name in rdna2_hlsl_f16.TEMPLATES:        # avant is_ext : les formes SDWA/DPP du f16 sont refusées par rdna2_hlsl_f16
-            return rdna2_hlsl_f16.vector(name, fields, lit, ACTIVE)
+            return rdna2_hlsl_f16.vector(name, fields, lit, active)
         if rdna2_hlsl_ext.is_ext(family, fields.get("src0")):
             return rdna2_hlsl_ext.statements(family, name, fields, lit or 0, active)
         return _vector(name, fields, lit, active)
