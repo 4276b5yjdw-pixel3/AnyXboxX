@@ -36,6 +36,8 @@ python tools/jour_j.py .. --natif --duree 120
 
 `anyxboxx.exe` then runs the game code directly on the processor, with TomBox's console DLLs (`ANYXBOXX_TOMBOX_DIR`) and the call trace (`ANYXBOXX_TRACE=1`).
 
+The native report lists pipeline state objects (PSOs) from TomBox's sampled creation and rejection events, with the last graphics PSO counter snapshot when available. Each diagnostic launch sets `TOMBOX_LOG` to a fresh file under the report directory. The report identifies that local log when TomBox writes it.
+
 **This mode does not isolate the game.** Use it only for an executable of known origin.
 
 ## 4. After the diagnosis
