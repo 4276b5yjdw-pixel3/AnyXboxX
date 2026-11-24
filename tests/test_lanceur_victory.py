@@ -1,4 +1,4 @@
-"""Épinglage de VIctory sur le fork fxceless/victory-gta6 et réglages par défaut du lanceur."""
+"""Épinglage de VIctory sur la branche anyxboxx/fork-7b0-lot4 de LooperSalty/victory (fork fxceless/victory-fork plus trois PR) et réglages par défaut du lanceur."""
 import configparser
 import re
 import subprocess
@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 RACINE = Path(__file__).resolve().parents[1]
-COMMIT_FORK = "7b0f736"
+COMMIT_FORK = "0e2c46ad3bd546c85c7098f4eadaf30a34dc6644"
 REGLAGES = (
     "VICTORY_SHADER_LOOP_LIMIT", "VICTORY_LATE_WAIT", "VICTORY_WIDE_BACK", "VICTORY_RELAY",
     "VICTORY_CARD_BUFFERS_MIN_MB", "VICTORY_CARD_BUFFERS_MB",
@@ -30,11 +30,11 @@ def _variables_posees(texte):
     return noms | set(re.findall(r"\$env:(VICTORY_[A-Z0-9_]+)\s*=", texte))
 
 
-def test_gitmodules_points_victory_to_the_fork():
+def test_gitmodules_points_victory_to_the_maintainers_fork():
     declares = configparser.ConfigParser()
     declares.read(RACINE / ".gitmodules", encoding="utf-8")
     urls = {declares[s]["path"]: declares[s]["url"] for s in declares.sections()}
-    assert urls["third_party/victory"].removesuffix(".git") == "https://github.com/fxceless/victory-gta6"
+    assert urls["third_party/victory"].removesuffix(".git") == "https://github.com/LooperSalty/victory"
 
 
 def test_gitlink_is_pinned_to_the_measured_commit():
