@@ -112,3 +112,31 @@ def test_every_tracked_submodule_is_declared_in_gitmodules_with_its_upstream_url
     assert {v.dossier for v in sous_modules} >= {"third_party/tombox"}
     for voisin in sous_modules:
         assert urls.get(voisin.dossier, "").removesuffix(".git").endswith(voisin.depot), voisin.nom
+
+
+
+def test_victory_follows_its_stable_branch_not_the_default_branch(monkeypatch):
+    victory = next(v for v in sv.VOISINS if v.nom == "VIctory")
+    assert (victory.depot, victory.dossier, victory.sous_module) == ("LooperSalty/victory", "third_party/victory", True)
+    assert victory.branche == "anyxboxx/stable"
+    assert all(v.branche == "" for v in sv.VOISINS if v.nom != "VIctory")
+    appels = []
+
+    def faux_git(*args, **_):
+        appels.append(args)
+        return "a" * 40 + "	" + args[-1]
+    monkeypatch.setattr(sv, "git", faux_git)
+    assert sv.dernier_commit(victory.depot, victory.branche) == "a" * 40
+    assert appels[-1][-1] == "refs/heads/anyxboxx/stable"
+    sv.dernier_commit("exemple/factice")
+    assert appels[-1][-1] == "HEAD"
+
+
+def test_missing_branch_is_an_explicit_error(monkeypatch):
+    monkeypatch.setattr(sv, "git", lambda *args, **_: "")
+    try:
+        sv.dernier_commit("exemple/factice", "absente")
+    except RuntimeError as erreur:
+        assert "refs/heads/absente" in str(erreur)
+    else:
+        raise AssertionError("une branche absente doit lever une erreur")

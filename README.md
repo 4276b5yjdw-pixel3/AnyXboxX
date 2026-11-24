@@ -6,10 +6,10 @@ AnyXboxX loads Xbox GDK executables (PE32+ x86-64 format) and runs their code wi
 
 ## Focus and status
 
-AnyXboxX is specialised on one build: **Grand Theft Auto VI for Xbox Series, version 1.0.2.1**. Only what this game needs is translated (the system functions it imports, the shaders and the Direct3D 12.x methods it uses). Other games will be tried once that translation is complete. The project works with [Leonida](https://github.com/ItsNotRexed/Leonida), which targets the same build.
+AnyXboxX is specialised on one build: **Grand Theft Auto VI for Xbox Series, version 1.0.2.1**. Only what this game needs is translated (the system functions it imports, the shaders and the Direct3D 12.x methods it uses). Other games will be tried once that translation is complete. The project builds on [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), which targets the same build: our integration of VIctory plus 24 community pull requests is the `third_party/victory` submodule (fork `LooperSalty/victory`, branch `anyxboxx/stable`). Thanks to Marvisak and to the authors of those pull requests, credited one by one in [THIRD_PARTY.md](THIRD_PARTY.md).
 
 > [!IMPORTANT]
-> **The game is not playable.** Its executable (`game_scarlett_master.exe`) is missing from the package studied, so the game itself has never been started. Once an executable is available, expect at least a few weeks of work before the game is even minimally playable. This repository contains no game files, keys or executable, and does not explain how to get them.
+> **The game is not playable.** Through VIctory, the Xbox Series 1.0.2.1 build now reaches the first cutscene (opening of mission 1) on our machine, but the scene is still black and the frame rate is 0.3 to 0.5 per second in the world. This repository contains no game files, keys or executable, and does not explain how to get them.
 
 Live status page, with the disk space to plan for: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
 
@@ -69,7 +69,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 553 automated tests | ✅ done |
+| 555 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice`, console `ID3D12*` interfaces and `DXGIXPresentArray`, served by TomBox's Rust `d3d12_xs.dll` (MIT, 48 implemented exports, built by `tools/build_tombox.py d3d12_xs`, loaded with `ANYXBOXX_D3D12_XS=<path>`); untestable here without a console executable | 🟡 in progress |
 | Console libraries from TomBox (Rust, GPL-3.0) for what AnyXboxX lacks: `xg_xs` (texture layouts, 23 exports) and full `xmem` (38 exports), with `ANYXBOXX_TOMBOX_DIR=<folder>`; built by `tools/build_tombox.py xg_xs xmem` | 🟡 in progress |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
@@ -96,6 +96,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Other GDK interfaces written by AnyXboxX (`XGameUi`, `XNetworking`…) | ⏳ to do |
 | RDNA 2 → DXIL shader recompiler: first programs translated to HLSL, compiled to DXIL and run on the PC's GPU with D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP without a GPU), memory identical to a wave32 reference interpreter running 521 of 1,487 encodings (scalar, VOP1/VOP2/VOPC/VOP3, memory: SMEM, LDS, GLOBAL, MUBUF with V# bounds, atomics, branches, `exec` divergence); a first vertex shader and pixel shader (EXP exports, VINTRP interpolation) drawn with D3D12, identical vertex by vertex and pixel by pixel: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in progress |
 | Shader cache: translated shaders compiled to DXIL once, then reused from disk (1.4 ms) or memory (0.8 ms) instead of dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` or `ANYXBOXX_SHADER_CACHE`, size-capped | 🟡 in progress |
+| GTA VI Xbox Series 1.0.2.1 via VIctory (`third_party/victory`): reaches the first cutscene (mission 1 opening credits); menus at 30 fps; no GPU hang in 5 min in the world; scene still black (lighting passes not translated yet), 0.3-0.5 fps; not playable | 🟡 in progress |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
 | Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |

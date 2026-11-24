@@ -6,10 +6,10 @@ AnyXboxX carica eseguibili Xbox GDK (formato PE32+ x86-64) ed esegue il loro cod
 
 ## Obiettivo e stato
 
-AnyXboxX è specializzato in una sola build: **Grand Theft Auto VI per Xbox Series, versione 1.0.2.1**. Viene tradotto solo ciò che serve a questo gioco (le funzioni di sistema che importa, gli shader e i metodi Direct3D 12.x che usa). Altri giochi saranno provati quando questa traduzione sarà completa. Il progetto lavora con [Leonida](https://github.com/ItsNotRexed/Leonida), che punta alla stessa build.
+AnyXboxX è specializzato in una sola build: **Grand Theft Auto VI per Xbox Series, versione 1.0.2.1**. Viene tradotto solo ciò che serve a questo gioco (le funzioni di sistema che importa, gli shader e i metodi Direct3D 12.x che usa). Altri giochi saranno provati quando questa traduzione sarà completa. Il progetto si appoggia a [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 o successiva), che punta alla stessa build: la nostra integrazione di VIctory più 24 pull request della comunità è il sottomodulo `third_party/victory` (fork `LooperSalty/victory`, ramo `anyxboxx/stable`). Grazie a Marvisak e agli autori di quelle pull request, citati uno per uno in [THIRD_PARTY.md](../../THIRD_PARTY.md).
 
 > [!IMPORTANT]
-> **Il gioco non è giocabile.** Il suo eseguibile (`game_scarlett_master.exe`) manca dal pacchetto studiato, quindi il gioco vero e proprio non è mai stato avviato. Una volta disponibile un eseguibile, serviranno ancora almeno alcune settimane di lavoro prima che il gioco sia minimamente giocabile. Questo repository non contiene file del gioco, chiavi o eseguibili e non spiega come ottenerli.
+> **Il gioco non è giocabile.** Con VIctory, la build 1.0.2.1 per Xbox Series ora arriva fino alla prima scena d'intermezzo (apertura della missione 1) sulla nostra macchina, ma la scena resta nera e la frequenza è di 0,3-0,5 immagini al secondo nel mondo. Questo repository non contiene file del gioco, chiavi o eseguibili e non spiega come ottenerli.
 
 Pagina di stato online, con lo spazio su disco da prevedere: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
 
@@ -69,7 +69,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Tabella delle 396 funzioni GDK: interfaccia e numero di metodo, estratti da `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ fatto |
 | `XTaskQueue`, `XAsync`, `XThread` servite da AnyXboxX: testgdk funziona senza il runtime di Windows | ✅ fatto |
 | Altre interfacce GDK: delegate al runtime GDK di Windows, nominate dalla traccia | 🟡 in corso |
-| 553 test automatizzati | ✅ fatto |
+| 555 test automatizzati | ✅ fatto |
 | D3D12.X: `D3D12XboxCreateDevice`, interfacce `ID3D12*` della console e `DXGIXPresentArray`, forniti dalla `d3d12_xs.dll` in Rust di TomBox (MIT, 48 export implementati, compilata con `tools/build_tombox.py d3d12_xs`, caricata con `ANYXBOXX_D3D12_XS=<percorso>`); non testabile qui senza un eseguibile console | 🟡 in corso |
 | Librerie console di TomBox (Rust, GPL-3.0) per ciò che manca ad AnyXboxX: `xg_xs` (layout delle texture, 23 export) e `xmem` completo (38 export), con `ANYXBOXX_TOMBOX_DIR=<cartella>`; compilate con `tools/build_tombox.py xg_xs xmem` | 🟡 in corso |
 | `XUser` offline: profilo locale sempre connesso, gamertag configurabile (`ANYXBOXX_GAMERTAG`), accesso di testgdk riuscito | ✅ fatto |
@@ -96,6 +96,7 @@ I due giochi di prova girano senza sincronizzazione verticale: circa 11 700 f/s 
 | Altre interfacce GDK scritte da AnyXboxX (`XGameUi`, `XNetworking`…) | ⏳ da fare |
 | Ricompilatore di shader RDNA 2 → DXIL: primi programmi tradotti in HLSL, compilati in DXIL ed eseguiti sulla GPU del PC con D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP senza GPU), memoria identica a un interprete di riferimento wave32 che esegue 521 codifiche su 1.487 (scalari, VOP1/VOP2/VOPC/VOP3, memoria: SMEM, LDS, GLOBAL, MUBUF con limiti V#, atomiche, salti, divergenza con `exec`); un primo vertex shader e pixel shader (export EXP, interpolazione VINTRP) disegnati con D3D12, identici vertice per vertice e pixel per pixel: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in corso |
 | Cache degli shader: shader tradotti compilati una sola volta in DXIL, poi ripresi dal disco (1,4 ms) o dalla memoria (0,8 ms) invece di dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` o `ANYXBOXX_SHADER_CACHE`, dimensione limitata | 🟡 in corso |
+| GTA VI Xbox Series 1.0.2.1 con VIctory (`third_party/victory`): arriva alla prima scena d'intermezzo (titoli di apertura della missione 1); menu a 30 fps; nessun ritiro della GPU in 5 min nel mondo; scena ancora nera (passate di illuminazione non ancora tradotte), 0,3-0,5 fps; non giocabile | 🟡 in corso |
 | Eccezioni SEH x64 (`.pdata`), thread multipli | ⏳ da fare |
 | Caricamento dinamico di una DLL durante l'esecuzione (`LoadLibrary` + `DllMain`) | ⏳ da fare |
 | Grafica D3D12.X verso Direct3D 12 / Vulkan | ⏳ da fare |

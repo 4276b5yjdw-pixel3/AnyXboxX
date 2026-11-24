@@ -1,9 +1,9 @@
-"""Mise à jour automatique des voisins : TomBox et Xbox2Windows.
+"""Mise à jour automatique des voisins : TomBox, VIctory (notre fork) et Xbox2Windows.
 
     python -I tools/sync_voisins.py [--appliquer] [--rapport FICHIER] [--message FICHIER]
 
 Sans --appliquer : lecture seule, compare les versions épinglées aux dernières versions publiées.
-Avec --appliquer : avance le sous-module TomBox, recopie sans modification les fichiers déjà copiés dans
+Avec --appliquer : avance les sous-modules (TomBox, VIctory sur sa branche anyxboxx/stable), recopie sans modification les fichiers déjà copiés dans
 third_party/xbox2windows depuis le dernier commit, et change les numéros de commit
 dans leurs README et dans THIRD_PARTY.md. Rien n'est fusionné : le workflow voisins.yml pousse la branche
 auto/voisins, que la CI teste ; un mainteneur la relit et ouvre la pull request. Bibliothèque standard seulement ; le code téléchargé n'est jamais exécuté.
@@ -45,6 +45,7 @@ class Voisin:
     sous_module: bool = False
     prefixe: str = ""                                   # dossier amont des fichiers copiés
     portes: tuple = ()                                  # fichiers amont portés à la main
+    branche: str = ""                                   # branche suivie ; vide = branche par défaut du dépôt
 
 
 VOISINS = (
@@ -52,6 +53,8 @@ VOISINS = (
     Voisin("Xbox2Windows", "R0Y00/Xbox2Windows", "third_party/xbox2windows",
            portes=("src/era_heap.cpp", "src/era_heap.h", "src/era_query.cpp", "tools/bc7_blocks.py",
                    "tools/bc7_tiles.py")),
+    # Notre fork de VIctory : la branche stable (VIctory + PR + adaptations), pas la branche par défaut.
+    Voisin("VIctory", "LooperSalty/victory", "third_party/victory", sous_module=True, branche="anyxboxx/stable"),
 )
 
 
@@ -154,10 +157,16 @@ def git(*args, cwd=RACINE):
     return result.stdout.strip()
 
 
-def dernier_commit(depot):
-    sortie = git("ls-remote", f"https://github.com/{depot}", "HEAD")
+def reference_distante(branche):
+    """Référence interrogée sur le dépôt distant : la branche suivie, sinon HEAD."""
+    return f"refs/heads/{branche}" if branche else "HEAD"
+
+
+def dernier_commit(depot, branche=""):
+    reference = reference_distante(branche)
+    sortie = git("ls-remote", f"https://github.com/{depot}", reference)
     if not sortie:
-        raise RuntimeError(f"{depot} : HEAD introuvable")
+        raise RuntimeError(f"{depot} : {reference} introuvable")
     return sortie.split()[0]
 
 
@@ -262,7 +271,7 @@ def examiner(voisin, racine, appliquer, maintenant, charger=telecharger):
     bilan = Bilan(voisin)
     try:
         bilan.ancien = epingle(voisin, racine)
-        bilan.nouveau = dernier_commit(voisin.depot)
+        bilan.nouveau = dernier_commit(voisin.depot, voisin.branche)
         if bilan.a_jour:
             return bilan
         bilan.lignes, bilan.bloque = resume_comparaison(comparer(voisin.depot, bilan.ancien, bilan.nouveau), voisin)
