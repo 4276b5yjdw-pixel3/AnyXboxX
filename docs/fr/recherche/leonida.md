@@ -1,4 +1,4 @@
-> English: [leonida-gta6.md](../../research/leonida-gta6.md)
+> English: [leonida.md](../../research/leonida.md)
 
 # Leonida et le build Xbox Series 1.0.2.1
 
@@ -18,7 +18,7 @@ Depuis le 23 novembre, AnyXboxX vise d'abord à faire tourner ce build : nous co
 | Démarrage du jeu | non : il leur manque aussi l'exécutable |
 | Shaders RDNA 2 → SPIR-V | 26 503 sur 26 503 traduits, tous valides selon `spirv-val` |
 | Ressources | modèles (OBJ), textures (DDS, BCPack partiel), audio (AWC) exportés depuis la copie du joueur |
-| Chargeur PE et shims | un exécutable de remplacement tourne de bout en bout (`gta6rt --run`) |
+| Chargeur PE et shims | un exécutable de remplacement tourne de bout en bout (`--run` du runtime de Leonida) |
 | Direct3D 12 Xbox → Vulkan | en cours (périphérique, files, ressources) ; ray tracing en cours |
 
 Leur chemin critique et les méthodes D3D12 encore ouvertes sont suivis dans leur issue #313. Pour travailler sur un sujet, on le réserve dans l'issue ouverte « Coordinating who works on what ». Une réservation tombe après 12 h sans PR.

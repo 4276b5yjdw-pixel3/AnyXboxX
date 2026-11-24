@@ -18,7 +18,7 @@
 | Bibliothèques console | 2 076 sur 2 141 exports | nos #13, #14, #26 |
 | Titre lancé | Fortnite : démarrage, connexion, sélection du mode, salon Battle Royale | aucun titre console chez nous |
 
-## Observations sur le paquet GTA VI 1.0.2.1
+## Observations sur le paquet 1.0.2.1 du titre
 
 Ils ont examiné le même paquet que celui étudié par AnyXboxX et arrivent à la même conclusion : il ne peut pas être lancé, l'exécutable est absent.
 

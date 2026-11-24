@@ -6,7 +6,7 @@ REA 6.10.1 a été installé temporairement depuis le paquet npm officiel et ex�
 
 ## Lanceur
 
-La commande `inspect-managed-members` identifie un assemblage .NET nommé `Lancer GTA VI`, de version `0.0.0.0`, avec les métadonnées CLR `v4.0.30319`. Sa classe `Launcher` déclare trois méthodes. REA indique une couverture complète des métadonnées examinées.
+La commande `inspect-managed-members` identifie un assemblage .NET nommé `Lancer <titre>`, de version `0.0.0.0`, avec les métadonnées CLR `v4.0.30319`. Sa classe `Launcher` déclare trois méthodes. REA indique une couverture complète des métadonnées examinées.
 
 | Méthode | Offset du corps dans le fichier | Taille IL | Instructions décodées |
 | --- | ---: | ---: | ---: |
@@ -26,7 +26,7 @@ Une installation de REA 6.10.1 et Node.js 24.22.1 satisfait les versions utilis�
 
 ```powershell
 rea inspect-desktop-application . --detail complete --json
-rea inspect-managed-members ".\Lancer GTA VI.exe" --json
+rea inspect-managed-members ".\Lancer <titre>.exe" --json
 ```
 
 La sortie complète contient les coordonnées des méthodes, des instructions et des références. Le parcours du dossier inclut les sous-dossiers présents au moment de l’exécution, donc les chiffres de couverture peuvent évoluer.

@@ -5,7 +5,7 @@
 Suite le même soir, jusqu'à la boucle de frames, dans [demarrage-leonida-2026-11-23.md](demarrage-leonida-2026-11-23.md).
 
 État au 23 novembre 2026. Cette note range les recherches du jour sur `game_scarlett_master.exe`
-(build 1.0.2.1) et sur les premiers lancements de cet exécutable sous `gta6rt` de Leonida. Elle remplace
+(build 1.0.2.1) et sur les premiers lancements de cet exécutable sous le runtime de Leonida. Elle remplace
 l'état « exécutable absent » de [pistes-premier-executable.md](pistes-premier-executable.md) (22 novembre).
 
 **Les règles 1 et 2 d'[AGENTS.md](../../../AGENTS.md) s'appliquent.** La note ne contient que des noms de fonctions,
@@ -44,7 +44,7 @@ implémentation complète ni une ABI correcte.
 
 | Fournisseur | Résultat | Source |
 | --- | --- | --- |
-| `gta6rt --dry-run` de Leonida | shim 52, hôte Windows 432, module du paquet 72, **non implémentés 31** (code 0) | mesuré, Codex |
+| `--dry-run` du runtime de Leonida | shim 52, hôte Windows 432, module du paquet 72, **non implémentés 31** (code 0) | mesuré, Codex |
 | Leonida, table statique | même répartition, avec 30 non implémentés : `XMemTransferMemory` est servi par le source mais signalé absent par un ancien binaire local | mesuré, Claude |
 | Outil de couverture d'AnyXboxX | paquet 209, AnyXboxX 6, TomBox 15, Windows 341, **manquants 16** (9 `AcpHal`, 5 `chad`, `DStorageGetFactory`, `XGSuggestSwizzleMode`) | mesuré, Codex |
 
@@ -105,9 +105,9 @@ méthode à l'offset de vtable `+0x40` est appelée avec `0x2000000` (une taille
 retour est testé. `GameInput.dll!#1` se lie à la `GameInput.dll` de l'hôte, car Leonida
 enregistre son shim sous `GameInputCreate` et non `#1`.
 
-## 4. Arrêts mesurés sous `gta6rt`
+## 4. Arrêts mesurés sous le runtime de Leonida
 
-Copie personnelle de l'exécutable, Windows 11, RTX 4070 SUPER, `gta6rt` compilé depuis Leonida `main` `1cc6e3c1`,
+Copie personnelle de l'exécutable, Windows 11, RTX 4070 SUPER, runtime compilé depuis Leonida `main` `1cc6e3c1`,
 paquet monté en lecture seule. La première colonne donne l'ordre où nous les avons rencontrés. Les correctifs
 cités sont des pull requests ouvertes ou fermées de [Leonida](https://github.com/ItsNotRexed/Leonida), créditées à
 leurs auteurs. « Bouche-trou local » désigne un correctif privé, jamais publié, servant à trouver l'arrêt suivant.
@@ -241,5 +241,5 @@ W6 n'ont besoin que des sources de TomBox. Aucun ne demande de relire le jeu.
 - Nos commentaires avec les mesures : le commentaire de revue du 2026-11-23 sur #6935 (`Flags` des files) et le
   commentaire sur #7076 (IID de liste de commandes et slots de liste), tous deux limités à des comptes,
   des HRESULT et l'IID.
-- Projets voisins en général : [voisins.md](voisins.md) ; notes de Leonida sur GTA 6 :
-  [leonida-gta6.md](leonida-gta6.md).
+- Projets voisins en général : [voisins.md](voisins.md) ; notes de Leonida :
+  [leonida.md](leonida.md).

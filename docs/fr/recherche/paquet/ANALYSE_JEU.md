@@ -1,6 +1,6 @@
 > English: [GAME_ANALYSIS.md](../../../research/package/GAME_ANALYSIS.md)
 
-# GTA VI sur Xbox Scarlett — ce que révèle le paquet 1.0.2.1
+# Un titre sur Xbox Scarlett — ce que révèle le paquet 1.0.2.1
 
 Le paquet sépare les ressources communes, les données du mode histoire et celles d’un mini-jeu. On peut retrouver les limites des blocs de ressources et en décompresser une partie. La logique des missions reste inconnue. Le layout désigne un exécutable principal absent à sa destination, et aucun script de mission lisible n’a été reconstruit à partir des deux archives de scripts.
 
@@ -71,7 +71,7 @@ La position zéro est l’en-tête externe. Les répétitions internes sont comp
 
 ## Ce que lance réellement le fichier Windows
 
-Le désassemblage statique du code .NET de `Lancer GTA VI.exe` montre trois méthodes qui expliquent son comportement.
+Le désassemblage statique du code .NET de `Lancer <titre>.exe` montre trois méthodes qui expliquent son comportement.
 
 - `Main` lit un chemin mémorisé dans `jeu.txt`. La touche Maj permet de revenir au sélecteur de fichiers. La méthode peut y enregistrer le nouveau choix.
 - `CanLaunch` vérifie que la cible existe et porte l’extension `.exe`. Elle exclut le lanceur lui-même et tout fichier nommé `game_scarlett_master.exe`. Les comparaisons de noms ignorent la casse.
@@ -91,5 +91,5 @@ Avec la CLI REA installée, ces commandes documentées par le dépôt permettent
 
 ```powershell
 rea inspect-desktop-application . --detail complete --json
-rea inspect-managed-members ".\Lancer GTA VI.exe" --json
+rea inspect-managed-members ".\Lancer <titre>.exe" --json
 ```

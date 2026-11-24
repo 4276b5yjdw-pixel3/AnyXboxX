@@ -1,6 +1,6 @@
 > Français : [ANALYSE_JEU.md](../../fr/recherche/paquet/ANALYSE_JEU.md)
 
-# GTA VI on Xbox Scarlett — what the 1.0.2.1 package reveals
+# A title on Xbox Scarlett — what the 1.0.2.1 package reveals
 
 The package separates the common resources, the story mode data and those of a mini-game. The limits of the resource blocks can be recovered and part of them can be decompressed. The mission logic remains unknown. The layout names a main executable that is absent at its destination, and no readable mission script has been rebuilt from the two script archives.
 
@@ -71,7 +71,7 @@ Position zero is the external header. The internal repetitions are compatible wi
 
 ## What the Windows file actually launches
 
-The static disassembly of the .NET code of `Lancer GTA VI.exe` shows three methods that explain its behavior.
+The static disassembly of the .NET code of `Lancer <title>.exe` shows three methods that explain its behavior.
 
 - `Main` reads a path stored in `jeu.txt`. The Shift key allows going back to the file picker. The method can save the new choice there.
 - `CanLaunch` checks that the target exists and has the `.exe` extension. It excludes the launcher itself and any file named `game_scarlett_master.exe`. Name comparisons ignore case.
@@ -91,5 +91,5 @@ With the REA CLI installed, these commands documented by the repository allow re
 
 ```powershell
 rea inspect-desktop-application . --detail complete --json
-rea inspect-managed-members ".\Lancer GTA VI.exe" --json
+rea inspect-managed-members ".\Lancer <title>.exe" --json
 ```

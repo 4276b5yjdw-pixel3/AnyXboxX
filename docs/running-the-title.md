@@ -1,14 +1,14 @@
-> Français : [lancer-gta6.md](fr/lancer-gta6.md)
+> Français : [lancer-le-titre.md](fr/lancer-le-titre.md)
 
-# Running GTA VI (Xbox Series 1.0.2.1 build) with AnyXboxX
+# Running the title (Xbox Series 1.0.2.1 build) with AnyXboxX
 
-This guide installs and starts the project, and lists everything you need to repeat our tests on the Xbox Series 1.0.2.1 build of GTA VI, up to where we are today: the first cutscene. It does not provide the game and does not explain how to get it: you bring your own copy. Never put game files in this repository or attach them to an issue.
+This guide installs and starts the project, and lists everything you need to repeat our tests on the Xbox Series 1.0.2.1 build of the title, up to where we are today: the first cutscene. It does not provide the game and does not explain how to get it: you bring your own copy. Never put game files in this repository or attach them to an issue.
 
 The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), tracked here as the `third_party/victory` submodule, pinned to the branch `anyxboxx/fork-7b0-lot5` of the maintainer's fork [LooperSalty/victory](https://github.com/LooperSalty/victory), which assembles the fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0) at `7b0f736` and seven of its pull requests (see below), at commit `fd021bf`. The script `tools/lancer_victory.ps1` builds it and starts it on your game folder.
 
 ## Pinned branch: fork plus seven pull requests (24 November, night)
 
-`third_party/victory` now points to the branch `anyxboxx/fork-7b0-lot5` of the maintainer's VIctory fork [LooperSalty/victory](https://github.com/LooperSalty/victory), at commit `fd021bf26a7003749d668e5d9bf6b234bfab2e47`. That branch assembles the fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0, formerly `fxceless/victory-gta6`) at `7b0f736` and seven of its pull requests that were still open, cherry-picked with `-x`:
+`third_party/victory` now points to the branch `anyxboxx/fork-7b0-lot5` of the maintainer's VIctory fork [LooperSalty/victory](https://github.com/LooperSalty/victory), at commit `fd021bf26a7003749d668e5d9bf6b234bfab2e47`. That branch assembles the fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0, under a former repository name) at `7b0f736` and seven of its pull requests that were still open, cherry-picked with `-x`:
 
 | Fork pull request | Author | What it does | Commit |
 | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ Measured or observed by the maintainer (Windows 11, RTX 4070 Super), from the VI
 
 - Startup: no flicker. Observed.
 - World after 2 min: 5.4 fps and 6,449 draws per frame (reference `main`: about 5.5 fps, about 4,410 draws; batch 4 with `VICTORY_RELAY=2`: 6.6 fps, 5,986 draws); 363 draws lost without a pipeline; 9 untranslated shaders (13 in batch 4); 16 pipelines refused by the driver (6 in batch 4); no device loss in about 2 min 30. Measured.
-- Maintainer's opinion: "much better", the best lighting and graphics so far. Graphic problems remain on Lucia's face.
+- Maintainer's opinion: "much better", the best lighting and graphics so far. Graphic problems remain on a character's face.
 
 `VICTORY_RELAY` is no longer set by the launcher: the run judged best had it off, and the fork's issue #89 reports that it makes the characters' skin disappear and overlaps the subtitles. Known limits: ray tracing absent, shaders still untranslated, long-run stability not measured (our run lasted about 2 min 30). Progress of 24 November, from the VIctory logs: `d279e69` about 4 fps (13 min in the prison, then device lost) → `7b0f736` + `VICTORY_RELAY=2` about 4.5 fps → settings of PR #172 about 5.5 fps → batch 4 about 6.6 fps with `VICTORY_RELAY=2`, startup flicker fixed → this branch about 5.4 fps with more draws and the best image so far. Authors are credited in [THIRD_PARTY.md](../THIRD_PARTY.md).
 

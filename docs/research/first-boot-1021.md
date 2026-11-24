@@ -5,7 +5,7 @@
 Continued the same evening, up to the frame loop, in [leonida-boot-2026-11-23.md](leonida-boot-2026-11-23.md).
 
 State as of 23 November 2026. This note files the research of that day on `game_scarlett_master.exe`
-(build 1.0.2.1) and on the first launches of that executable under Leonida's `gta6rt`. It supersedes the
+(build 1.0.2.1) and on the first launches of that executable under Leonida's runtime. It supersedes the
 "executable absent" state of [first-executable-leads.md](first-executable-leads.md) (22 November).
 
 **Rules 1 and 2 of [AGENTS.md](../../AGENTS.md) apply.** The note holds only function names, vtable slots,
@@ -43,7 +43,7 @@ implementation nor a correct ABI.
 
 | Provider | Result | Source |
 | --- | --- | --- |
-| Leonida `gta6rt --dry-run` | shim 52, host Windows 432, package module 72, **unimplemented 31** (code 0) | measured, Codex |
+| Leonida runtime `--dry-run` | shim 52, host Windows 432, package module 72, **unimplemented 31** (code 0) | measured, Codex |
 | Leonida, static table | the same split, with 30 unimplemented: `XMemTransferMemory` is served by the source but reported missing by an older local binary | measured, Claude |
 | AnyXboxX coverage tool | package 209, AnyXboxX 6, TomBox 15, Windows 341, **missing 16** (9 `AcpHal`, 5 `chad`, `DStorageGetFactory`, `XGSuggestSwizzleMode`) | measured, Codex |
 
@@ -103,9 +103,9 @@ It needs the output pointer non-null and HRESULT 0, else `int3`, then calls meth
 with `0x2000000` (a staging size: assumed), tested for sign. `GameInput.dll!#1`
 binds to the host's `GameInput.dll`, because Leonida registers its shim under `GameInputCreate`, not `#1`.
 
-## 4. Stops measured under `gta6rt`
+## 4. Stops measured under Leonida's runtime
 
-Own copy of the executable, Windows 11, RTX 4070 SUPER, `gta6rt` built from Leonida `main` `1cc6e3c1`, package
+Own copy of the executable, Windows 11, RTX 4070 SUPER, runtime built from Leonida `main` `1cc6e3c1`, package
 mounted read-only. The first column is the order we met them. Fixes cited are open or closed pull requests of
 [Leonida](https://github.com/ItsNotRexed/Leonida), credited to their authors. "Local stand-in" means a private
 patch, never published, used to find the next stop.
@@ -235,5 +235,5 @@ need TomBox's sources only. None of them needs to read the game again.
   #6792, #6709, #4531, #6878, #6919, #5253, #6582, #6954, #7037, #4348, #2490.
 - Our comments with the measurements: the review comment of 2026-11-23 on #6935 (queue `Flags`) and the comment
   on #7076 (command-list IID and list slots), both limited to counts, HRESULTs and the IID.
-- Neighbouring projects in general: [neighbors.md](neighbors.md); Leonida's GTA 6 notes:
-  [leonida-gta6.md](leonida-gta6.md).
+- Neighbouring projects in general: [neighbors.md](neighbors.md); Leonida's notes:
+  [leonida.md](leonida.md).

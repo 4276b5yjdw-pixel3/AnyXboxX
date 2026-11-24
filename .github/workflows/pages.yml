@@ -1,5 +1,5 @@
 name: site
-# Site GitHub Pages : site/index.html (peut-on lancer GTA VI ? espace disque), publié tel quel.
+# Site GitHub Pages : site/index.html (peut-on le lancer sur PC ? espace disque), publié tel quel.
 on:
   push:
     branches: [main]

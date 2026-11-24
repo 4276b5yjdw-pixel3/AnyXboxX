@@ -1,4 +1,4 @@
-// Rough "will my PC run it?" estimate for the Xbox Series build of GTA VI, relative to the Xbox Series X.
+// Rough "will my PC run it?" estimate for the Xbox Series build of the title, relative to the Xbox Series X.
 // Nothing here is measured: the game does not run yet. Hardware indexes are approximate (public benchmark
 // averages, ±20 %), with the Series X GPU and CPU at 100. The model is deliberately simple and says so on the page.
 

@@ -3,10 +3,10 @@
 # Démarrer le 1.0.2.1 sous Leonida, 23 novembre 2026 : arrêts, images noires, constats statiques
 
 État au soir du 23 novembre 2026. Cette note range les recherches du jour (Claude et Codex, sur la machine du
-mainteneur) sur le démarrage du build 1.0.2.1 sous `gta6rt` de [Leonida](https://github.com/ItsNotRexed/Leonida),
+mainteneur) sur le démarrage du build 1.0.2.1 sous le runtime de [Leonida](https://github.com/ItsNotRexed/Leonida),
 du premier arrêt à la boucle de frames. Elle prolonge [premier-demarrage-1021.md](premier-demarrage-1021.md), qui
 s'arrête aux six premiers arrêts et à la liste de travaux d'AnyXboxX. Les projets voisins en général :
-[voisins.md](voisins.md) ; les notes de Leonida sur GTA 6 : [leonida-gta6.md](leonida-gta6.md).
+[voisins.md](voisins.md) ; les notes de Leonida : [leonida.md](leonida.md).
 
 **La règle 1 d'[AGENTS.md](../../../AGENTS.md) s'applique, plus strictement que dans la première note.** Cette note
 ne contient que des numéros de slot de vtable, des valeurs de drapeaux, des HRESULT, des noms de types publics du
@@ -33,9 +33,9 @@ Les mesures sont les nôtres, sauf nom cité. Les noms sont des identifiants Git
 | Élément | Valeur | Statut |
 | --- | --- | --- |
 | Machine | Windows 11 (build 26300), Core i7-13700KF, RTX 4070 SUPER (pilote 610.88), natif, sans Wine | mesuré |
-| Runtime | `gta6rt`, MSVC RelWithDebInfo, `LEONIDA_D3D12=vulkan` dès la deuxième passe | mesuré |
+| Runtime | runtime de Leonida, MSVC RelWithDebInfo, `LEONIDA_D3D12=vulkan` dès la deuxième passe | mesuré |
 | Exécutable | le build 1.0.2.1 déjà décrit (SHA-256 commençant par `e95020b2`), copie personnelle, paquet en lecture seule | mesuré |
-| Piles | `main` de Leonida à plusieurs dates (`1cc6e3c1`, puis `ec0e01c5`, puis `dde82f27`) avec des pull requests ouvertes fusionnées en local, conflits résolus à la main, **seul `gta6rt` compilé, tests propres des PR non lancés** sauf mention dans un commentaire de PR | mesuré |
+| Piles | `main` de Leonida à plusieurs dates (`1cc6e3c1`, puis `ec0e01c5`, puis `dde82f27`) avec des pull requests ouvertes fusionnées en local, conflits résolus à la main, **seul le runtime compilé, tests propres des PR non lancés** sauf mention dans un commentaire de PR | mesuré |
 | Base plus tardive | le `main` de la forge des mainteneurs (`2ac38583`, contient #7759), journal dans l'issue #8851 | mesuré |
 | Shaders | `make_game --stages shaders` : 26 503 traduits en 32 min sur une pile (paliers wave64 : A 236, B 7, C 425 pour VS, PS, GS) | mesuré |
 | Variables des lancements de boucle | `LEONIDA_ARENA_MB=4095` (sinon `E_OUTOFMEMORY`), `LEONIDA_STUB_PIPELINES=1` pour certains, `LEONIDA_SKIP_INT3=1` pour un `int3` de l'image | mesuré |
@@ -126,7 +126,7 @@ Autres piles, même machine :
 | --- | --- | --- |
 | main `dde82f27` plus #7201 #7323 #7759 #7286 #7290 #7356 #7880 #7448 #7218 #7949 #6885 #6981, slot 139 de liste en `Reset` | 4 `PresentX` (R8G8B8A8 3840 par 2160, cible de rendu et UAV, double tampon), puis une violation d'accès. L'import par #7218 des tampons du slot 133 sur les pages du titre fonctionne sur NVIDIA mais demande `LEONIDA_ARENA_MB=4095`. Sous `LEONIDA_STUB_PIPELINES`, tous les draws sont refusés (pipeline 0) | mesuré |
 | base `rt5-integration` (tibzejoker) plus #7759 plus #8815 | sans slot 57 pris en charge, le titre boucle sur le slot 57 : `CreateLifetimeTracker` refuse plus de 3 600 appels en 5 minutes, 0 appel du slot 55, 0 `PresentX`. Avec #8890 (RipcuBAN : le slot 57 rend `E_INVALIDARG` faute de `fspx_gfx`), la boucle avance : plus de 3 300 `CreatePipelineState` réussis en 5 minutes. Sans la cale `AcpHal` (#6885, #6981 de Jadiac5), une violation d'accès suit `ApuCreateHeap` | mesuré |
-| `main` de la forge des mainteneurs `2ac38583` | `gta6rt` compile ; l'étape des shaders tournait encore en fin de journée (1 h 30 estimée). Pas encore de résultat de frame | mesuré (compilation), en attente (lancements) |
+| `main` de la forge des mainteneurs `2ac38583` | le runtime compile ; l'étape des shaders tournait encore en fin de journée (1 h 30 estimée). Pas encore de résultat de frame | mesuré (compilation), en attente (lancements) |
 
 Mesuré par d'autres, sur le `main` de la forge une fois le slot 55 en place (#7759) : Yoshi-OOF compte 41 545
 dérivations réussies quand les objets de base du slot 57 sont gardés. lines9686-rgb et sh1shu1 font tourner la même

@@ -1,14 +1,14 @@
-> English: [running-gta6.md](../running-gta6.md)
+> English: [running-the-title.md](../running-the-title.md)
 
-# Lancer GTA VI (build Xbox Series 1.0.2.1) avec AnyXboxX
+# Lancer le titre (build Xbox Series 1.0.2.1) avec AnyXboxX
 
-Ce guide explique comment installer et lancer le projet, et tout ce qu'il faut installer pour refaire nos essais sur le build Xbox Series 1.0.2.1 de GTA VI, jusqu'au point où nous en sommes : la première cinématique. Il ne fournit pas le jeu et n'explique pas comment l'obtenir : vous apportez votre propre copie. Ne mettez jamais de fichier du jeu dans ce dépôt et ne les joignez à aucune issue.
+Ce guide explique comment installer et lancer le projet, et tout ce qu'il faut installer pour refaire nos essais sur le build Xbox Series 1.0.2.1 du titre, jusqu'au point où nous en sommes : la première cinématique. Il ne fournit pas le jeu et n'explique pas comment l'obtenir : vous apportez votre propre copie. Ne mettez jamais de fichier du jeu dans ce dépôt et ne les joignez à aucune issue.
 
 Le lancement passe par [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou ultérieure), suivi ici comme sous-module `third_party/victory`, épinglé sur la branche `anyxboxx/fork-7b0-lot5` du fork du mainteneur [LooperSalty/victory](https://github.com/LooperSalty/victory), qui assemble le fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0) au commit `7b0f736` et sept de ses pull requests (voir plus bas), au commit `fd021bf`. Le script `tools/lancer_victory.ps1` le compile et le lance sur votre dossier du jeu.
 
 ## Branche épinglée : fork plus sept pull requests (24 novembre, nuit)
 
-`third_party/victory` pointe maintenant sur la branche `anyxboxx/fork-7b0-lot5` du fork VIctory du mainteneur [LooperSalty/victory](https://github.com/LooperSalty/victory), au commit `fd021bf26a7003749d668e5d9bf6b234bfab2e47`. Cette branche assemble le fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0, anciennement `fxceless/victory-gta6`) au commit `7b0f736` et sept de ses pull requests encore ouvertes, reprises avec `cherry-pick -x` :
+`third_party/victory` pointe maintenant sur la branche `anyxboxx/fork-7b0-lot5` du fork VIctory du mainteneur [LooperSalty/victory](https://github.com/LooperSalty/victory), au commit `fd021bf26a7003749d668e5d9bf6b234bfab2e47`. Cette branche assemble le fork [fxceless/victory-fork](https://github.com/fxceless/victory-fork) (GPL-3.0, sous un ancien nom de dépôt) au commit `7b0f736` et sept de ses pull requests encore ouvertes, reprises avec `cherry-pick -x` :
 
 | Pull request du fork | Auteur | Effet | Commit |
 | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ Mesuré ou observé par le mainteneur (Windows 11, RTX 4070 Super), d'après le 
 
 - Démarrage : sans clignotement. Observé.
 - Monde après 2 min : 5,4 i/s et 6 449 draws par image (référence `main` : environ 5,5 i/s, environ 4 410 draws ; lot 4 avec `VICTORY_RELAY=2` : 6,6 i/s, 5 986 draws) ; 363 draws perdus faute de pipeline ; 9 shaders non traduits (13 au lot 4) ; 16 pipelines refusés par le pilote (6 au lot 4) ; aucune perte du périphérique en environ 2 min 30. Mesuré.
-- Avis du mainteneur : « beaucoup mieux », la meilleure lumière et les meilleurs graphismes à ce jour. Des problèmes graphiques demeurent sur le visage de Lucia.
+- Avis du mainteneur : « beaucoup mieux », la meilleure lumière et les meilleurs graphismes à ce jour. Des problèmes graphiques demeurent sur le visage d'un personnage.
 
 Le lanceur ne pose plus `VICTORY_RELAY` : l'essai jugé le meilleur l'avait coupé, et l'issue n°89 du fork rapporte qu'il fait disparaître la peau des personnages et superpose les sous-titres. Limites connues : ray tracing absent, shaders encore non traduits, tenue longue non mesurée (notre essai a duré environ 2 min 30). Avancée du 24 novembre, d'après les journaux VIctory : `d279e69` environ 4 i/s (13 min dans la prison puis périphérique perdu) → `7b0f736` + `VICTORY_RELAY=2` environ 4,5 i/s → réglages de la PR n°172 environ 5,5 i/s → lot 4 environ 6,6 i/s avec `VICTORY_RELAY=2`, clignotement du démarrage corrigé → cette branche environ 5,4 i/s avec plus de draws et la meilleure image à ce jour. Les auteurs sont crédités dans [THIRD_PARTY.md](../../THIRD_PARTY.md).
 

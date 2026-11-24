@@ -9,19 +9,19 @@
 >
 > Measured on an i7-13700KF + RTX 4070 SUPER, Windows 11, with the VIctory fork `LooperSalty/victory` at commit `fd021bf` (branch `anyxboxx/fork-7b0-lot5`) (submodule `third_party/victory`) started by `tools/lancer_victory.ps1 -GameDir <game folder>`:
 >
-> - ✅ The Xbox Series 1.0.2.1 build of GTA VI **launches** on PC: boot, profile screen, first-run settings, legal screens, loading, pause menu. Menus run at 30 fps.
+> - ✅ The Xbox Series 1.0.2.1 build of the title **launches** on PC: boot, profile screen, first-run settings, legal screens, loading, pause menu. Menus run at 30 fps.
 > - ✅ It reaches **the world and displays it**: the character moves under the player's control and the 3D image is shown, at about 5.4 frames per second after 2 min with 6,449 draws per frame (measured by the maintainer, Windows 11, RTX 4070 Super, VIctory log). The startup animation no longer flickers (observed). The maintainer finds it "much better", with the best lighting and graphics so far.
-> - ⛔ Current limits: graphic problems remain on Lucia's face, 9 shaders are still not translated, 363 draws are lost without a pipeline, 16 pipelines are refused by the driver, ray tracing is absent, and long-run stability is not measured (the host device was lost after about 13 minutes on the first pin, `d279e69`; no loss in about 2 min 30 on the current one). `VICTORY_RELAY` is off by default: the fork's issue #89 reports that it makes the characters' skin disappear and overlaps the subtitles.
+> - ⛔ Current limits: graphic problems remain on a character's face, 9 shaders are still not translated, 363 draws are lost without a pipeline, 16 pipelines are refused by the driver, ray tracing is absent, and long-run stability is not measured (the host device was lost after about 13 minutes on the first pin, `d279e69`; no loss in about 2 min 30 on the current one). `VICTORY_RELAY` is off by default: the fork's issue #89 reports that it makes the characters' skin disappear and overlaps the subtitles.
 > - 👁 History of 24 November (measured or observed by the maintainer, VIctory logs): `d279e69` about 4 fps, 13 min in the prison, then device lost → `7b0f736` + `VICTORY_RELAY=2` about 4.5 fps → launcher settings of PR #172 without DRED about 5.5 fps → batch 4 (3 pull requests) about 6.6 fps with `VICTORY_RELAY=2`, startup flicker fixed → this batch (7 pull requests, without `VICTORY_RELAY`) about 5.4 fps but 6,449 draws per frame and the best image so far.
 > - 🆕 Pinned since the commit `fd021bf` of the branch `anyxboxx/fork-7b0-lot5` of our VIctory fork `LooperSalty/victory`: the fork `fxceless/victory-fork` at `7b0f736` plus seven of its open pull requests: #63 (arminkhaleghirod, textures that changed lately hashed at every check, fixes the startup flicker), #71 (MartinIndra02, D3D12 COPY queue for the relay card copies), #32 (arminkhaleghirod, 16-bit float RGBA standing in for R9G9B9E5 render targets), #82 (Kaivyyy, depth bounds test passed to the host), #83 (ryotdev, empty-EXEC branches that can reactivate lanes are kept), #81 (undeadhuman37, a descriptor only read as data of eight dwords is a measured image), #77 (m335671, `v_fma_mixlo/mixhi` over an f16 first interpolation half keeps zero). Measured by the maintainer (VIctory log `victory-fork-lot5.log`, launcher settings of `main` without `VICTORY_RELAY`): 5.4 fps and 6,449 draws per frame after 2 min (batch 4: 6.6 fps with `VICTORY_RELAY=2`; `main`: about 5.5 fps and 4,410 draws), 363 draws lost without a pipeline, 9 untranslated shaders (13 in batch 4), 16 pipelines refused by the driver (6 in batch 4), no device loss in about 2 min 30, no startup flicker.
 > - Requirements: your own copy of the game, an NVIDIA or AMD GPU with SM 6.6 and mesh shaders, Rust. No game files in this repository.
-> - How to run it: [docs/running-gta6.md](docs/running-gta6.md).
+> - How to run it: [docs/running-the-title.md](docs/running-the-title.md).
 
 AnyXboxX loads Xbox GDK executables (PE32+ x86-64 format) and runs their code with Unicorn. The console's system functions are replaced by a C++ runtime in native mode, and by Python code in the isolated machine (high-level emulation, like WinDurango or Wine). The program presents itself as an Xbox Series X: `XSystemGetDeviceType` returns `XboxScarlettAnaconda`.
 
 ## Focus and status
 
-AnyXboxX is specialised on one build: **Grand Theft Auto VI for Xbox Series, version 1.0.2.1**. Only what this game needs is translated (the system functions it imports, the shaders and the Direct3D 12.x methods it uses). Other games will be tried once that translation is complete. The project builds on [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), which targets the same build: the `third_party/victory` submodule is pinned to the fork `fxceless/victory-fork` (GPL-3.0) at commit `7b0f736`. Thanks to Marvisak and to the authors of those pull requests, credited one by one in [THIRD_PARTY.md](THIRD_PARTY.md).
+AnyXboxX is specialised on one build: **one Xbox Series title, version 1.0.2.1**. Only what this game needs is translated (the system functions it imports, the shaders and the Direct3D 12.x methods it uses). Other games will be tried once that translation is complete. The project builds on [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 or later), which targets the same build: the `third_party/victory` submodule is pinned to the fork `fxceless/victory-fork` (GPL-3.0) at commit `7b0f736`. Thanks to Marvisak and to the authors of those pull requests, credited one by one in [THIRD_PARTY.md](THIRD_PARTY.md).
 
 > [!IMPORTANT]
 > **The game is not playable.** See the box at the top of this page for where we are. This repository contains no game files, keys or executable, and does not explain how to get them.
@@ -84,7 +84,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Table of the 396 GDK functions: interface and method number, extracted from `xgameruntime.lib` (`tools/gdk_interfaces.py`) | ✅ done |
 | `XTaskQueue`, `XAsync`, `XThread` served by AnyXboxX: testgdk runs without the Windows runtime | ✅ done |
 | Other GDK interfaces: delegated to the Windows GDK runtime, named by the trace | 🟡 in progress |
-| 656 automated tests | ✅ done |
+| 657 automated tests | ✅ done |
 | D3D12.X: `D3D12XboxCreateDevice`, console `ID3D12*` interfaces and `DXGIXPresentArray`, served by TomBox's Rust `d3d12_xs.dll` (MIT, 48 implemented exports, built by `tools/build_tombox.py d3d12_xs`, loaded with `ANYXBOXX_D3D12_XS=<path>`); untestable here without a console executable | 🟡 in progress |
 | Console libraries from TomBox (Rust, GPL-3.0) for what AnyXboxX lacks: `xg_xs` (texture layouts, 23 exports) and full `xmem` (38 exports), with `ANYXBOXX_TOMBOX_DIR=<folder>`; built by `tools/build_tombox.py xg_xs xmem` | 🟡 in progress |
 | Offline `XUser`: always-signed-in local profile, configurable gamertag (`ANYXBOXX_GAMERTAG`), testgdk sign-in succeeds | ✅ done |
@@ -111,7 +111,7 @@ Both test games run without vertical sync: about 11,700 fps for SimpleTriangle a
 | Other GDK interfaces written by AnyXboxX (`XGameUi`, `XNetworking`…) | ⏳ to do |
 | RDNA 2 → DXIL shader recompiler: first programs translated to HLSL, compiled to DXIL and run on the PC's GPU with D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP without a GPU), memory identical to a wave32 reference interpreter running 599 of 1,487 encodings (scalar, VOP1/VOP2/VOPC/VOP3, memory: SMEM, LDS, GLOBAL, MUBUF with V# bounds, atomics, branches, `exec` divergence); a first vertex shader and pixel shader (EXP exports, VINTRP interpolation) drawn with D3D12, identical vertex by vertex and pixel by pixel: `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 in progress |
 | Shader cache: translated shaders compiled to DXIL once, then reused from disk (1.4 ms) or memory (0.8 ms) instead of dxc (22 ms); `%LOCALAPPDATA%\AnyXboxX\shader-cache` or `ANYXBOXX_SHADER_CACHE`, size-capped | 🟡 in progress |
-| GTA VI Xbox Series 1.0.2.1 via VIctory (`third_party/victory`, branch `anyxboxx/fork-7b0-lot5` at `fd021bf`, fork `fxceless/victory-fork` plus seven pull requests): the world is displayed and playable at about 5.4 fps with 6,449 draws per frame (measured by the maintainer, Windows 11, RTX 4070 Super, VIctory log); startup flicker fixed; best image so far; Lucia's face still shows graphic problems, 9 shaders untranslated, no ray tracing; long-run stability not measured | 🟡 in progress |
+| Xbox Series title 1.0.2.1 via VIctory (`third_party/victory`, branch `anyxboxx/fork-7b0-lot5` at `fd021bf`, fork `fxceless/victory-fork` plus seven pull requests): the world is displayed and playable at about 5.4 fps with 6,449 draws per frame (measured by the maintainer, Windows 11, RTX 4070 Super, VIctory log); startup flicker fixed; best image so far; a character's face still shows graphic problems, 9 shaders untranslated, no ray tracing; long-run stability not measured | 🟡 in progress |
 | x64 SEH exceptions (`.pdata`), multiple threads | ⏳ to do |
 | Dynamic loading of a DLL at run time (`LoadLibrary` + `DllMain`) | ⏳ to do |
 | D3D12.X graphics to Direct3D 12 / Vulkan | ⏳ to do |
@@ -216,7 +216,7 @@ def XSystemGetDeviceType(c):
 - [Reverse-engineering notes on the studied Scarlett package](docs/research/package/README.md) (written by Codex): RDS5/ETPF tables, RPF headers, package layout.
 - [TomBox and its continuation](docs/research/tombox.md): Rust console DLLs, Direct3D 12.x, RDNA 2 shader translator, what AnyXboxX reuses (MIT, credited).
 - [Xbox2Windows](docs/research/xbox2windows.md): static recompilation research; BC7 and GFX10 tiling reused by AnyXboxX (MIT, credited).
-- [First boot of the 1.0.2.1 executable](docs/research/first-boot-1021.md): stops measured under Leonida's `gta6rt` in order, the Leonida pull requests that treat them, work list for AnyXboxX.
+- [First boot of the 1.0.2.1 executable](docs/research/first-boot-1021.md): stops measured under Leonida's runtime in order, the Leonida pull requests that treat them, work list for AnyXboxX.
 
 ## Tests
 

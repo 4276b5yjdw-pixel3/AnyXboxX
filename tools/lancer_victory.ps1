@@ -17,7 +17,7 @@
 
 .NOTES
   The first cold launch may crash while the pipelines compile; launch again once the cache is filled.
-  Settings measured on 2026-11-24 with the submodule's pinned commit (fxceless/victory-gta6).
+  Settings measured on 2026-11-24 with the submodule's pinned commit (fxceless/victory-fork).
 
 .EXAMPLE
   .\tools\lancer_victory.ps1 -GameDir D:\Games\MyPackage

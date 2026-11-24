@@ -131,11 +131,11 @@ cas Bink et FFX de Xbox2Windows. AnyXboxX reste une plateforme générique (règ
 
 ## Dépôt complet de Leonida (23 novembre)
 
-Le dépôt amont de Leonida a été supprimé le 2026-11-24 et son sous-module retiré. Voir [leonida-gta6.md](leonida-gta6.md) pour la comparaison antérieure des fonctions GDK des deux runtimes.
+Le dépôt amont de Leonida a été supprimé le 2026-11-24 et son sous-module retiré. Voir [leonida.md](leonida.md) pour la comparaison antérieure des fonctions GDK des deux runtimes.
 
-Premiers lancements de l'exécutable 1.0.2.1 sous `gta6rt` (arrêts mesurés dans l'ordre, pull requests de Leonida qui les traitent, liste de travaux qui en découle pour AnyXboxX) : [premier-demarrage-1021.md](premier-demarrage-1021.md).
+Premiers lancements de l'exécutable 1.0.2.1 sous le runtime de Leonida (arrêts mesurés dans l'ordre, pull requests de Leonida qui les traitent, liste de travaux qui en découle pour AnyXboxX) : [premier-demarrage-1021.md](premier-demarrage-1021.md).
 
-Le même exécutable mené jusqu'à la boucle de frames sous `gta6rt` de Leonida (arrêts, quatre causes mesurées des images noires, constats statiques, nos erreurs, ce que le proxy TomBox doit encore servir) : [demarrage-leonida-2026-11-23.md](demarrage-leonida-2026-11-23.md).
+Le même exécutable mené jusqu'à la boucle de frames sous le runtime de Leonida (arrêts, quatre causes mesurées des images noires, constats statiques, nos erreurs, ce que le proxy TomBox doit encore servir) : [demarrage-leonida-2026-11-23.md](demarrage-leonida-2026-11-23.md).
 
 ## Licences modifiées en amont (23 novembre, après-midi)
 

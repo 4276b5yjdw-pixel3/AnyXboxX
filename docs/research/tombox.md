@@ -18,7 +18,7 @@ State recorded on 21 November 2026 (commit `fef9a6e` of omonkeyz/xbox-emulator),
 | Console libraries | 2,076 of 2,141 exports | our #13, #14, #26 |
 | Title launched | Fortnite: startup, sign-in, mode selection, Battle Royale lobby | we have no console title |
 
-## Observations on the GTA VI 1.0.2.1 package
+## Observations on the title's 1.0.2.1 package
 
 They examined the same package that AnyXboxX studies and reach the same conclusion: it cannot be launched, the executable is missing.
 

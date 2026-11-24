@@ -4,9 +4,9 @@
 
 State as of the evening of 23 November 2026. This note files the research of that day (Claude and Codex, on the
 maintainer's machine) on the boot of build 1.0.2.1 under [Leonida](https://github.com/ItsNotRexed/Leonida)'s
-`gta6rt`, from the first stop to the frame loop. It continues [first-boot-1021.md](first-boot-1021.md), which stops at
+runtime, from the first stop to the frame loop. It continues [first-boot-1021.md](first-boot-1021.md), which stops at
 the first six stops and the work list for AnyXboxX. Neighbours in general: [neighbors.md](neighbors.md); Leonida's
-GTA 6 notes: [leonida-gta6.md](leonida-gta6.md).
+notes: [leonida.md](leonida.md).
 
 **Rule 1 of [AGENTS.md](../../AGENTS.md) applies, and more strictly than in the first note.** This note holds
 vtable slot numbers, flag values, HRESULTs, public SDK type names, PR numbers, counts, times and memory sizes. It
@@ -31,9 +31,9 @@ participants; their numbering of the stops is not ours unless said.
 | Item | Value | Status |
 | --- | --- | --- |
 | Machine | Windows 11 (build 26300), Core i7-13700KF, RTX 4070 SUPER (driver 610.88), native, no Wine | measured |
-| Runtime | `gta6rt`, MSVC RelWithDebInfo, `LEONIDA_D3D12=vulkan` from the second pass on | measured |
+| Runtime | Leonida runtime, MSVC RelWithDebInfo, `LEONIDA_D3D12=vulkan` from the second pass on | measured |
 | Executable | the 1.0.2.1 build already described (SHA-256 starting `e95020b2`), own copy, package read-only | measured |
-| Stacks | Leonida `main` at various dates (`1cc6e3c1`, then `ec0e01c5`, then `dde82f27`) with open pull requests merged locally, conflicts resolved by hand, **only `gta6rt` built, the PRs' own tests not run** unless a PR comment says so | measured |
+| Stacks | Leonida `main` at various dates (`1cc6e3c1`, then `ec0e01c5`, then `dde82f27`) with open pull requests merged locally, conflicts resolved by hand, **only the runtime built, the PRs' own tests not run** unless a PR comment says so | measured |
 | Later base | the maintainers' forge `main` (`2ac38583`, contains #7759), journal in issue #8851 | measured |
 | Shaders | `make_game --stages shaders`: 26,503 translated in 32 min on one stack (wave64 tiers: A 236, B 7, C 425 for VS, PS, GS) | measured |
 | Environment variables of the loop runs | `LEONIDA_ARENA_MB=4095` (otherwise `E_OUTOFMEMORY`), `LEONIDA_STUB_PIPELINES=1` for some runs, `LEONIDA_SKIP_INT3=1` for one in-image `int3` | measured |
@@ -123,7 +123,7 @@ Other stacks, same machine:
 | --- | --- | --- |
 | main `dde82f27` plus #7201 #7323 #7759 #7286 #7290 #7356 #7880 #7448 #7218 #7949 #6885 #6981, list slot 139 as `Reset` | 4 `PresentX` (R8G8B8A8 3840 by 2160, render target and UAV, double buffered), then an access violation. #7218's import of the slot 133 buffers onto the title's pages works on NVIDIA but needs `LEONIDA_ARENA_MB=4095`. Under `LEONIDA_STUB_PIPELINES` every draw is refused (pipeline 0) | measured |
 | base `rt5-integration` (tibzejoker) plus #7759 plus #8815 | without slot 57 served, the title loops on slot 57: `CreateLifetimeTracker` refuses more than 3,600 calls in 5 minutes, 0 call of slot 55, 0 `PresentX`. With #8890 (RipcuBAN: slot 57 returns `E_INVALIDARG` for lack of `fspx_gfx`) the loop advances: more than 3,300 `CreatePipelineState` succeed in 5 minutes. Without the `AcpHal` shim (#6885, #6981 by Jadiac5) an access violation follows `ApuCreateHeap` | measured |
-| maintainers' forge `main` `2ac38583` | `gta6rt` builds; the shader stage was still running at the end of the day (estimated 1 h 30). No frame result yet | measured (build), pending (runs) |
+| maintainers' forge `main` `2ac38583` | the runtime builds; the shader stage was still running at the end of the day (estimated 1 h 30). No frame result yet | measured (build), pending (runs) |
 
 Measured by others, on forge `main` once slot 55 is in (#7759): Yoshi-OOF counts 41,545 successful derivations once
 the slot 57 base objects are kept. lines9686-rgb and sh1shu1 run the same frame loop and give the two Vulkan
