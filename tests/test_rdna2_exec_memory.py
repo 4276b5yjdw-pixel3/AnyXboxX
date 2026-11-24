@@ -107,6 +107,46 @@ def test_global_atomic_add_returns_previous_values():
     assert wave.v[11] == [100 + lane for lane in range(32)]
 
 
+def lds_two_words(first, second, *body):
+    """v1 = 0 (adresse), lds[0] = first, lds[4] = second, puis `body`."""
+    return program(
+        vop1("v_mov_b32", 1, const(0)),
+        vop1("v_mov_b32", 2, LITERAL), first,
+        vop1("v_mov_b32", 3, LITERAL), second,
+        *ds("ds_write_b32", addr=1, data0=2),
+        *ds("ds_write_b32", addr=1, data0=3, offset0=4),
+        *body)
+
+
+def test_lds_d16_reads_fill_one_half_and_keep_the_other():
+    # Octets de la LDS : 42 7F 81 80. v4 vaut 0xCAFE1357 avant chaque lecture.
+    expected = {"ds_read_u8_d16": (1, 0xCAFE007F), "ds_read_u8_d16_hi": (3, 0x00801357),
+                "ds_read_i8_d16": (3, 0xCAFEFF80), "ds_read_i8_d16_hi": (3, 0xFF801357),
+                "ds_read_u16_d16": (2, 0xCAFE8081), "ds_read_u16_d16_hi": (0, 0x7F421357)}
+    for name, (offset, value) in expected.items():
+        wave = rdna2_exec.run(lds_two_words(
+            0x80817F42, 0,
+            vop1("v_mov_b32", 4, LITERAL), 0xCAFE1357,
+            *ds(name, addr=1, vdst=4, offset0=offset)))
+        assert wave.v[4] == [value] * 32, name
+    # Demi-mot à cheval sur deux mots (octet 3) : valeur mesurée sur GPU, publiée dans la
+    # pull request 571 de VIctory (mots 0xAB123456 et 0xDEADCDBE, destination 0xCAFE1357).
+    wave = rdna2_exec.run(lds_two_words(
+        0xAB123456, 0xDEADCDBE,
+        vop1("v_mov_b32", 4, LITERAL), 0xCAFE1357,
+        *ds("ds_read_u16_d16_hi", addr=1, vdst=4, offset0=3)))
+    assert wave.v[4] == [0xBEAB1357] * 32
+
+
+def test_lds_d16_hi_writes_take_the_high_half_of_the_data():
+    wave = rdna2_exec.run(lds_two_words(
+        0xFFFFFFFF, 0xFFFFFFFF,
+        vop1("v_mov_b32", 5, LITERAL), 0x11AB22CD,
+        *ds("ds_write_b8_d16_hi", addr=1, data0=5, offset0=1),       # octet 1 = AB
+        *ds("ds_write_b16_d16_hi", addr=1, data0=5, offset0=4)))     # octets 4 et 5 = 11AB
+    assert wave.lds[:8] == bytes.fromhex("ffabffff ab11ffff")
+
+
 def test_memory_instructions_raise_coverage():
     done, total = rdna2_exec.coverage()
     assert 500 <= done < total
