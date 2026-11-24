@@ -142,3 +142,7 @@ The workflow had refused two updates because a licence file changed. Reviewed by
 
 - **TomBox** `30a1b53` → `f89e410`: `THIRD_PARTY/LICENSE-TuxBox-APACHE-2.0.txt` (Apache 2.0, fixes by brcly/TuxBox taken with credit) and `crates/tombox-xshader/src/trans32/LICENSE-rocjitsu.txt` (MIT, AMD, models of `v_log/exp/sin/cos_f32`). Apache 2.0 and MIT are compatible with GPL 3.0; TomBox's own text stays GPL-3.0 or later. The submodule advances without modification.
 - **Xbox2Windows** `6f48648` → `708f4ab`: `tools/_bcpack_rans/LICENSE-MIT` and `LICENSE-APACHE` (bcpack-rs, MIT or Apache 2.0, plus Microsoft's silicon-rans, MIT). This folder is not copied on our side and no copied file imports it; the repository licence (`LICENSE`, MIT) is unchanged. The five copied files that changed (`dxil_retarget.py`, `pe_inventory.py`, `probe_roots.py`, `xbox_intrinsic_gate.py`, `dxil_retarget_check.py`) are copied without modification.
+
+## New neighbours since 24 November
+
+VIctory, xcl and five-star-recomp, with our measurements of VIctory on 2026-11-24 (menus at 30 fps, 351 untranslated programs in the world, 119 compute shaders refused for wave64): [victory-xcl-fivestar.md](victory-xcl-fivestar.md).
