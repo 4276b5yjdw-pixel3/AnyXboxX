@@ -11,6 +11,7 @@
 > - ✅ Ele chega até **a primeira cena cinematográfica** (abertura da missão 1, créditos de abertura exibidos). Nenhum travamento da GPU em 5 minutos no mundo.
 > - ⛔ Limite por enquanto: a cena 3D continua preta (as passagens de iluminação ainda não foram traduzidas) e o mundo roda a 0,3 a 0,5 imagem por segundo, portanto não é jogável. Trabalho em andamento nos travamentos da GPU do branch experimental (`anyxboxx/essai`) e na iluminação.
 > - Requisitos: a sua própria cópia do jogo, uma GPU NVIDIA ou AMD com SM 6.6 e mesh shaders, Rust. Nenhum arquivo do jogo neste repositório.
+> - Como executar: [docs/running-gta6.md](../running-gta6.md).
 
 O AnyXboxX carrega executáveis Xbox GDK (formato PE32+ x86-64) e executa o código deles com o Unicorn. As funções de sistema do console são substituídas por um runtime C++ em modo nativo e por código Python na máquina isolada (emulação de alto nível, como o WinDurango ou o Wine). O programa se apresenta como um Xbox Series X: `XSystemGetDeviceType` retorna `XboxScarlettAnaconda`.
 
