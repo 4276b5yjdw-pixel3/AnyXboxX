@@ -49,6 +49,22 @@ Toutes sont des diagnostics : elles demandent le build `diag` (la fonctionnalit�
 | `VICTORY_PROFILE=<ms>` | Profileur à échantillonnage de tout le processus ; journalise les piles d'appels les plus fréquentes toutes les 5 s (période en ms, 4 par défaut). | Local, non publié |
 | `VICTORY_RT_MISS=1` | Tous les rayons manquent (diagnostic de ray tracing, désactivé par défaut). | Local, non publié |
 
+## État au 24 novembre (soir)
+
+Mesuré en lançant notre propre copie du build 1.0.2.1 sous VIctory, sur la branche d'intégration locale (`main` de VIctory + pull requests + correctifs locaux pas tous publiés), i7-13700KF + RTX 4070 SUPER. Ce sont des mesures d'exécution (i/s, comptes, traces) et la sortie de `victory translate` ; rien ne vient de la lecture du code du jeu.
+
+- **Le mode Series S est plus rapide (mesuré).** `victory run --console series-s ...` donne environ 3,1 à 3,3 i/s dans le monde, contre environ 2,0 à 2,4 i/s en mode Series X (environ +50 %), avec le même symptôme d'image. Le jeu rend alors en interne en 1280x720 et présente en 1920x1080. Recommandé pour itérer.
+- **Diagnostic de l'image noire (mesuré).** La géométrie existe dans le G-buffer : les personnages de la cinématique sont visibles en 1440p et en 720p. La couleur finale est une teinte uniforme qui s'assombrit avec le temps (exposition), avec les sous-titres dessinés par-dessus. Presque toutes les passes d'éclairage différé sont traduites et liées. Une trace par passe (option locale `VICTORY_INDIRECT_TRACE`, non publiée) montre qu'environ 379 `ExecuteIndirect` de mesh partent avec des arguments à zéro, parce que les passes GPU qui produisent ces arguments ne sont pas encore traduites : le traducteur les refuse avec « an address from a phi » et « a lane mask holding lanes elsewhere read as data ». C'est le chantier en cours.
+- **Traduction (mesurée).** Shaders non traduits en jeu : environ 130 à 170 (compte en jeu). Sur le corpus (26 084 programmes, `victory translate`) : VS/PS 13 780 émis sur 14 038, CS 2 212, MS 8 654 sur 8 765 (comptes tels qu'affichés par l'outil).
+- **Correctifs publiés en amont** (`Marvisak/VIctory`) : #1215 (vitesse : écriture directe `NtWriteVirtualMemory`, copies sans `VirtualQuery`, profileur), #1225 (`readfirstlane` d'une adresse uniforme : ColorDownsample), #1231 (compteur de boucle uniforme : sondes de lumière). Des commentaires de mesures ont aussi été ajoutés sur #497, #320, #1074, #1198 et #841.
+- **Communauté.** Le projet a un serveur Discord (lien en haut du README).
+
+Variable ajoutée au tableau ci-dessus (diagnostic, build `diag`) :
+
+| Variable | Effet | D'où elle vient |
+| --- | --- | --- |
+| `VICTORY_INDIRECT_TRACE` | Trace par passe des appels `ExecuteIndirect` et de leurs arguments. | Local, non publié |
+
 ## Prérequis
 
 - Windows 10 ou 11 x64.

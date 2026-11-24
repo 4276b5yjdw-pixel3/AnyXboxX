@@ -146,3 +146,5 @@ The workflow had refused two updates because a licence file changed. Reviewed by
 ## New neighbours since 24 November
 
 VIctory, xcl and five-star-recomp, with our measurements of VIctory on 2026-11-24 (menus at 30 fps, 351 untranslated programs in the world, 119 compute shaders refused for wave64): [victory-xcl-fivestar.md](victory-xcl-fivestar.md).
+
+Also new: [Leonida Continued](https://github.com/ubiquitarianism/leonida) (ubiquitarianism/leonida, GPL-3.0), a continuation of the RDNA 2 → SPIR-V translation after the original Leonida project was deleted. Listed from its public description; we have not compared its code with ours yet.
