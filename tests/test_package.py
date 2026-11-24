@@ -1,6 +1,7 @@
 """XPackage : le jeu est un paquet installé en local, appelé par n° de méthode comme le jeu."""
 import ctypes
 import os
+import sys
 
 import pytest
 
@@ -20,7 +21,8 @@ class Details(ctypes.Structure):
                 ("count", ctypes.c_uint32), ("age_restricted", ctypes.c_bool), ("title_id", ctypes.c_char_p)]
 
 
-ENUMERATION = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(Details))
+ENUMERATION = (ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(Details))
+              if sys.platform == "win32" else None)
 
 
 @pytest.fixture

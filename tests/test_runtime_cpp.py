@@ -135,8 +135,10 @@ anyxboxx_only = pytest.mark.skipif(
 TASK_QUEUE_GUID = bytes.fromhex("cb7d3b07cf1f304094bee3c9eb623428")   # {073B7DCB-…} en mémoire
 MANUAL, THREAD_POOL = 0, 1
 WORK_PORT = 0
-CALLBACK = ctypes.WINFUNCTYPE(None, ctypes.c_void_p, ctypes.c_bool)
-ASYNC_WORK = ctypes.WINFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p)
+CALLBACK = (ctypes.WINFUNCTYPE(None, ctypes.c_void_p, ctypes.c_bool)
+            if sys.platform == "win32" else None)
+ASYNC_WORK = (ctypes.WINFUNCTYPE(ctypes.c_uint32, ctypes.c_void_p)
+             if sys.platform == "win32" else None)
 
 
 class AsyncBlock(ctypes.Structure):

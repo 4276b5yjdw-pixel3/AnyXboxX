@@ -94,6 +94,7 @@ def test_tests_that_cannot_run_are_a_failure_not_a_report_of_passes(runtime_dir,
     assert not report.exists()
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="script PowerShell")
 def test_missing_runtime_stops_before_any_report(tmp_path):
     report = tmp_path / "rapport.md"
     result = check(["-Backend", "warp", "-ReportPath", str(report)], {**os.environ, "ANYXBOXX_RUNTIME": str(tmp_path)})

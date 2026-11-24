@@ -1,6 +1,7 @@
 """Sauvegardes (XGameSave) et stockage local persistant, appelés par n° de méthode comme le jeu."""
 import ctypes
 import os
+import sys
 
 import pytest
 
@@ -29,7 +30,8 @@ class ContainerInfo(ctypes.Structure):
                 ("total_size", ctypes.c_uint64), ("last_modified", ctypes.c_int64), ("needs_sync", ctypes.c_bool)]
 
 
-CONTAINER_CALLBACK = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ContainerInfo), ctypes.c_void_p)
+CONTAINER_CALLBACK = (ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ContainerInfo), ctypes.c_void_p)
+                    if sys.platform == "win32" else None)
 
 
 def open_provider(saves, user):
