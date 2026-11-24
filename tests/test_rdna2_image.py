@@ -24,10 +24,16 @@ T_SHARP, S_SHARP = 8, 16                          # s[8:15] et s[16:19]
 gpu = pytest.mark.skipif(not rdna2_gpu.available(), reason="dxc ou anyxboxx_gpu_run.exe absent")
 
 
-def mimg(name, vdata, vaddr, srsrc=T_SHARP, ssamp=S_SHARP, dmask=0xF, dim=images.DIM_2D, unorm=0):
+def mimg(name, vdata, vaddr, srsrc=T_SHARP, ssamp=S_SHARP, dmask=0xF, dim=images.DIM_2D, unorm=0, nsa_addrs=None):
     op = OPCODES["MIMG", name]
-    low = 0x3C << 26 | (op & 0x7F) << 18 | unorm << 12 | dmask << 8 | dim << 3 | (op >> 7) & 1
-    return low, (ssamp // 4) << 21 | (srsrc // 4) << 16 | vdata << 8 | vaddr
+    nsa = 1 if nsa_addrs else 0
+    low = 0x3C << 26 | (op & 0x7F) << 18 | unorm << 12 | dmask << 8 | dim << 3 | nsa << 1 | (op >> 7) & 1
+    first_addr = nsa_addrs[0] if nsa_addrs else vaddr
+    high = (ssamp // 4) << 21 | (srsrc // 4) << 16 | vdata << 8 | first_addr
+    if not nsa_addrs:
+        return low, high
+    extra = sum((reg & 0xFF) << (8 * i) for i, reg in enumerate(nsa_addrs[1:]))
+    return low, high, extra
 
 
 def texture_bytes(fmt, width, height):
@@ -107,8 +113,8 @@ def test_unsupported_cases_are_named():
         run_interpreter(one_d, sgprs, memory)
     with pytest.raises(Untranslatable, match="dimension 0"):
         rdna2_hlsl.translate(one_d)
-    with pytest.raises(rdna2_exec.Untranslated, match="bilinéaire"):
-        run_interpreter(sampling_program(), {**sgprs, S_SHARP + 2: 1 << 20}, memory)
+    with pytest.raises(rdna2_exec.Untranslated, match="anisotrope"):
+        run_interpreter(sampling_program(), {**sgprs, S_SHARP + 2: 2 << 20}, memory)
     with pytest.raises(rdna2_exec.Untranslated, match="GFX10_FORMAT_32_FLOAT"):
         run_interpreter(sampling_program(), {**sgprs, **descriptors(22, 8, 4, images.CLAMP_WRAP)}, memory)
 
