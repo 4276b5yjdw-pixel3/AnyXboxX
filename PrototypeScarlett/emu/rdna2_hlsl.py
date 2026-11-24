@@ -9,7 +9,7 @@ couverte lève Untranslatable en la nommant.
 """
 import struct
 
-from emu import rdna2, rdna2_hlsl_image
+from emu import rdna2, rdna2_hlsl_ext, rdna2_hlsl_image
 from emu.rdna2_exec_ops import signed
 from emu.rdna2_exec_vop3 import Fields
 from emu.rdna2_hlsl_memory import memory_statements
@@ -151,7 +151,11 @@ def statements(data, instruction, finish="return;", special=None):
         line = scalar_statement(name, _fields(family, first), _literal(data, instruction, 1))
         return [line] if line else []
     if family in ("VOP1", "VOP2", "VOPC"):
-        return _vector(name, _fields(family, first), _literal(data, instruction, 1))
+        fields = _fields(family, first)
+        lit = _literal(data, instruction, 1)
+        if rdna2_hlsl_ext.is_ext(family, fields.get("src0")):
+            return rdna2_hlsl_ext.statements(family, name, fields, lit or 0, ACTIVE)
+        return _vector(name, fields, lit)
     if family == "VOP3":
         return _vop3(name, opcode, Fields(pair), _literal(data, instruction, 2))
     if family in MEMORY_FAMILIES:
