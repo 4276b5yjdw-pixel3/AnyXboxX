@@ -35,6 +35,13 @@ VECTOR_ATOMIC = re.compile(r"^(global|flat|buffer)_atomic_(add|sub|swap|and|or|x
 SCALAR_PATTERN = re.compile(r"^s_(buffer_)?load_(dword|dwordx2|dwordx4|dwordx8|dwordx16)$")
 LDS_PATTERN = re.compile(r"^ds_(read|write)(2?)_(b32|b64|b96|b128|u8|i8|u16|i16|b8|b16)$")
 LDS_ATOMIC = re.compile(r"^ds_(add|sub|and|or|xor|min|max)(_rtn)?_(u32|i32|b32)$")
+# Formes _d16 : la valeur est une moitié (16 bits) du VGPR. {nom: (sens, type, moitié haute)}.
+LDS_HALVES = {
+    **{f"ds_read_{kind}_d16{suffix}": ("read", kind, bool(suffix))
+       for kind in ("u8", "i8", "u16") for suffix in ("", "_hi")},
+    **{f"ds_write_{kind}_d16_hi": ("write", kind, True) for kind in ("b8", "b16")},
+}
+HALF_BITS, HALF_MASK = 16, 0xFFFF
 CACHE_CONTROL = frozenset({"s_dcache_inv", "s_gl1_inv", "s_dcache_wb", "buffer_gl0_inv", "buffer_gl1_inv",
                            "ds_nop"})
 OTHER = frozenset({"s_memtime", "s_memrealtime", "ds_bpermute_b32"})
@@ -74,7 +81,7 @@ def supports(name):
     vector = VECTOR_PATTERN.match(name)
     return bool(name in CACHE_CONTROL or name in OTHER or vector and vector.group(3) in WIDTHS
                 or VECTOR_ATOMIC.match(name) or SCALAR_PATTERN.match(name)
-                or LDS_PATTERN.match(name) or LDS_ATOMIC.match(name))
+                or LDS_PATTERN.match(name) or LDS_ATOMIC.match(name) or name in LDS_HALVES)
 
 
 def _to_words(data):
@@ -159,6 +166,9 @@ def _lds(wave, name, word):
     found = LDS_PATTERN.match(name)
     for lane in wave.active():
         base = wave.v[addr][lane]
+        if name in LDS_HALVES:
+            _lds_half(wave, name, base + (offset1 << 8 | offset0), data0, vdst, lane)
+            continue
         if atomic:
             _lds_atomic(wave, atomic, base + (offset1 << 8 | offset0), data0, vdst, lane)
             continue
@@ -173,6 +183,24 @@ def _lds(wave, name, word):
                 wave.lds[address:address + size] = _store_bytes(wave, source, lane, size)
             else:
                 _load_into(wave, target, lane, bytes(wave.lds[address:address + size]), found.group(3))
+
+
+def _lds_half(wave, name, address, data0, vdst, lane):
+    """Accès _d16 : une lecture remplit une moitié du VGPR (étendue à 16 bits) et garde l'autre ;
+    une écriture _d16_hi prend l'octet ou le demi-mot dans la moitié haute de la donnée.
+
+    Source : DSInstructions.td de LLVM (sortie liée à l'entrée, prédicat D16PreservesUnusedBits).
+    """
+    direction, kind, high = LDS_HALVES[name]
+    size, shift = WIDTHS[kind], HALF_BITS if high else 0
+    address %= LDS_SIZE
+    if direction == "write":
+        value = (wave.v[data0][lane] >> shift) & ((1 << 8 * size) - 1)
+        wave.lds[address:address + size] = value.to_bytes(size, "little")
+        return
+    half = _extend(bytes(wave.lds[address:address + size]), kind) & HALF_MASK
+    kept = wave.v[vdst][lane] & ~(HALF_MASK << shift) & MASK32
+    wave.v[vdst][lane] = kept | half << shift
 
 
 def _lds_atomic(wave, found, address, data0, vdst, lane):
