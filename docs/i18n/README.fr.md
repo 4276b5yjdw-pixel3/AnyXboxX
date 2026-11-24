@@ -7,10 +7,10 @@
 > [!NOTE]
 > **Où on en est (24/11/2026)**
 >
-> Mesuré sur i7-13700KF + RTX 4070 SUPER, Windows 11, avec l'intégration stable de VIctory (`third_party/victory`, branche `anyxboxx/stable` du fork `LooperSalty/victory`) lancée par `tools/lancer_victory.ps1 -GameDir <dossier du jeu>` :
+> Mesuré sur i7-13700KF + RTX 4070 SUPER, Windows 11, avec le fork de VIctory `fxceless/victory-gta6` au commit `d279e69` (sous-module `third_party/victory`) lancé par `tools/lancer_victory.ps1 -GameDir <dossier du jeu>` :
 >
 > - ✅ Le build Xbox Series 1.0.2.1 de GTA VI **se lance** sur PC : démarrage, écran de profil, réglages du premier lancement, écrans légaux, chargement, menu pause. Les menus tournent à 30 i/s.
-> - ✅ Il atteint **le monde avec un personnage contrôlable** : le tutoriel « Move / Move the camera » (L / R) s'affiche, composé par-dessus une image 3D encore noire.
+> - ✅ Il atteint **le monde et l'affiche** : le personnage se déplace sous le contrôle du joueur et l'image 3D s'affiche, à environ 4 images par seconde (observé par le mainteneur, Windows 11, RTX 4070 Super).
 > - ⛔ Limite actuelle : le périphérique hôte est perdu au bout de quelques minutes à environ 13 minutes dans le monde, ce n'est donc pas stable. L'ancienne intégration restait à environ 2,4 images par seconde sans image 3D ; avec le fork épinglé, le monde s'affiche et se joue à environ 4 images par seconde.
 > - 👁 Observé par le mainteneur (Windows 11, RTX 4070 Super), avec le fork `fxceless/victory-gta6` au commit `d279e69` et les réglages du lanceur : le jeu a été joué à environ 4 fps pendant environ 13 minutes dans la zone de départ (la prison). Le personnage se déplace sous le contrôle du joueur et interagit avec les premiers PNJ, puis le périphérique hôte est perdu (limite connue).
 > - Prérequis : votre propre copie du jeu, un GPU NVIDIA ou AMD avec SM 6.6 et mesh shaders, Rust. Aucun fichier du jeu dans ce dépôt.
@@ -22,7 +22,7 @@ Pour poursuivre l'analyse du paquet Scarlett étudié, voir le [plan de compatib
 
 ## Cible et état
 
-AnyXboxX est spécialisé sur un seul build : **Grand Theft Auto VI pour Xbox Series, version 1.0.2.1**. Seul ce dont ce jeu a besoin est traduit (les fonctions système qu'il importe, les shaders et les méthodes Direct3D 12.x qu'il utilise). D'autres jeux seront essayés quand cette traduction sera complète. Le projet s'appuie sur [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou ultérieure), qui vise le même build : notre intégration de VIctory et de 24 pull requests de la communauté est le sous-module `third_party/victory` (fork `LooperSalty/victory`, branche `anyxboxx/stable`). Merci à Marvisak et aux auteurs de ces pull requests, crédités un par un dans [THIRD_PARTY.md](../../THIRD_PARTY.md).
+AnyXboxX est spécialisé sur un seul build : **Grand Theft Auto VI pour Xbox Series, version 1.0.2.1**. Seul ce dont ce jeu a besoin est traduit (les fonctions système qu'il importe, les shaders et les méthodes Direct3D 12.x qu'il utilise). D'autres jeux seront essayés quand cette traduction sera complète. Le projet s'appuie sur [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 ou ultérieure), qui vise le même build : le sous-module `third_party/victory` est épinglé sur le fork `fxceless/victory-gta6` (GPL-3.0) au commit `d279e69`. Merci à Marvisak et aux auteurs de ces pull requests, crédités un par un dans [THIRD_PARTY.md](../../THIRD_PARTY.md).
 
 > [!IMPORTANT]
 > **Le jeu n'est pas jouable.** Voir l'encadré en haut de cette page pour l'état d'avancement. Ce dépôt ne contient ni fichier du jeu, ni clé, ni exécutable, et n'explique pas comment les obtenir.
@@ -112,7 +112,7 @@ Les deux jeux de test tournent sans synchronisation verticale : environ 11 700 i
 | Autres interfaces GDK écrites par AnyXboxX (`XGameUi`, `XNetworking`…) | ⏳ à faire |
 | Recompilateur de shaders RDNA 2 → DXIL : premiers programmes traduits en HLSL, compilés en DXIL et exécutés sur le GPU du PC avec D3D12 (`--hlsl`, `anyxboxx_gpu_run.exe`, WARP sans GPU), mémoire identique à un interpréteur de référence wave32 qui exécute 599 encodages sur 1 487 (scalaires, VOP1/VOP2/VOPC/VOP3, mémoire : SMEM, LDS, GLOBAL, MUBUF avec bornes V#, atomiques, branchements, divergence par `exec`) ; un premier vertex shader et pixel shader (exports EXP, interpolation VINTRP) dessinés avec D3D12, identiques sommet par sommet et pixel par pixel : `scarlett.py --rdna2 <shader.bin> --executer` | 🟡 en cours |
 | Cache de shaders : shaders traduits compilés une seule fois en DXIL, puis repris du disque (1,4 ms) ou de la mémoire (0,8 ms) au lieu de dxc (22 ms) ; `%LOCALAPPDATA%\AnyXboxX\shader-cache` ou `ANYXBOXX_SHADER_CACHE`, taille plafonnée | 🟡 en cours |
-| GTA VI Xbox Series 1.0.2.1 via VIctory (`third_party/victory`) : atteint le monde avec un personnage contrôlable (tutoriel « Move / Move the camera » sur une image 3D noire) ; menus à 30 i/s ; environ 2,4 i/s dans le monde, environ 3,2 en mode Series S (mesuré le 2026-11-24) ; pas jouable | 🟡 en cours |
+| GTA VI Xbox Series 1.0.2.1 via VIctory (`third_party/victory`, fork `fxceless/victory-gta6` au commit `d279e69`) : le monde s'affiche et se joue à environ 4 i/s (observé par le mainteneur, Windows 11, RTX 4070 Super) ; le périphérique hôte est perdu au bout de quelques minutes à environ 13 minutes | 🟡 en cours |
 | Exceptions SEH x64 (`.pdata`), threads multiples | ⏳ à faire |
 | Chargement dynamique d'une DLL pendant l'exécution (`LoadLibrary` + `DllMain`) | ⏳ à faire |
 | Graphismes D3D12.X vers Direct3D 12 / Vulkan | ⏳ à faire |
