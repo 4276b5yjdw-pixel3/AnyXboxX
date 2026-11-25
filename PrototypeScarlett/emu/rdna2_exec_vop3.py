@@ -40,9 +40,15 @@ def _float3(function):
 
 
 def _bitfield(value, offset, width, is_signed=False):
+    """(S0 >> S1[4:0]) & ((1 << S2[4:0]) - 1). v_bfe_i32 shifts S0.i arithmetically (ISA section 12.12,
+    p. 169: "D.i = (S0.i >> S1.u[4:0]) & ..."), like s_bfe_i32 (section 12.1, p. 105, rdna2_exec_bits.bfe),
+    then sign-extends the field: a field that runs past bit 31 reads copies of the sign bit."""
     offset, width = offset & 31, width & 31
-    field = (value >> offset) & ((1 << width) - 1) if width else 0
-    return signed(field, width) if is_signed and width else field
+    if not width:
+        return 0
+    if not is_signed:
+        return (value >> offset) & ((1 << width) - 1)
+    return signed((signed(value) >> offset) & ((1 << width) - 1), width)
 
 
 def _perm_b32(src0, src1, src2):
