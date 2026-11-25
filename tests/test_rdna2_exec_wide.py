@@ -8,10 +8,11 @@ import struct
 
 import pytest
 
-from emu import rdna2_exec, rdna2_gpu, rdna2_hlsl
+from emu import rdna2_exec, rdna2_gpu, rdna2_hlsl, rdna2_hlsl_wide
 from emu.rdna2_exec_ops import float_bits
 from test_rdna2_exec import V, const, program, vop1, vop2, vop3
-from test_rdna2_hlsl import compare, store_lane, with_lane_offset
+from test_rdna2_exec_memory import INPUT
+from test_rdna2_hlsl import compare, global_, store_lane, with_lane_offset
 
 LITERAL, ONE, TWO = 255, 242, 244
 gpu = pytest.mark.skipif(not rdna2_gpu.available(), reason="dxc ou anyxboxx_gpu_run.exe absent")
@@ -74,6 +75,49 @@ def test_32_bit_to_double_conversions():
     assert result64(wave, 2) == -7.0
     assert result64(wave, 4) == 4294967289.0
     assert result64(wave, 8) == 0.10000000149011612                      # 0.1f exactement
+
+
+F32_SOURCES = [float_bits(1.0), float_bits(-1.0), 0, 0x8000_0000, 0x7F80_0000, 0xFF80_0000, 0x7FC0_0000,
+               0xFFC0_0000, 0x7FC1_2345, 0xFFC1_2345, float_bits(0.1), 0x7F7F_FFFF, 0x0080_0000, 0x8080_0000,
+               0x0000_0001, 0x8000_0001, 0x007F_FFFF, 0x8001_2345]                # dénormaux : gardés (ISA)
+MODIFIERS = [(0, 0), (0, 1), (1, 0), (1, 1)]                             # (abs, neg) : aucun, -x, |x|, -|x|
+
+
+@pytest.mark.parametrize("abs_, neg, expected", [(0, 1, -1.0), (1, 0, 1.0), (1, 1, -1.0)])
+def test_f32_to_double_applies_source_modifiers(abs_, neg, expected):
+    wave = rdna2_exec.run(program(vop1("v_mov_b32", 2, LITERAL), float_bits(-1.0 if abs_ else 1.0),
+                                  *vop3("v_cvt_f64_f32", 4, V + 2, abs_=abs_, neg=neg)))
+    assert result64(wave, 4) == expected
+
+
+def f32_to_double_program():
+    """Chaque ligne convertit sa source f32 (INPUT + 4 × ligne) sous les quatre combinaisons abs/neg."""
+    words = [*global_("global_load_dword", addr=31, vdst=1, saddr=0)]
+    for slot, (abs_, neg) in enumerate(MODIFIERS):
+        words += vop3("v_cvt_f64_f32", 2 + 2 * slot, V + 1, abs_=abs_, neg=neg)
+    for slot in range(2 * len(MODIFIERS)):
+        words += store_lane(2 + slot, slot)
+    return with_lane_offset(*words)
+
+
+def f32_sources_memory():
+    sources = (F32_SOURCES * 3)[:32]
+    memory = bytearray(INPUT + 128)
+    memory[INPUT:] = struct.pack("<32I", *sources)
+    return bytes(memory)
+
+
+def test_f32_to_double_is_translated_without_doubles():
+    [statement] = rdna2_hlsl_wide.statements("v_cvt_f64_f32", [V + 1], 2, "true", abs_bits=1, neg_bits=1)
+    assert "double" not in statement and "0x7FFFFFFFu" in statement and "0x80000000u" in statement
+
+
+@gpu
+def test_f32_to_double_with_abs_neg_matches_interpreter_on_gpu():
+    """-0.0, NaN des deux signes (charge utile gardée), ±infini, dénormaux : le signe suit abs/neg comme
+    dans l'interpréteur. Traduction en entiers : vaut aussi sans doubles (Intel UHD)."""
+    expected, actual = compare(f32_to_double_program(), memory=f32_sources_memory())
+    assert actual == expected
 
 
 def test_fma_rounds_once():
