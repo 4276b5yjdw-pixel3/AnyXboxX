@@ -36,12 +36,33 @@ def test_dynamic_loading_redirects_console_runtime(tmp_path, runtime_dir):
     def code(iat):
         return (Asm().frame().lea_rcx(0x200).call_iat(iat[("kernel32.dll", "LoadLibraryA")])
                 .mov_rcx_rax().lea_rdx(0x220).call_iat(iat[("kernel32.dll", "GetProcAddress")])
-                .nonzero_rax_to_eax().unframe().ret().at(0x200).raw(b"xmem.dll\0")
+                .nonzero_rax_to_eax().raw(b"\x6b\xc0\x2a").unframe().ret().at(0x200).raw(b"xmem.dll\0")
                 .at(0x220).raw(b"XMemAlloc\0").build())
 
     imports = [("kernel32.dll", "LoadLibraryA"), ("kernel32.dll", "GetProcAddress")]
     exe = build_pe(tmp_path / "dynamic.exe", code, imports=imports, dll=False)
-    assert launch(runtime_dir, exe).returncode == 1
+    assert launch(runtime_dir, exe).returncode == 42
+
+
+def test_local_dll_registry_import_is_redirected(tmp_path, runtime_dir):
+    registry = ("advapi32.dll", "RegOpenKeyExW")
+
+    def helper_code(iat):
+        asm = Asm()
+        return (asm.raw(b"\x48\x8b\x05" + asm._disp(iat[registry], 7)).ret()
+                .at(0x100).mov_eax(1).ret().build())
+
+    build_pe(tmp_path / "helper.dll", helper_code, imports=[registry],
+             exports=[("RegistryAddress", 0)], entry=0x100)
+    helper = ("helper.dll", "RegistryAddress")
+
+    def code(iat):
+        asm = Asm().frame().call_iat(iat[helper])
+        return (asm.raw(b"\x48\x3b\x05" + asm._disp(iat[registry], 7))
+                .raw(b"\x0f\x94\xc0\x0f\xb6\xc0\x6b\xc0\x2a").unframe().ret().build())
+
+    exe = build_pe(tmp_path / "uses-helper.exe", code, imports=[helper, registry], dll=False)
+    assert launch(runtime_dir, exe).returncode == 42
 
 
 def test_thread_local_works_without_python(tmp_path, runtime_dir):
