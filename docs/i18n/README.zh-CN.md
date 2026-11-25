@@ -231,7 +231,7 @@ def XSystemGetDeviceType(c):
 
 ## 参与贡献
 
-`main` 分支受到保护：所有贡献都必须经过审阅的 pull request，并且测试必须通过。缺陷和需要模拟的函数请在 issue 中提交。完整规则见 [CONTRIBUTING.md](../../CONTRIBUTING.md)（法语）。
+`main` 分支受到保护：所有贡献都必须经过审阅的 pull request，并且测试必须通过。缺陷和需要模拟的函数请在 issue 中提交。完整规则见 [CONTRIBUTING.md](../../CONTRIBUTING.md)。
 
 讨论、求助和测试报告：[Discord](https://discord.gg/TcX42vRyPU)。
 

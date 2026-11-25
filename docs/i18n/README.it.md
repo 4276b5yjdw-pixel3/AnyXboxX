@@ -231,7 +231,7 @@ def XSystemGetDeviceType(c):
 
 ## Contribuire
 
-Il ramo `main` è protetto: ogni contributo passa da una pull request revisionata e i test devono passare. I bug e le funzioni da emulare si segnalano nelle issue. Le regole complete sono in [CONTRIBUTING.md](../../CONTRIBUTING.md) (in francese).
+Il ramo `main` è protetto: ogni contributo passa da una pull request revisionata e i test devono passare. I bug e le funzioni da emulare si segnalano nelle issue. Le regole complete sono in [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 Discussione, aiuto e report di test: [Discord](https://discord.gg/TcX42vRyPU)
 
