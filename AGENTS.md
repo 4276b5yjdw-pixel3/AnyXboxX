@@ -1,6 +1,6 @@
 # AGENTS.md — AnyXboxX
 
-Guide for AI coding agents and contributors working in this repository. Human contribution rules (fork, pull request, review) are in [CONTRIBUTING.md](CONTRIBUTING.md), in French.
+Guide for AI coding agents and contributors working in this repository. Human contribution rules (fork, pull request, review) are in [CONTRIBUTING.md](CONTRIBUTING.md). Issues, pull requests and commit messages are written in English.
 
 ## What the project is
 
@@ -51,7 +51,7 @@ cargo build --release --manifest-path rust/Cargo.toml
 4. **Verify against an oracle.** Decoder changes are checked against the LLVM tables (`python tools/rdna2_mnemonics.py <llvm .s folder> --verifier`); every HLSL translation is checked against the reference interpreter, byte for byte, on GPU or WARP.
 5. **Tests with every change.** New behaviour comes with a test that fails without it.
 6. **README in 9 languages.** `README.md` (English) and `docs/i18n/README.*.md` must stay in sync: same table rows, same test count (rounded down to the hundred, written `800+`, checked by `tests/test_readme_sync.py`), same images. Image text is in English.
-7. **Git**: `main` is protected; work on a branch and open a pull request; CI (`.github/workflows/tests.yml`) must pass. Commit messages: `type: description` (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`), written in French like the history.
+7. **Git**: `main` is protected; work on a branch and open a pull request; CI (`.github/workflows/tests.yml`) must pass. Commit messages: `type: description` (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`), written in English (older history is in French).
 8. **Code style**: small focused files (under about 400 lines), small functions, explicit error handling, no hidden mutation of shared state, constants instead of magic numbers where it helps reading.
 9. **Native mode runs code unsandboxed.** Only run trusted test programs with `--natif` or `anyxboxx.exe`.
 
