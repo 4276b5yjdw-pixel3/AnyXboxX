@@ -1922,7 +1922,7 @@ mod coalesce_tests {
     fn near_runs_join_far_ones_stay() {
         let runs = [(0, 4), (8, 4), (100, 4), (300, 4)];
         assert_eq!(coalesce_runs(&runs, 16), vec![(0, 12), (100, 4), (300, 4)]);
-        assert_eq!(coalesce_runs(&runs, 256), vec![(0, 104), (300, 4)]);
+        assert_eq!(coalesce_runs(&runs, 100), vec![(0, 104), (300, 4)]);
     }
 
     #[test]

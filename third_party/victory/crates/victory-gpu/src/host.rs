@@ -5329,7 +5329,7 @@ impl Host {
         let mut jobs_in: Vec<(std::sync::Arc<crate::shadow::Shadow>, usize, usize, usize, u64)> = Vec::new();
         if let Some((data, _)) = kept_down {
             for (shadow, lo, hi, at, _, after) in &kept {
-                jobs_in.push((shadow.clone(), *lo, *hi, *data + *at as usize, *after));
+                jobs_in.push((shadow.clone(), *lo, *hi, data + *at as usize, *after));
             }
         }
         if let Some((data, _, after)) = live_down {
