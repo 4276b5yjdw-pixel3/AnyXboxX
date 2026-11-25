@@ -108,6 +108,25 @@ fn allocates_relocates_and_protects_a_synthetic_image() {
     ));
 }
 
+#[cfg(all(windows, target_arch = "x86_64"))]
+#[test]
+fn calls_a_synthetic_image_entry_point() {
+    use anyxboxx_native_launcher::memory::{Allocation, MemoryError};
+    let mut file = fixture();
+    // mov eax, 42; ret -- generated test code, independent of any game.
+    file[0x200..0x206].copy_from_slice(&[0xb8, 42, 0, 0, 0, 0xc3]);
+    let mut image = Image::parse(&file).unwrap();
+    let allocation = Allocation::map(&mut image).unwrap();
+    // SAFETY: this test supplies its own six-byte x86-64 function.
+    assert!(matches!(
+        unsafe { allocation.call_entry(&image) },
+        Err(MemoryError::InvalidEntry)
+    ));
+    allocation.protect(&image).unwrap();
+    // SAFETY: the synthetic function uses the Windows x64 ABI and needs no imports or TLS.
+    assert_eq!(unsafe { allocation.call_entry(&image) }.unwrap(), 42);
+}
+
 #[cfg(windows)]
 #[test]
 fn tls_registration_rejects_missing_carrier_and_invalid_directory() {

@@ -37,6 +37,7 @@ pub enum MemoryError {
     Protection(std::io::Error),
     AlreadyProtected,
     WrongImage,
+    InvalidEntry,
 }
 
 impl fmt::Display for MemoryError {
@@ -47,16 +48,24 @@ impl fmt::Display for MemoryError {
             Self::Protection(error) => write!(f, "protection de l'image impossible: {error}"),
             Self::AlreadyProtected => f.write_str("image déjà protégée"),
             Self::WrongImage => f.write_str("taille d'image incohérente"),
+            Self::InvalidEntry => f.write_str("point d'entrée de l'image invalide"),
         }
     }
 }
 
 impl std::error::Error for MemoryError {}
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum State {
+    Writable,
+    ProtectionFailed,
+    Protected,
+}
+
 pub struct Allocation {
     base: NonNull<u8>,
     size: usize,
-    protected: Cell<bool>,
+    state: Cell<State>,
 }
 
 impl Allocation {
@@ -82,7 +91,7 @@ impl Allocation {
         let allocation = Self {
             base,
             size,
-            protected: Cell::new(false),
+            state: Cell::new(State::Writable),
         };
         image
             .relocate(base.as_ptr() as u64)
@@ -98,7 +107,7 @@ impl Allocation {
 
     /// Copy the image after imports are bound, before applying page protections.
     pub fn sync(&self, image: &Image) -> Result<(), MemoryError> {
-        if self.protected.get() {
+        if self.state.get() != State::Writable {
             return Err(MemoryError::AlreadyProtected);
         }
         if image.bytes.len() != self.size {
@@ -109,10 +118,29 @@ impl Allocation {
         Ok(())
     }
 
+    /// Invoke the image entry point after imports, protections, exceptions and TLS are installed.
+    ///
+    /// # Safety
+    /// The image must be trusted executable x86-64 code and all its runtime state must be ready.
+    pub unsafe fn call_entry(&self, image: &Image) -> Result<i32, MemoryError> {
+        let offset = image.entry_rva as usize;
+        if self.state.get() != State::Protected
+            || image.bytes.len() != self.size
+            || offset >= self.size
+        {
+            return Err(MemoryError::InvalidEntry);
+        }
+        // SAFETY: caller guarantees this address is a valid entry point with the Windows ABI.
+        let entry: unsafe extern "system" fn() -> i32 =
+            unsafe { std::mem::transmute(self.base.as_ptr().add(offset)) };
+        // SAFETY: caller guarantees the mapped code is trusted and initialized.
+        Ok(unsafe { entry() })
+    }
+
     /// Apply the same section protection choices as the native launcher.
     pub fn protect(&self, image: &Image) -> Result<(), MemoryError> {
         // A partial failure can leave some pages read-only, so further sync must be refused.
-        self.protected.set(true);
+        self.state.set(State::ProtectionFailed);
         self.protect_range(0, image.headers_size as usize, PAGE_READONLY)?;
         for section in &image.sections {
             let length = section.virtual_size.max(section.raw_size) as usize;
@@ -136,6 +164,7 @@ impl Allocation {
         {
             return Err(MemoryError::Protection(std::io::Error::last_os_error()));
         }
+        self.state.set(State::Protected);
         Ok(())
     }
 
