@@ -99,3 +99,35 @@ fn allocates_relocates_and_protects_a_synthetic_image() {
     assert_eq!(actual, expected);
     allocation.protect(&image).unwrap();
 }
+
+#[test]
+fn decodes_named_and_ordinal_imports_and_rejects_truncated_tables() {
+    use anyxboxx_native_launcher::imports::{Import, Symbol, imports};
+    let mut file = fixture();
+    put32(&mut file, 0x98 + 112 + 8, 0x1140);
+    put32(&mut file, 0x340, 0x1180);
+    put32(&mut file, 0x34c, 0x11c0);
+    put32(&mut file, 0x350, 0x11a0);
+    put64(&mut file, 0x380, 0x11d0);
+    put64(&mut file, 0x388, 0x8000_0000_0000_0007);
+    file[0x3c0..0x3c9].copy_from_slice(b"test.dll\0");
+    file[0x3d2..0x3d7].copy_from_slice(b"Func\0");
+    let image = Image::parse(&file).unwrap();
+    assert_eq!(
+        imports(&image).unwrap(),
+        vec![
+            Import {
+                dll: b"test.dll".to_vec(),
+                symbol: Symbol::Name(b"Func".to_vec()),
+                slot: 0x11a0
+            },
+            Import {
+                dll: b"test.dll".to_vec(),
+                symbol: Symbol::Ordinal(7),
+                slot: 0x11a8
+            },
+        ]
+    );
+    put64(&mut file, 0x380, 0x4000);
+    assert!(imports(&Image::parse(&file).unwrap()).is_err());
+}
