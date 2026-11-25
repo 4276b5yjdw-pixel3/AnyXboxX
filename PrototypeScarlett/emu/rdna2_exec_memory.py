@@ -9,6 +9,7 @@ publique d'AMD (« RDNA 2 Instruction Set Architecture »).
 import re
 import struct
 
+from emu import rdna2_exec_atomic, rdna2_exec_lanes, rdna2_exec_smem
 from emu.rdna2_exec_ops import MASK32, signed
 
 PAGE = 4096
@@ -33,7 +34,7 @@ LDS_SIMPLE_ATOMICS = ("add", "sub", "and", "or", "xor")
 VECTOR_PATTERN = re.compile(r"^(global|flat|scratch|buffer)_(load|store)_([a-z0-9]+)$")
 VECTOR_ATOMIC = re.compile(r"^(global|flat|buffer)_atomic_(add|sub|swap|and|or|xor|umin|umax|smin|smax)$")
 SCALAR_PATTERN = re.compile(r"^s_(buffer_)?load_(dword|dwordx2|dwordx4|dwordx8|dwordx16)$")
-LDS_PATTERN = re.compile(r"^ds_(read|write)(2?)_(b32|b64|b96|b128|u8|i8|u16|i16|b8|b16)$")
+LDS_PATTERN = re.compile(r"^ds_(read|write)(2st64|2)?_(b32|b64|b96|b128|u8|i8|u16|i16|b8|b16)$")
 LDS_ATOMIC = re.compile(r"^ds_(add|sub|and|or|xor|min|max)(_rtn)?_(u32|i32|b32)$")
 # Formes _d16 : la valeur est une moitié (16 bits) du VGPR. {nom: (sens, type, moitié haute)}.
 LDS_HALVES = {
@@ -44,7 +45,7 @@ LDS_HALVES = {
 HALF_BITS, HALF_MASK = 16, 0xFFFF
 CACHE_CONTROL = frozenset({"s_dcache_inv", "s_gl1_inv", "s_dcache_wb", "buffer_gl0_inv", "buffer_gl1_inv",
                            "ds_nop"})
-OTHER = frozenset({"s_memtime", "s_memrealtime", "ds_bpermute_b32"})
+OTHER = frozenset({"s_memtime", "s_memrealtime", *rdna2_exec_lanes.NAMES})
 
 
 class Memory:
@@ -81,7 +82,9 @@ def supports(name):
     vector = VECTOR_PATTERN.match(name)
     return bool(name in CACHE_CONTROL or name in OTHER or vector and vector.group(3) in WIDTHS
                 or VECTOR_ATOMIC.match(name) or SCALAR_PATTERN.match(name)
-                or LDS_PATTERN.match(name) or LDS_ATOMIC.match(name) or name in LDS_HALVES)
+                or LDS_PATTERN.match(name) or LDS_ATOMIC.match(name) or name in LDS_HALVES
+                or rdna2_exec_atomic.vector(name) or rdna2_exec_atomic.lds(name)
+                or rdna2_exec_atomic.lds_exchange2(name) or rdna2_exec_smem.supports(name))
 
 
 def _to_words(data):
@@ -111,7 +114,9 @@ def execute(wave, family, name, word):
     """Exécute une instruction mémoire dont `supports(name)` est vrai ; `word` : 64 bits."""
     if name in CACHE_CONTROL:
         return
-    if family == "SMEM":
+    if family == "SMEM" and rdna2_exec_smem.supports(name):
+        rdna2_exec_smem.execute(wave, name, word)
+    elif family == "SMEM":
         _scalar(wave, name, word)
     elif family == "DS":
         _lds(wave, name, word)
@@ -157,13 +162,12 @@ def _scalar(wave, name, word):
 def _lds(wave, name, word):
     offset0, offset1 = word & 0xFF, (word >> 8) & 0xFF
     addr, data0, data1, vdst = ((word >> shift) & 0xFF for shift in (32, 40, 48, 56))
-    if name == "ds_bpermute_b32":
-        values = list(wave.v[data0])
-        for lane in wave.active():
-            wave.v[vdst][lane] = values[((wave.v[addr][lane] + (offset1 << 8 | offset0)) // DWORD) % 32]
+    if name in rdna2_exec_lanes.NAMES:
+        rdna2_exec_lanes.execute(wave, name, addr, data0, vdst, offset1 << 8 | offset0)
         return
     atomic = LDS_ATOMIC.match(name)
     found = LDS_PATTERN.match(name)
+    extended, exchange2 = rdna2_exec_atomic.lds(name), rdna2_exec_atomic.lds_exchange2(name)
     for lane in wave.active():
         base = wave.v[addr][lane]
         if name in LDS_HALVES:
@@ -172,9 +176,16 @@ def _lds(wave, name, word):
         if atomic:
             _lds_atomic(wave, atomic, base + (offset1 << 8 | offset0), data0, vdst, lane)
             continue
+        if extended:
+            _lds_atomic_ext(wave, extended, base + (offset1 << 8 | offset0), (data0, data1), vdst, lane)
+            continue
+        if exchange2:
+            _lds_exchange2(wave, exchange2, base, (offset0, offset1), (data0, data1), vdst, lane)
+            continue
         size = WIDTHS[found.group(3)]
-        if found.group(2):          # read2/write2 : deux accès, décalages en éléments
-            places = [(base + offset0 * size, data0, vdst), (base + offset1 * size, data1, vdst + size // DWORD)]
+        if found.group(2):          # read2/write2[st64] : deux accès, décalages en éléments (× 64 pour st64)
+            step = size * (rdna2_exec_atomic.STRIDE64 if found.group(2) == "2st64" else 1)
+            places = [(base + offset0 * step, data0, vdst), (base + offset1 * step, data1, vdst + size // DWORD)]
         else:
             places = [(base + (offset1 << 8 | offset0), data0, vdst)]
         for address, source, target in places:
@@ -214,6 +225,37 @@ def _lds_atomic(wave, found, address, data0, vdst, lane):
         wave.v[vdst][lane] = old
 
 
+def _lane_value(wave, register, lane, width):
+    """Valeur de `width` bits dans les VGPR register, register + 1… d'une ligne."""
+    return sum(wave.v[register + i][lane] << (32 * i) for i in range(width // 32))
+
+
+def _set_lane_value(wave, register, lane, value, width):
+    for i in range(width // 32):
+        wave.v[register + i][lane] = value >> (32 * i) & MASK32
+
+
+def _lds_atomic_ext(wave, spec, address, sources, vdst, lane):
+    width, operation, returns = spec
+    size, address = width // 8, address % LDS_SIZE
+    old = int.from_bytes(wave.lds[address:address + size], "little")
+    a, b = (_lane_value(wave, register, lane, width) for register in sources)
+    wave.lds[address:address + size] = operation(old, a, b).to_bytes(size, "little")
+    if returns:
+        _set_lane_value(wave, vdst, lane, old, width)
+
+
+def _lds_exchange2(wave, spec, base, offsets, sources, vdst, lane):
+    """ds_wrxchg2[st64]_rtn : deux échanges, anciennes valeurs dans vdst puis vdst + largeur."""
+    width, stride = spec
+    size = width // 8
+    for index, (offset, source) in enumerate(zip(offsets, sources)):
+        address = (base + offset * size * stride) % LDS_SIZE
+        old = int.from_bytes(wave.lds[address:address + size], "little")
+        wave.lds[address:address + size] = _lane_value(wave, source, lane, width).to_bytes(size, "little")
+        _set_lane_value(wave, vdst + index * width // 32, lane, old, width)
+
+
 # --- FLAT / GLOBAL et MUBUF : mémoire vectorielle ------------------------------------------
 
 def _flat(wave, family, name, word):
@@ -233,8 +275,8 @@ def _buffer(wave, name, word):
     base, stride, records = descriptor(wave, ((word >> 48) & 0x1F) * 4)
     soffset_code = (word >> 56) & 0xFF
     soffset = 0 if soffset_code == NULL else wave.read_scalar(soffset_code, None)
-    plain = VECTOR_PATTERN.match(name)
-    size = WIDTHS[plain.group(3)] if plain else DWORD
+    plain, extended = VECTOR_PATTERN.match(name), rdna2_exec_atomic.vector(name)
+    size = WIDTHS[plain.group(3)] if plain else extended[0] // 8 if extended else DWORD
     for lane in wave.active():
         index = wave.v[vaddr][lane] if idxen else 0
         byte_offset = offset + (wave.v[vaddr + idxen][lane] if offen else 0)
@@ -244,6 +286,11 @@ def _buffer(wave, name, word):
 
 
 def _access(wave, name, address, data, vdst, lane, inside=True, returns=False):
+    extended = rdna2_exec_atomic.vector(name)
+    if extended:
+        if inside:
+            _vector_atomic_ext(wave, extended, address, data, vdst, lane, returns)
+        return
     atomic = VECTOR_ATOMIC.match(name)
     if atomic:
         if inside:
@@ -260,3 +307,15 @@ def _access(wave, name, address, data, vdst, lane, inside=True, returns=False):
     else:
         loaded = wave.memory.read(address, size) if inside else bytes(size)
         _load_into(wave, vdst, lane, loaded, found.group(3))
+
+
+def _vector_atomic_ext(wave, spec, address, data, vdst, lane, returns):
+    """cmpswap, inc/dec, csub, flottants et formes _x2 : DATA[0] puis DATA[1] (cmpswap) en VGPR."""
+    width, operation, words = spec
+    size = width // 8
+    old = int.from_bytes(wave.memory.read(address, size), "little")
+    a = _lane_value(wave, data, lane, width)
+    b = _lane_value(wave, data + width // 32, lane, width) if words > width // 32 else 0
+    wave.memory.write(address, operation(old, a, b).to_bytes(size, "little"))
+    if returns:                                   # glc : la valeur d'avant est renvoyée
+        _set_lane_value(wave, vdst, lane, old, width)

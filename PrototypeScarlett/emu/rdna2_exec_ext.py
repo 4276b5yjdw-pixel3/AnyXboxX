@@ -3,7 +3,7 @@ for VOP1, VOP2, and VOPC instructions in the reference interpreter (#21).
 
 Semantics follow AMD's public RDNA 2 ISA specification (sections 6.5 SDWA and 6.6 DPP).
 """
-from emu.rdna2_exec_ops import VECTOR, VECTOR_COMPARE, bits_float, float_bits
+from emu.rdna2_exec_ops import SIXTEEN_BIT_RESULTS, VECTOR, VECTOR_COMPARE, bits_float, float_bits
 from emu.rdna2_operands_ext import BOUND_CTRL_BIT, CLAMP_BIT, DPP8, DPP8_FI, DPP16, FI_BIT, OMOD_SHIFT, SDWA
 
 MASK32 = 0xFFFF_FFFF
@@ -19,9 +19,11 @@ def is_ext(family, src0):
 
 def _operand_float_flags(name):
     """Return (src_is_f32, dst_is_f32) from the instruction's operand types."""
-    if name.startswith("v_cvt_"):
+    if name.startswith("v_cvt_"):            # v_cvt_[mode_]<destination>_<source>
         parts = name.split("_")
-        return len(parts) >= 4 and parts[3] == "f32", len(parts) >= 3 and parts[2] == "f32"
+        return parts[-1] == "f32", parts[-2] == "f32"
+    if name == "v_frexp_exp_i32_f32":
+        return True, False
     is_f32 = name.endswith("_f32")
     return is_f32, is_f32
 
@@ -103,6 +105,9 @@ def _dpp16_source_lane(lane, ctrl):
 def _exec_sdwa(wave, family, name, fields, ext):
     from emu.rdna2_exec import Untranslated
 
+    if name in SIXTEEN_BIT_RESULTS:
+        raise Untranslated(f"{name} en SDWA : résultat 16 bits sous dst_sel non vérifié")
+
     src_is_float, dst_is_float = _operand_float_flags(name)
     s0_code = ext & 0xFF
     s0_scalar = (ext >> 23) & 1
@@ -125,11 +130,11 @@ def _exec_sdwa(wave, family, name, fields, ext):
             if test(a, b):
                 mask |= 1 << lane
         if writes_exec:
-            wave.s[126] = mask
+            wave.write_mask(126, mask)
         elif (ext >> 15) & 1:
-            wave.write_scalar((ext >> 8) & 0x7F, mask)
+            wave.write_mask((ext >> 8) & 0x7F, mask)
         else:
-            wave.s[106] = mask
+            wave.write_mask(106, mask)
         return
 
     operation = VECTOR[name]

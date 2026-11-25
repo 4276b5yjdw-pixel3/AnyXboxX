@@ -8,7 +8,8 @@ référence emu/rdna2_exec*, contre lequel la traduction est vérifiée.
 """
 import re
 
-from emu.rdna2_exec_ops import float_bits, signed
+from emu.rdna2_exec_ops import SOPP_NO_EFFECT, float_bits, signed
+from emu.rdna2_hlsl_helpers import HELPERS  # noqa: F401  (réexporté : rdna2_hlsl, graphics, wave64)
 
 NULL, VCC, EXEC, OFF = 125, 106, 126, 0x7D
 INLINE_FLOATS = {240: 0.5, 241: -0.5, 242: 1.0, 243: -1.0, 244: 2.0, 245: -2.0, 246: 4.0, 247: -4.0,
@@ -18,95 +19,6 @@ INLINE_FLOATS = {240: 0.5, 241: -0.5, 242: 1.0, 243: -1.0, 244: 2.0, 245: -2.0, 
 class Untranslatable(NotImplementedError):
     """Instruction que le recompilateur ne sait pas encore traduire en HLSL."""
 
-
-HELPERS = """uint MulHiU32(uint a, uint b) {
-  uint a0 = a & 0xFFFFu, a1 = a >> 16, b0 = b & 0xFFFFu, b1 = b >> 16;
-  uint p00 = a0 * b0, p01 = a0 * b1, p10 = a1 * b0, p11 = a1 * b1;
-  uint mid = (p00 >> 16) + (p01 & 0xFFFFu) + (p10 & 0xFFFFu);
-  return p11 + (p01 >> 16) + (p10 >> 16) + (mid >> 16);
-}
-uint MulHiI32(uint a, uint b) {
-  return MulHiU32(a, b) - (asint(a) < 0 ? b : 0u) - (asint(b) < 0 ? a : 0u);
-}
-uint BfeI32(uint v, uint off, uint w) {
-  w &= 31u;
-  if (w == 0u) return 0u;
-  uint field = (v >> (off & 31u)) & ((1u << w) - 1u);
-  uint shift = 32u - w;
-  return asuint((asint(field) << shift) >> shift);
-}
-uint SatF32ToI32(uint a) {
-  float x = asfloat(a);
-  if ((a & 0x7FFFFFFFu) > 0x7F800000u) return 0u;          // NaN : test sur les bits, pas x != x
-  if (x >= 2147483648.0f) return 0x7FFFFFFFu;
-  if (x <= -2147483648.0f) return 0x80000000u;
-  return asuint((int)x);
-}
-uint SatF32ToU32(uint a) {
-  float x = asfloat(a);
-  if ((a & 0x7FFFFFFFu) > 0x7F800000u || x <= 0.0f) return 0u;
-  return x >= 4294967296.0f ? 0xFFFFFFFFu : (uint)x;
-}
-uint SBfeU32(uint v, uint c) {
-  uint w = (c >> 16) & 0x7Fu;
-  if (w == 0u) return 0u;
-  uint field = v >> (c & 31u);
-  return w >= 32u ? field : field & ((1u << w) - 1u);
-}
-uint SBfeI32(uint v, uint c) {
-  uint w = (c >> 16) & 0x7Fu;
-  if (w == 0u) return 0u;
-  int field = asint(v) >> (c & 31u);
-  if (w >= 32u) return asuint(field);
-  uint shift = 32u - w;
-  return asuint((field << shift) >> shift);
-}
-uint WqmB32(uint v) {
-  uint r = 0u;
-  [unroll] for (uint q = 0u; q < 32u; q += 4u) { if (((v >> q) & 0xFu) != 0u) r |= 0xFu << q; }
-  return r;
-}
-uint QuadMaskB32(uint v) {
-  uint r = 0u;
-  [unroll] for (uint q = 0u; q < 8u; ++q) { if (((v >> (q * 4u)) & 0xFu) != 0u) r |= 1u << q; }
-  return r;
-}
-uint LeadingSignsI32(uint v) {
-  uint x = (v & 0x80000000u) != 0u ? ~v : v;
-  return x == 0u ? 0xFFFFFFFFu : 31u - firstbithigh(x);
-}
-uint AlignBit(uint hi, uint lo, uint s) {
-  s &= 31u;
-  return s == 0u ? lo : ((hi << (32u - s)) | (lo >> s));
-}
-uint SadU32(uint a, uint b, uint c) {
-  return (a > b ? (a - b) : (b - a)) + c;
-}
-uint MulLegacyF32(uint a, uint b) {
-  float x = asfloat(a), y = asfloat(b);
-  return (x == 0.0f || y == 0.0f) ? 0u : asuint(x * y);
-}
-uint FmaLegacyF32(uint a, uint b, uint c) {
-  float x = asfloat(a), y = asfloat(b);
-  return (x == 0.0f || y == 0.0f) ? c : asuint(mad(x, y, asfloat(c)));
-}
-uint PermB32(uint a, uint b, uint c) {
-  uint r = 0u;
-  [unroll] for (uint i = 0u; i < 4u; ++i) {
-    uint sel = (c >> (i * 8u)) & 0xFFu;
-    uint bt = 0xFFu;
-    if (sel < 4u) bt = (b >> (sel * 8u)) & 0xFFu;
-    else if (sel < 8u) bt = (a >> ((sel - 4u) * 8u)) & 0xFFu;
-    else if (sel == 8u) bt = (b & 0x00008000u) != 0u ? 0xFFu : 0u;
-    else if (sel == 9u) bt = (b & 0x80000000u) != 0u ? 0xFFu : 0u;
-    else if (sel == 10u) bt = (a & 0x00008000u) != 0u ? 0xFFu : 0u;
-    else if (sel == 11u) bt = (a & 0x80000000u) != 0u ? 0xFFu : 0u;
-    else if (sel == 12u) bt = 0u;
-    r |= bt << (i * 8u);
-  }
-  return r;
-}
-"""
 
 
 def hexa(value):
@@ -130,6 +42,19 @@ def source(code, literal=None):
     if code == 255 and literal is not None:
         return hexa(literal)
     raise Untranslatable(f"opérande {code} non traduit")
+
+
+def source_high(code):
+    """Mot haut (uint) d'une source 64 bits : registre suivant, ou extension d'une constante entière."""
+    if code >= 256:
+        return f"v[{code - 255}]"
+    if code < 128 and code != NULL:
+        return f"s[{code + 1}]"
+    if code == NULL or 128 <= code <= 192:
+        return "0u"
+    if 193 <= code <= 208:
+        return "0xFFFFFFFFu"
+    raise Untranslatable(f"opérande 64 bits {code} non traduit")
 
 
 def scalar_target(code):
@@ -211,7 +136,7 @@ for _op in ("andn1", "andn2"):
 for _name in ("s_nop", "s_waitcnt", "s_waitcnt_vscnt", "s_waitcnt_vmcnt", "s_waitcnt_expcnt",
               "s_waitcnt_lgkmcnt", "s_barrier", "s_sleep", "s_setprio", "s_ttracedata",
               "s_dcache_inv", "s_gl1_inv", "buffer_gl0_inv", "buffer_gl1_inv", "s_clause",
-              "s_inst_prefetch"):
+              "s_inst_prefetch", *SOPP_NO_EFFECT):
     SCALAR[_name] = ""
 COMPARE_OPERATORS = {"eq": "==", "lg": "!=", "ne": "!=", "neq": "!=", "gt": ">", "ge": ">=", "lt": "<", "le": "<="}
 for _op, _symbol in COMPARE_OPERATORS.items():
@@ -251,13 +176,13 @@ VECTOR = {
     "v_mul_legacy_f32": "MulLegacyF32({a}, {b})",
     "v_min_f32": "asuint(min(asfloat({a}), asfloat({b})))",
     "v_max_f32": "asuint(max(asfloat({a}), asfloat({b})))",
-    "v_fmac_f32": "asuint(mad(asfloat({a}), asfloat({b}), asfloat({d})))",
+    "v_fmac_f32": "FmaF32({a}, {b}, {d})",                 # arrondi unique : emu/rdna2_hlsl_fma.py
     "v_mac_f32": "asuint(mad(asfloat({a}), asfloat({b}), asfloat({d})))",
-    "v_fma_f32": "asuint(mad(asfloat({a}), asfloat({b}), asfloat({c})))",
+    "v_fma_f32": "FmaF32({a}, {b}, {c})",
     "v_mad_f32": "asuint(mad(asfloat({a}), asfloat({b}), asfloat({c})))",
     "v_fma_legacy_f32": "FmaLegacyF32({a}, {b}, {c})",
-    "v_fmamk_f32": "asuint(mad(asfloat({a}), asfloat({k}), asfloat({b})))",
-    "v_fmaak_f32": "asuint(mad(asfloat({a}), asfloat({b}), asfloat({k})))",
+    "v_fmamk_f32": "FmaF32({a}, {k}, {b})",
+    "v_fmaak_f32": "FmaF32({a}, {b}, {k})",
     "v_rcp_f32": "asuint(rcp(asfloat({a})))",
     "v_rsq_f32": "asuint(rsqrt(asfloat({a})))",
     "v_sqrt_f32": "asuint(sqrt(asfloat({a})))",
@@ -276,6 +201,8 @@ VECTOR = {
     "v_cvt_u32_f32": "SatF32ToU32({a})",
     "v_cvt_i32_f32": "SatF32ToI32({a})",
     "v_cvt_f32_ubyte0": "asuint((float)({a} & 0xFFu))",
+    "v_sat_pk_u8_i16": "((uint)clamp((int)(({a}) << 16u) >> 16, 0, 255) "
+                       "| ((uint)clamp((int)({a}) >> 16, 0, 255) << 8u))",
     "v_cvt_f32_ubyte1": "asuint((float)(({a} >> 8) & 0xFFu))",
     "v_cvt_f32_ubyte2": "asuint((float)(({a} >> 16) & 0xFFu))",
     "v_cvt_f32_ubyte3": "asuint((float)(({a} >> 24) & 0xFFu))",
@@ -334,9 +261,39 @@ VECTOR = {
     "v_mbcnt_lo_u32_b32": "(countbits({a} & ((1u << lane) - 1u)) + {b})",
     "v_mbcnt_hi_u32_b32": "{b}",
     "v_cndmask_b32": "((({c} >> lane) & 1u) != 0 ? {b} : {a})",
+    "v_mul_hi_i32_i24": "MulHiI32(asuint((asint({a}) << 8) >> 8), asuint((asint({b}) << 8) >> 8))",
+    "v_cvt_flr_i32_f32": "FloorToI32({a}, false)",
+    "v_cvt_rpi_i32_f32": "FloorToI32({a}, true)",
+    "v_cvt_off_f32_i4": "asuint((float)((asint({a}) << 28) >> 28) * 0.0625f)",
+    "v_rcp_iflag_f32": "asuint(rcp(asfloat({a})))",
+    "v_ffbh_i32": "LeadingSignsI32({a})",
+    "v_frexp_exp_i32_f32": "FrexpExpF32({a})",
+    "v_frexp_mant_f32": "FrexpMantF32({a})",
+    "v_fmac_legacy_f32": "FmaLegacyF32({a}, {b}, {d})",
+    "v_madmk_f32": "asuint(mad(asfloat({a}), asfloat({k}), asfloat({b})))",
+    "v_madak_f32": "asuint(mad(asfloat({a}), asfloat({b}), asfloat({k})))",
+    "v_mul_lo_i32": "({a} * {b})",
+    "v_sad_u8": "(SadU8({a}, {b}) + {c})",
+    "v_sad_hi_u8": "((SadU8({a}, {b}) << 16) + {c})",
+    "v_lerp_u8": "LerpU8({a}, {b}, {c})",
+    "v_cubeid_f32": "asuint(Cube({a}, {b}, {c}).x)",
+    "v_cubesc_f32": "asuint(Cube({a}, {b}, {c}).y)",
+    "v_cubetc_f32": "asuint(Cube({a}, {b}, {c}).z)",
+    "v_cubema_f32": "asuint(Cube({a}, {b}, {c}).w)",
 }
-COMPARE = re.compile(r"^v_cmp(x?)_(f|lt|eq|le|gt|lg|ge|ne|neq|t|tru)_(f32|u32|i32)$")
+COMPARE = re.compile(r"^v_cmp(x?)_(f|lt|eq|le|gt|lg|ge|ne|neq|t|tru|o|u|nge|nlg|ngt|nle|nlt|class)"
+                     r"_(f32|u32|i32)$")
 CONSTANT_TESTS = {"f": "false", "t": "true", "tru": "true"}
+# Tests flottants non ordonnés (vrais si une source est NaN) : négation du test ordonné.
+# NaN testé à part : sans cela, le pilote AMD RDNA 2 confond comparaisons ordonnées et non ordonnées (#134).
+UNORDERED_F32 = {
+    "o": "(!IsNanF32({a}) && !IsNanF32({b}))", "u": "(IsNanF32({a}) || IsNanF32({b}))",
+    "nge": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) >= asfloat({b})))",
+    "nlg": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) < asfloat({b}) || asfloat({a}) > asfloat({b})))",
+    "ngt": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) > asfloat({b})))",
+    "nle": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) <= asfloat({b})))",
+    "nlt": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) < asfloat({b})))", "class": "((({b}) >> ClassF32({a})) & 1u) != 0u",
+}
 
 
 def compare_condition(name, a, b):
@@ -344,10 +301,16 @@ def compare_condition(name, a, b):
     operation, kind = found.group(2), found.group(3)
     if operation in CONSTANT_TESTS:
         return CONSTANT_TESTS[operation]
+    if operation in UNORDERED_F32:
+        if kind != "f32":
+            raise Untranslatable(f"non traduite en HLSL : {name}")
+        return UNORDERED_F32[operation].format(a=a, b=b)
     cast = {"f32": "asfloat", "u32": "", "i32": "asint"}[kind]
     symbol = COMPARE_OPERATORS[operation]
     if operation == "lg" and kind == "f32":            # ordonné et différent
-        return f"({cast}({a}) < {cast}({b}) || {cast}({a}) > {cast}({b}))"
+        return f"(!IsNanF32({a}) && !IsNanF32({b}) && ({cast}({a}) < {cast}({b}) || {cast}({a}) > {cast}({b})))"
+    if kind == "f32" and operation in ("lt", "le", "gt", "ge"):
+        return f"(!IsNanF32({a}) && !IsNanF32({b}) && {cast}({a}) {symbol} {cast}({b}))"
     return f"{cast}({a}) {symbol} {cast}({b})"
 
 

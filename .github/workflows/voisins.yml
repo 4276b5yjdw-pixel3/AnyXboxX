@@ -1,5 +1,5 @@
 name: voisins
-# Toutes les heures : TomBox, VIctory (branche anyxboxx/stable de notre fork) et Xbox2Windows ont-ils avancé ? Si oui, la branche « auto/voisins »
+# Toutes les heures : TomBox et Xbox2Windows ont-ils avancé ? Si oui, la branche « auto/voisins »
 # est force-poussée avec le sous-module avancé et les copies recopiées sans modification, et la CI (tests.yml)
 # la teste. Aucune pull request n'est ouverte par Actions : un mainteneur relit la branche et ouvre la PR.
 on:

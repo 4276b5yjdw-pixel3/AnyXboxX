@@ -115,11 +115,10 @@ def test_every_tracked_submodule_is_declared_in_gitmodules_with_its_upstream_url
 
 
 
-def test_victory_follows_its_stable_branch_not_the_default_branch(monkeypatch):
-    victory = next(v for v in sv.VOISINS if v.nom == "VIctory")
-    assert (victory.depot, victory.dossier, victory.sous_module) == ("LooperSalty/victory", "third_party/victory", True)
-    assert victory.branche == "anyxboxx/stable"
-    assert all(v.branche == "" for v in sv.VOISINS if v.nom != "VIctory")
+def test_victory_is_pinned_by_hand_and_a_tracked_branch_is_queried_by_name(monkeypatch):
+    assert all(v.nom != "VIctory" for v in sv.VOISINS)      # épinglé sur le fork, jamais avancé automatiquement
+    victory = sv.Voisin("Factice", "exemple/factice", "third_party/factice", sous_module=True, branche="anyxboxx/stable")
+    assert all(v.branche == "" for v in sv.VOISINS)
     appels = []
 
     def faux_git(*args, **_):
