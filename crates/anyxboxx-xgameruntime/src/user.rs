@@ -63,6 +63,15 @@ unsafe fn valid(user: *const c_void) -> bool {
     !user.is_null() && unsafe { (*user.cast::<UserHandle>()).magic } == HANDLE_MAGIC
 }
 
+/// The XUID of a user handle this module made (C++ `LocalUserId`), or `None` for any other pointer.
+///
+/// # Safety
+/// `user` is null or a pointer the title received from this module (see [`valid`]).
+pub unsafe fn local_user_xuid(user: *const c_void) -> Option<u64> {
+    // SAFETY: forwarded to the contract above.
+    unsafe { valid(user) }.then_some(XUID)
+}
+
 /// Frees a handle made by [`new_handle`].
 pub fn close_handle(user: *mut c_void) {
     if user.is_null() {
