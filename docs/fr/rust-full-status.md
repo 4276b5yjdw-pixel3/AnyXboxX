@@ -82,16 +82,17 @@ Profils (`crates/anyxboxx-launcher/profiles.toml`, un test chacun) :
 | `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, cdylib `no_std` | `test_native_tls.py`, `test_native_tls_callbacks.py`, table d'exports identique | **supprimé** |
 | `runtime/xmem` | `crates/anyxboxx-xmem` (attributs ERA partagés avec le module xmem de VIctory) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
 | `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (file de tâches = `xasync` de VIctory, qui sert déjà les méthodes XThread) | 66 des 90 tests GDK passaient à la dernière mesure complète ; pas re-mesuré depuis | portés depuis : magasin de sauvegardes et GameSave (`save_store.rs`, `save_interface.rs`), stockage local, XStore hors ligne (`store.rs`), HDR, réseau, image du joueur, compteur d'images DXGI. Encore en C++ : `package_interface.cpp` |
+| `runtime/launcher` | `crates/anyxboxx-native-launcher` | `tests/test_rust_native_launcher_parity.py` lance la suite native synthétique contre les deux implémentations | gardé sous `anyxboxx_cpp.exe` comme oracle ; les cas TomBox demandent ses DLL |
 | Lanceur graphique | `crates/anyxboxx-launcher` (nouveau) | 80 tests Rust | |
 
-Comment les DLL Rust du runtime arrivent dans le dossier du runtime : `cargo build --release` les compile, puis `runtime/CMakeLists.txt` les copie de `target/release` vers `runtime/build/bin` (`rust_dlls.cmake` ; s'il en manque une, la compilation s'arrête en donnant la commande à lancer). `cargo build --release` passe donc avant `cmake` (CI, AGENTS.md, README).
+Comment les DLL Rust et le lanceur natif arrivent dans le dossier du runtime : `cargo build --release` les compile, puis `runtime/CMakeLists.txt` les copie de `target/release` vers `runtime/build/bin` (`rust_dlls.cmake` ; s'il en manque un, la compilation s'arrête en donnant la commande à lancer). Le lanceur natif est `runtime/build/bin/anyxboxx.exe` ; `target/release/anyxboxx.exe` est la CLI VIctory distincte. `cargo build --release` passe donc avant `cmake` (CI, AGENTS.md, README).
 
 Constat sur la porteuse TLS : en cdylib `no_std`, son bloc TLS contient exactement la zone porteuse (262 208 octets, sans variables de thread de la std Rust). Le modèle du jeu la partage donc comme avec la DLL C++. `no_std` exige `panic = "abort"`, que Cargo n'accepte que pour tout le profil release : le profil release de l'espace racine interrompt donc le programme sur panique.
 
 **Encore en C++ :**
 
 - `runtime/xgameruntime` : `package_interface.cpp` (paquets et appels de paquets du Store). La DLL C++ se compile et se teste encore.
-- `runtime/launcher` (`anyxboxx.exe`) : la décision D4 le supprime, mais ses tests du mode natif n'ont pas encore d'équivalent Rust.
+- `runtime/launcher` : gardé sous `anyxboxx_cpp.exe` comme oracle de parité.
 - `runtime/gpu_runner` : phase 4.
 - `runtime/third_party/libhttpclient-task` : part avec xgameruntime.
 
