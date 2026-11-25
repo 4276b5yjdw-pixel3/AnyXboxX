@@ -9,6 +9,8 @@ pub mod libraries;
 #[cfg(windows)]
 pub mod memory;
 pub mod redirect;
+#[cfg(windows)]
+pub mod registration;
 
 /// Extract the executable name using the native launcher's manifest scanning rules.
 ///

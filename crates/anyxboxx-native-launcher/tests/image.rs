@@ -100,6 +100,36 @@ fn allocates_relocates_and_protects_a_synthetic_image() {
     allocation.protect(&image).unwrap();
 }
 
+#[cfg(windows)]
+#[test]
+fn tls_registration_rejects_missing_carrier_and_invalid_directory() {
+    use anyxboxx_native_launcher::{
+        libraries::{LOAD_LIBRARY_SEARCH_SYSTEM32, Module},
+        memory::Allocation,
+        registration::{RegistrationError, register},
+    };
+    use std::path::Path;
+    let module = Module::load(Path::new("kernel32.dll"), LOAD_LIBRARY_SEARCH_SYSTEM32).unwrap();
+    let mut file = fixture();
+    put32(&mut file, 0x98 + 112 + 9 * 8, 0x1100);
+    let mut image = Image::parse(&file).unwrap();
+    let allocation = Allocation::map(&mut image).unwrap();
+    // SAFETY: this fixture has no exception table and kernel32 has no TLS carrier export,
+    // so no mapped code is executed or registered.
+    assert_eq!(
+        unsafe { register(&image, &allocation, module) },
+        Err(RegistrationError::TlsInstallation)
+    );
+    put32(&mut file, 0x98 + 112 + 9 * 8, 0x1fff);
+    let mut image = Image::parse(&file).unwrap();
+    let allocation = Allocation::map(&mut image).unwrap();
+    // SAFETY: the invalid directory is rejected before any mapped code can run.
+    assert_eq!(
+        unsafe { register(&image, &allocation, module) },
+        Err(RegistrationError::InvalidTlsDirectory)
+    );
+}
+
 #[test]
 fn decodes_named_and_ordinal_imports_and_rejects_truncated_tables() {
     use anyxboxx_native_launcher::imports::{BindError, Import, Symbol, bind, imports};

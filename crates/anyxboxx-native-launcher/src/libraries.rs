@@ -20,6 +20,9 @@ unsafe extern "system" {
 pub struct Module(NonNull<c_void>);
 
 impl Module {
+    pub fn handle(self) -> *mut c_void {
+        self.0.as_ptr()
+    }
     pub fn load(path: &Path, flags: u32) -> std::io::Result<Self> {
         let wide: Vec<u16> = path.as_os_str().encode_wide().chain([0]).collect();
         // SAFETY: `wide` is NUL-terminated and alive for the call; the reserved file handle is null.
