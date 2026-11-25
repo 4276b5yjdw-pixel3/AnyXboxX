@@ -5,6 +5,8 @@
 #
 # A missing Rust DLL stops the build with the command to run: no stale or partial runtime folder.
 string(REPLACE "," ";" pairs "${DLLS}")
+# file(COPY_FILE) does not create folders: on a clean build runtime/build/bin does not exist yet.
+file(MAKE_DIRECTORY "${BIN}")
 foreach(pair IN LISTS pairs)
   string(REPLACE "=" ";" names "${pair}")
   list(GET names 0 source)
