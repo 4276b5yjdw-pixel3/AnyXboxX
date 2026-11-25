@@ -1447,3 +1447,46 @@ def test_interpolation_programs_match_the_python_model():
         outcomes[run_python(lanes, False, scalars, program_words, memory, **graphics).split()[0]] += 1
         assert_same(exe, lanes, False, scalars, program_words, memory, **graphics)
     assert outcomes["steps"] >= INTERP_PROGRAMS // 2, outcomes
+
+
+def program_counter_cases():
+    """(scalaires, programme) : s_getpc_b64 (avec littéral, destinations NULL, EXEC, M0, impaire),
+    sous-programme par s_swappc_b64 et par s_call_b64 avec retour par s_setpc_b64, s_setpc_b64 sur NULL
+    (cible 0), et les refus : cible non alignée, hors du programme, poids fort non nul, paire impaire,
+    opérande au-delà des SGPR, destination impaire après une cible valide."""
+    end = sopp("s_endpgm")
+    subroutine = [sop1("s_getpc_b64", 2, 0), sop2("s_add_u32", 2, 2, LITERAL), 20,
+                  sop1("s_swappc_b64", 4, 2), sop1("s_mov_b32", 11, 133), end,
+                  sop1("s_mov_b32", 10, 135), sop1("s_setpc_b64", 0, 4)]
+    call = [sopk("s_call_b64", 6, 2), sop1("s_mov_b32", 11, 133), end,
+            sop1("s_mov_b32", 10, 137), sop1("s_setpc_b64", 0, 6)]
+    null_source = [sop2("s_add_u32", 20, 20, 129), sopc("s_cmp_eq_u32", 20, 130), sopp("s_cbranch_scc1", 1),
+                   sop1("s_setpc_b64", 0, 125), end]
+    return [
+        ([], program(sop1("s_getpc_b64", 4, 0), sop1("s_getpc_b64", 8, LITERAL), 0xDEAD_BEEF)),
+        ([], program(sop1("s_getpc_b64", 125, 0), sop1("s_getpc_b64", 124, 0), sop1("s_getpc_b64", 126, 0))),
+        ([], program(sop1("s_getpc_b64", 5, 0))),
+        ([], subroutine),
+        ([], call),
+        ([], null_source),
+        ([(2, 6)], program(sop1("s_setpc_b64", 0, 2))),
+        ([(2, 0x1000)], program(sop1("s_setpc_b64", 0, 2))),
+        ([(2, 4), (3, 1)], program(sop1("s_setpc_b64", 0, 2))),
+        ([(3, 4)], program(sop1("s_setpc_b64", 0, 3))),
+        ([], program(sop1("s_setpc_b64", 0, 128))),
+        ([(2, 4)], program(sop1("s_swappc_b64", 9, 2))),
+        ([(2, 0x10)], program(sop1("s_swappc_b64", 8, 2))),
+        ([], program(sopk("s_call_b64", 6, 0xFFF0))),
+        ([], program(sopk("s_call_b64", 6, 0x0100))),
+        ([], program(sopk("s_call_b64", 7, 0))),
+    ]
+
+
+def test_program_counter_programs_match_the_python_model():
+    exe = binary()
+    outcomes = {"steps": 0, "error": 0}
+    for lanes in (32, 64):
+        for scalars, words in program_counter_cases():
+            outcomes[run_python(lanes, False, scalars, words).split()[0]] += 1
+            assert_same(exe, lanes, False, scalars, words)
+    assert outcomes == {"steps": 10, "error": 22}, outcomes

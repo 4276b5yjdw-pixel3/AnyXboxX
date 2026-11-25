@@ -18,6 +18,7 @@ use crate::format_exec;
 use crate::image_exec;
 use crate::interp;
 use crate::mubuf;
+use crate::pc;
 use crate::scalar;
 use crate::smem;
 use crate::vector;
@@ -285,6 +286,12 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         } else {
             next_pc
         };
+        return Ok(true);
+    }
+    if pc::family_of(&name) == Some(family) {
+        // s_getpc_b64, s_setpc_b64, s_swappc_b64 (SOP1) and s_call_b64 (SOPK): after the branches, as in
+        // the Python.
+        wave.pc = pc::execute(wave, &name, &fields, next_pc, data.len())?;
         return Ok(true);
     }
     if !scalar::execute(wave, &name, &fields, literal)? {
