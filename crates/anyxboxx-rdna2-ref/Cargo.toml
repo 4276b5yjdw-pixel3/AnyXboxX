@@ -7,6 +7,10 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[dependencies]
+# Exact arithmetic for the divide helpers (emu/rdna2_exec_div.py rounds exact rationals, Fraction in Python).
+num-bigint = "0.4"
+
 [lib]
 name = "anyxboxx_rdna2_ref"
 path = "src/lib.rs"

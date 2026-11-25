@@ -371,6 +371,9 @@ pub fn execute(
     word: u64,
     literal: Option<u32>,
 ) -> Result<bool, Error> {
+    if crate::div::execute(wave, name, &Fields::new(word), literal)? {
+        return Ok(true);
+    }
     if crate::sad::operation(name).is_some() {
         return crate::sad::execute(wave, name, &Fields::new(word), literal);
     }

@@ -9,6 +9,7 @@
 
 pub mod compare;
 pub mod decode;
+pub mod div;
 pub mod error;
 pub mod exec;
 pub mod ext;

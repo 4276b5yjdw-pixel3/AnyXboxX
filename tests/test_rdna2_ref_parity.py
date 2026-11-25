@@ -227,7 +227,7 @@ def random_program(rng):
             or name in SAD_NAMES
             or (name in VECTOR and name not in LITERAL_OPERATION_NAMES and (0x100 <= opcode < 0x140 or 0x180 <= opcode < 0x200))
             or (name in VECTOR_COMPARE and opcode < 0x100)
-            or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE
+            or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE + DIV_NAMES
         ):
             names[family].append((opcode, name))
         if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
@@ -304,6 +304,9 @@ def instruction(rng, names):
 # for the Python model (which indexes SGPRs and register pairs directly).
 # Operations whose constant is a literal: the VOP3 form has no literal word unless a source is the literal code.
 LITERAL_OPERATION_NAMES = ("v_madmk_f32", "v_madak_f32", "v_fmamk_f32", "v_fmaak_f32")
+DIV_NAMES = (
+    "v_div_scale_f32", "v_div_scale_f64", "v_div_fmas_f32", "v_div_fmas_f64", "v_div_fixup_f32", "v_div_fixup_f64",
+)
 VOP3_CARRY = ("v_add_co_u32", "v_sub_co_u32", "v_subrev_co_u32", "v_add_co_ci_u32", "v_sub_co_ci_u32",
               "v_subrev_co_ci_u32")
 VOP3_MAD64 = ("v_mad_u64_u32", "v_mad_i64_i32")
@@ -312,7 +315,7 @@ VOP3_LANE = ("v_readfirstlane_b32", "v_readlane_b32", "v_writelane_b32", "v_mbcn
 
 def vop3_words(rng, opcode, name):
     """A VOP3 instruction: two words (the low half first), a third word when a source is the literal."""
-    wide_sources = name in SAD_NAMES or name in VOP3_MAD64            # 64-bit reads of a VGPR pair
+    wide_sources = name in SAD_NAMES or name in VOP3_MAD64 or name.endswith("_f64")  # 64-bit reads of a VGPR pair
     pool = list(range(256, 511)) if wide_sources else list(range(256, 512))
     sources = [rng.choice(OPERANDS + pool) for _ in range(3)]
     # The SAD forms refuse any modifier: most of them get none, so that the executed path is covered too.
@@ -327,6 +330,8 @@ def vop3_words(rng, opcode, name):
     field_8_14 = abs_bits
     if name in VOP3_CARRY or name in VOP3_MAD64:
         vdst = rng.randrange(255)
+    if name.endswith("_f64"):
+        vdst = rng.randrange(255)                                    # a 64-bit result takes vdst and vdst + 1
         field_8_14 = rng.randrange(126)                              # the carry SGPR pair sdst
     low = 0x35 << 26 | opcode << 16 | vdst | field_8_14 << 8 | rng.randrange(16) << 11 | clamp << 15
     high = sources[0] | sources[1] << 9 | sources[2] << 18 | (0 if plain else rng.randrange(4)) << 27 | (
@@ -350,3 +355,33 @@ def test_random_scalar_programs_match_the_python_model():
         scalars = [(index, rng.getrandbits(32) if rng.random() < 0.5 else rng.randrange(8)) for index in range(16)]
         words = program(*random_program(rng))
         assert_same(exe, lanes, scc, scalars, words)
+
+
+# Operand bit patterns the division helpers treat specially: zeros, infinities, NaNs, subnormals, the
+# largest and smallest normal values, and values near the scale thresholds.
+DIVISION_SPECIAL_WORDS = (
+    0x0000_0000, 0x8000_0000, 0x3F80_0000, 0xBF80_0000, 0x7F80_0000, 0xFF80_0000, 0x7FC0_0000, 0x0000_0001,
+    0x7F7F_FFFF, 0x0080_0000, 0x4000_0000, 0x0080_0001, 0x6000_0000, 0x1000_0000, 0x7480_0000,
+)
+
+
+def test_division_helpers_match_the_python_model():
+    """One division helper per program, on SGPR operands (pairs for f64) of special and random bit patterns."""
+    exe = binary()
+    rng = random.Random(SEED + 1)
+    for _ in range(200):
+        name = rng.choice(DIV_NAMES)
+        opcode = OPCODES["VOP3", name]
+        f64 = name.endswith("_f64")
+        sources = (0, 2, 4) if f64 else (0, 1, 2)
+        plain = rng.random() < 0.5
+        neg_bits = 0 if plain else rng.randrange(8)
+        clamp = 0 if plain else rng.randrange(2)
+        sdst = rng.randrange(126)
+        low = 0x35 << 26 | opcode << 16 | sdst << 8 | clamp << 15
+        high = sources[0] | sources[1] << 9 | sources[2] << 18 | (0 if plain else rng.randrange(4)) << 27 | neg_bits << 29
+        scalars = [
+            (index, rng.choice(DIVISION_SPECIAL_WORDS) if rng.random() < 0.6 else rng.getrandbits(32))
+            for index in range(8)
+        ] + [(106, rng.getrandbits(32))]
+        assert_same(exe, 32, False, scalars, program(low, high))
