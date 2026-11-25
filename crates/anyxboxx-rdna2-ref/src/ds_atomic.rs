@@ -151,7 +151,7 @@ fn set_lane_value(
 }
 
 /// The start of an access of `size` bytes at `address` (taken modulo the LDS), refused past its end.
-fn place(address: u64, size: usize) -> Result<usize, Error> {
+pub(crate) fn place(address: u64, size: usize) -> Result<usize, Error> {
     let start = (address % LDS_SIZE as u64) as usize;
     if start + size > LDS_SIZE {
         return Err(Error::Operand(format!(
@@ -161,14 +161,14 @@ fn place(address: u64, size: usize) -> Result<usize, Error> {
     Ok(start)
 }
 
-fn read_value(wave: &Wave, start: usize, size: usize) -> u64 {
+pub(crate) fn read_value(wave: &Wave, start: usize, size: usize) -> u64 {
     wave.lds[start..start + size]
         .iter()
         .rev()
         .fold(0u64, |acc, byte| acc << 8 | u64::from(*byte))
 }
 
-fn write_value(wave: &mut Wave, start: usize, size: usize, value: u64) {
+pub(crate) fn write_value(wave: &mut Wave, start: usize, size: usize, value: u64) {
     wave.lds[start..start + size].copy_from_slice(&value.to_le_bytes()[..size]);
 }
 

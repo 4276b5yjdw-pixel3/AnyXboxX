@@ -15,6 +15,8 @@ pub mod decode;
 pub mod div;
 pub mod ds;
 pub mod ds_atomic;
+pub mod ds_half;
+pub mod ds_lanes;
 pub mod error;
 pub mod exec;
 pub mod ext;

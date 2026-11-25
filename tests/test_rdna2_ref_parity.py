@@ -588,3 +588,37 @@ def test_lds_atomic_programs_match_the_python_model():
         python = run_python(lanes, False, [], program_words)
         assert python.startswith("steps"), "le cas doit s'exécuter"
         assert_same(exe, lanes, False, [], program_words)
+
+
+def test_lds_half_and_lane_exchange_programs_match_the_python_model():
+    """Acces _d16 (moitie de VGPR gardee) et ds_swizzle/ds_permute/ds_bpermute, en wave32 et wave64."""
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4
+    cases = [
+        # _d16 : lecture signee et non signee des moities basse et haute, ecritures _hi
+        (32, words(lane4, vop1("v_mov_b32", 1, 255), 0x80FF7F80, vop1("v_mov_b32", 6, 255), 0xAAAAAAAA,
+                   vop1("v_mov_b32", 7, 255), 0x55555555,
+                   ds("ds_write_b32", addr=4, data0=1),
+                   ds("ds_read_i8_d16", vdst=6, addr=4),
+                   ds("ds_read_u8_d16_hi", vdst=6, addr=4, offset0=1),
+                   ds("ds_read_u16_d16", vdst=7, addr=4),
+                   ds("ds_read_u16_d16_hi", vdst=7, addr=4, offset0=2),
+                   ds("ds_write_b8_d16_hi", addr=4, data0=1, offset0=8),
+                   ds("ds_write_b16_d16_hi", addr=4, data0=1, offset0=12),
+                   ds("ds_read_b32", vdst=8, addr=4, offset0=8))),
+        # ds_swizzle : quad perm, reverse (BITMASK), puis permute et bpermute (decalage de 4 octets)
+        (32, words(lane4,
+                   ds("ds_swizzle_b32", vdst=6, data0=4, offset0=0xB1, offset1=0x80),
+                   ds("ds_swizzle_b32", vdst=7, data0=4, offset0=0x1F, offset1=0x7C),
+                   ds("ds_bpermute_b32", vdst=8, addr=4, data0=4, offset0=4),
+                   ds("ds_permute_b32", vdst=9, addr=4, data0=4, offset0=4))),
+        # wave64 : chaque moitie de 32 lignes echange seule
+        (64, words(lane4,
+                   ds("ds_swizzle_b32", vdst=6, data0=4, offset0=0xB1, offset1=0x80),
+                   ds("ds_bpermute_b32", vdst=8, addr=4, data0=4, offset0=4),
+                   ds("ds_permute_b32", vdst=9, addr=4, data0=4, offset0=4))),
+    ]
+    for lanes, program_words in cases:
+        python = run_python(lanes, False, [], program_words)
+        assert python.startswith("steps"), "le cas doit s'executer"
+        assert_same(exe, lanes, False, [], program_words)
