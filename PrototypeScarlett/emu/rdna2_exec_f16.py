@@ -65,6 +65,17 @@ def half_clamp(bits):
     return min(bits, HALF_ONE)
 
 
+def half_round(bits, function):
+    """v_floor/ceil/trunc/rndne_f16 : entier de S0 (exact en f16), signe gardé comme les formes f32
+    (IEEE 754 roundToIntegral : trunc(-0.5) = -0) ; ±infini inchangé, NaN → 0x7E00."""
+    if _is_nan(bits):
+        return HALF_NAN
+    if bits & 0x7FFF == HALF_INFINITY:
+        return bits
+    value = bits_half(bits)
+    return half_bits(math.copysign(float(function(value)), value))
+
+
 H = bits_half
 
 # Opérations f16 : nom → (types des sources src0..src2, fonction(a, b, c, d, k)).
@@ -83,6 +94,11 @@ OPERATIONS = {
     "v_min_f16": ("hh", lambda a, b, c, d, k: half_min(a, b)),
     # Au-delà de ±64, le résultat f16 vaut déjà 0 ou l'infini : borner l'exposant ne change rien.
     "v_ldexp_f16": ("hi", lambda a, b, c, d, k: half_bits(math.ldexp(H(a), max(-64, min(64, signed(b, 16)))))),
+    # ISA RDNA 2, §12.8, opcodes VOP1 91-94 (p. 148) ; round() de Python : au plus proche pair.
+    "v_floor_f16": ("h", lambda a, b, c, d, k: half_round(a, math.floor)),
+    "v_ceil_f16": ("h", lambda a, b, c, d, k: half_round(a, math.ceil)),
+    "v_trunc_f16": ("h", lambda a, b, c, d, k: half_round(a, math.trunc)),
+    "v_rndne_f16": ("h", lambda a, b, c, d, k: half_round(a, round)),
     "v_cvt_f16_f32": ("w", lambda a, b, c, d, k: half_bits(bits_float(a))),
     "v_cvt_f32_f16": ("h", lambda a, b, c, d, k: FLOAT_NAN if _is_nan(a) else float_bits(H(a))),
 }
