@@ -74,7 +74,7 @@ fn run(args: &[OsString], draw: bool) -> i32 {
     } else {
         1
     };
-    let Ok((_, device, kind)) = adapter::chosen() else {
+    let Ok((device, kind)) = adapter::create() else {
         return fail("aucun périphérique D3D12");
     };
     let pipeline = gpu::root(&device).and_then(|root| {

@@ -25,8 +25,8 @@ def runners():
     return oracle, RUST
 
 
-def invoke(runner, args):
-    env = {**os.environ, "ANYXBOXX_GPU": "warp"}
+def invoke(runner, args, gpu="warp"):
+    env = {**os.environ, "ANYXBOXX_GPU": gpu}
     return subprocess.run([str(runner), *map(str, args)], capture_output=True, env=env, timeout=120)
 
 
@@ -85,3 +85,15 @@ def test_failure_parity(runners, tmp_path):
         assert (results[1].returncode, results[1].stdout, results[1].stderr) == (
             results[0].returncode, results[0].stdout, results[0].stderr)
         assert memory.read_bytes() == bytes(16)
+
+
+def test_missing_named_adapter_parity(runners, tmp_path):
+    shader = tmp_path / "shader.dxil"
+    shader.write_bytes(b"unused")
+    memory = tmp_path / "memory.bin"
+    memory.write_bytes(bytes(16))
+    for args in (["--adaptateur"], [shader, memory]):
+        results = [invoke(runner, args, "anyxboxx-no-such-adapter-918273") for runner in runners]
+        assert results[0].returncode != 0
+        assert (results[1].returncode, results[1].stdout, results[1].stderr) == (
+            results[0].returncode, results[0].stdout, results[0].stderr)

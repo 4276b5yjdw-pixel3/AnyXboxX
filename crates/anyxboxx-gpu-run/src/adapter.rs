@@ -75,8 +75,68 @@ pub fn chosen() -> Result<(IDXGIAdapter1, ID3D12Device, &'static str)> {
     } else {
         (unsafe { factory.EnumWarpAdapter()? }, "WARP")
     };
-    let device = device(&adapter)?;
+    let device = match device(&adapter) {
+        Ok(device) => device,
+        Err(error) => {
+            eprintln!("[gpu] pas de p?riph?rique D3D12 sur ? {} ?", name(&adapter));
+            return Err(error);
+        }
+    };
     Ok((adapter, device, kind))
+}
+
+// The execution path asks D3D12 for its default adapter directly. Unlike
+// --adaptateur, it does not first select DXGI adapter zero.
+pub fn create() -> Result<(ID3D12Device, &'static str)> {
+    let filter = std::env::var("ANYXBOXX_GPU").unwrap_or_default();
+    if !filter.is_empty() && !filter.eq_ignore_ascii_case("warp") {
+        let factory: IDXGIFactory4 = unsafe { CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))? };
+        let adapters = hardware(&factory);
+        let Some(adapter) = adapters
+            .iter()
+            .find(|a| name(a).to_lowercase().contains(&filter.to_lowercase()))
+        else {
+            let names = adapters.iter().map(name).collect::<Vec<_>>().join(", ");
+            eprintln!(
+                "[gpu] aucun adaptateur mat?riel ne contient ? {filter} ? ; adaptateurs : {}",
+                if names.is_empty() { "aucun" } else { &names }
+            );
+            return Err(windows::core::Error::from_hresult(windows::core::HRESULT(
+                0x80004005u32 as i32,
+            )));
+        };
+        return match device(adapter) {
+            Ok(device) => Ok((device, "mat?riel")),
+            Err(error) => {
+                eprintln!(
+                    "[gpu] pas de p?riph?rique D3D12 sur ? {} ? (0x{:08x})",
+                    name(adapter),
+                    error.code().0 as u32
+                );
+                Err(error)
+            }
+        };
+    }
+    if filter != "warp" {
+        let mut result = None;
+        if unsafe {
+            D3D12CreateDevice(
+                None::<&windows::core::IUnknown>,
+                D3D_FEATURE_LEVEL_11_0,
+                &mut result,
+            )
+        }
+        .is_ok()
+        {
+            return Ok((
+                result.expect("D3D12CreateDevice returned no device"),
+                "mat?riel",
+            ));
+        }
+    }
+    let factory: IDXGIFactory4 = unsafe { CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))? };
+    let warp: IDXGIAdapter1 = unsafe { factory.EnumWarpAdapter()? };
+    Ok((device(&warp)?, "WARP"))
 }
 
 fn feature<T: Default>(device: &ID3D12Device, kind: D3D12_FEATURE) -> T {
