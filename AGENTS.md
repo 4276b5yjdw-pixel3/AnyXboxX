@@ -21,7 +21,7 @@ AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett
 | `third_party/xbox2windows/` | Unchanged copies of [R0Y00/Xbox2Windows](https://github.com/R0Y00/Xbox2Windows) tools (MIT, DXIL retarget), commit in its README; refreshed by `tools/sync_voisins.py`. |
 | `tools/` | Generators (GDK interface table, kernelx exports, RDNA 2 tables), comparison and measurement tools (TomBox, FSSM, Xbox compiler probe, GPU check), `jour_j.py`, the VIctory launcher `lancer_victory.ps1`, neighbour watch (`sync_voisins.py`, `veille.py`) |
 | `site/` | GitHub Pages site, published as is by `.github/workflows/pages.yml` |
-| `tests/` | pytest suite (782 tests on 2026-11-25; the README table holds the current count) |
+| `tests/` | pytest suite (the README table holds the current test count) |
 | `docs/` | Research notes and logs, in English. `docs/fr/` holds the French version of each document (same tree). `docs/i18n/` holds the 8 README translations. |
 
 ## Setup and commands
