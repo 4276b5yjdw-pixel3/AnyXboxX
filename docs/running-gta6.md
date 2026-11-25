@@ -17,7 +17,22 @@ The launch goes through [VIctory](https://github.com/Marvisak/VIctory) (Marvisak
 
 The launcher builds the release profile (`-Diag` or `-Dred` for the diagnostics build) and sets Neptune's `play.ps1` switch set for the Series X path (16 GB card: lower `VICTORY_CARD_WINDOWS_MB` and `VICTORY_CARD_BUFFERS_MB` on a smaller one). `-Warm` runs `victory.exe warm` on the game folder's `.rpf` files only. `-AutoA` taps A through the start screens, `-FrametimeDump` writes a frame time CSV into the cache folder. In the game, F10 hides the figures in the corner and F12 saves a picture to Pictures.
 
+The launcher also sets `VICTORY_OCEAN_READBACK=1`, with or without `-NoTunedSettings`. The title's wave passes write the ocean's height maps on the GPU (256x256, a R32_FLOAT height map and a R32G32_FLOAT displacement map, linear layout) and its CPU samples them to float boats; on the console both share memory, here the texels stay in the host copy unless they are copied back (`texback.rs`, Neptune's port of Geckomacabre/vx-layer and MiamiGame/XTP, off by default). Without it boats sit on the sea bed. Measured on Linux (RX 9070 XT, GE-Proton11-12, release build, a 20-minute run): about 14 such textures copied back per frame, the boat of the first chapter mission floats and the mission goes on; not measured on Windows. `VICTORY_TEXTURE_BACK_MODES` stays unset (linear layouts only): Neptune's notes report that copying back the XOR swizzle modes 2 and 27 turned the water to foam with black patches.
+
 Measured by the maintainer on 25 November (RTX 4070 SUPER, i7-13700KF, Series X path at 4K, world, after `warm`, release build): median about 12.5 fps, about 15 fps over the last minute, peaks at 30, about 7,500 draws per frame, no crash; the previous base ran at about 5 fps there. Known issues (Neptune's notes): objects and clothes briefly black while their textures are swapped, parts of the world missing behind some doors and on some roofs, no facial animation, frame time jumps while the game streams; indoor light is an even ambient stand-in for the ray-traced lighting.
+
+### On Linux (Proton, AMD)
+
+The Neptune base does not carry the 57 Proton/AMD commits of the previous base (next section), so `main` needs four things under Proton. `tools/lancer_victory.ps1` is Windows only: set these by hand around `wine victory.exe run <game folder>\game_scarlett_master.exe --execute`, with the same variables as the launcher.
+
+| What | Why |
+| --- | --- |
+| Microsoft's `d3dcompiler_47.dll` next to `victory.exe`, and `WINEDLLOVERRIDES` with `d3dcompiler_47=n` | VIctory compiles its own helper shaders (indirect argument clamp, card compare, depth plane pass) with `D3DCompile`. Wine's builtin compiler refuses them (`'InterlockedMax' is not defined on type 'RWByteAddressBuffer'`): without the clamp every indirect draw is dropped, and only the UI is drawn over a black world. Neptune has no DXC fallback, so `VICTORY_DXC` does not help. The DLL comes from your own Windows or Windows SDK install; never commit it. |
+| `VKD3D_CONFIG=descriptor_heap` | The title asks for 1,245,184 views, more than vkd3d-proton's default cap. |
+| `VICTORY_LATE_WAIT=0` | Neptune's switch set turns the relay on (`VICTORY_RELAY=2`), and with the relay an unset `VICTORY_LATE_WAIT` means stage 3. On RADV the device was then lost after about 80 s and 105 s (`0x887A0005`, the kernel naming a GPU page fault from shader data loads); with `0`, four runs of 2.6 to 20 minutes had none. |
+| No `warm` | `victory.exe warm` translated every shader and made the compute pipelines, then hung under Proton (no CPU time, every thread waiting). Leave it out: the game translates what it needs on the first launch. |
+
+Measured on Linux only (Fedora 44, RX 9070 XT 16 GB, RADV through vkd3d-proton, GE-Proton11-12 with the view-tree wineserver, release build of `main` with the launcher's switch set and `VICTORY_OCEAN_READBACK=1`): the world draws, a 20-minute run into chapter 1 ended when the window was closed. Two losses without it, four runs without a loss with it: treat `VICTORY_LATE_WAIT=0` as measured, not proven. Not measured: other AMD drivers, NVIDIA under Proton.
 
 ## Proton and AMD fixes (25 November)
 
