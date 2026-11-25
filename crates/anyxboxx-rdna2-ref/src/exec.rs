@@ -12,6 +12,7 @@ use crate::error::Error;
 use crate::ext;
 use crate::flat;
 use crate::format_exec;
+use crate::image_exec;
 use crate::mubuf;
 use crate::scalar;
 use crate::smem;
@@ -129,6 +130,8 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let mubuf_family = family == "MUBUF";
     // Typed accesses (MUBUF buffer_*_format, MTBUF): the other MTBUF forms (_d16) are refused.
     let format_family = (mubuf_family || family == "MTBUF") && format_exec::supports(&name);
+    // MIMG: the 2D loads, stores and samples of `image_exec`; the other image instructions are refused.
+    let image_family = family == "MIMG" && image_exec::supports(&name);
     if !SCALAR_FAMILIES.contains(&family)
         && !vector_family
         && !compare_family
@@ -139,6 +142,7 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         && !flat_family
         && !mubuf_family
         && !format_family
+        && !image_family
     {
         return Err(refused());
     }
@@ -164,6 +168,15 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         // Two words: the offset, the registers and the GLC bit are in the first, the registers in the second.
         let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
         flat::execute(wave, family, &name, wide)?;
+        wave.pc = next_pc;
+        return Ok(true);
+    }
+    if image_family {
+        // Two words, then the NSA words (bits 1-2 of the first): `size` counts them all.
+        let words: Vec<u32> = (0..size)
+            .map(|k| word_at(data, wave.pc + k * DWORD))
+            .collect();
+        image_exec::execute(wave, &name, &words)?;
         wave.pc = next_pc;
         return Ok(true);
     }

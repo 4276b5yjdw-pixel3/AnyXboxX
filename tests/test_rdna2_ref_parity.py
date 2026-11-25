@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from emu import rdna2_exec
+from emu import rdna2_exec, rdna2_image
 from emu.rdna2_exec import VOP2_CARRY, Wave
 from emu.rdna2_exec_cmp64 import COMPARE64
 from emu.rdna2_exec_dot import OPERATIONS as DOT_OPERATIONS
@@ -856,4 +856,162 @@ def test_refused_typed_buffer_accesses_match_the_python_model():
         scalars = buffer_descriptor(2, word3, word1_high=word1_high)
         program_words = words(instruction)
         assert run_python(32, False, scalars, program_words) == "error untranslated\n", hex(word3)
+        assert_same(exe, 32, False, scalars, program_words)
+
+
+IMAGE_ADDRESS = 0x4000
+COORDINATES = 0x2000                            # tableaux par ligne : décalages, z, s, t, lod, x, y, mip
+SPECIAL_COORDINATES = (0.5, 0.0, 1.0, -0.25, float("nan"), float("inf"), float("-inf"), 1e30, -1e30,
+                       0.999999, 3.75, -2.5, 0.125, 0.875)
+
+
+def f32_bits(value):
+    return struct.unpack("<I", struct.pack("<f", value))[0]
+
+
+def mimg(name, vdata=0, vaddr=0, srsrc=4, ssamp=6, dmask=0xF, dim=1, unorm=0, nsa=(), first_flags=0,
+         second_flags=0):
+    """Mots d'une instruction MIMG gfx10 (MIMGe_gfx10 de LLVM) : opcode bits 18-24 et bit 0 (OPM) ; NSA bits
+    1-2 suivis des mots d'adresses supplémentaires (un octet par VGPR)."""
+    opcode = OPCODES["MIMG", name]
+    extra = list(nsa) + [0] * (-len(nsa) % 4)
+    first = (0x3C << 26 | (opcode & 0x7F) << 18 | opcode >> 7 | (len(extra) // 4) << 1 | dim << 3 | dmask << 8
+             | unorm << 12 | first_flags)
+    second = vaddr | vdata << 8 | srsrc << 16 | ssamp << 21 | second_flags
+    packed = [int.from_bytes(bytes(extra[i:i + 4]), "little") for i in range(0, len(extra), 4)]
+    return (first, second, *packed)
+
+
+def lane_values(rng, lanes):
+    """Les tableaux de coordonnées (un mot par ligne) lus par les programmes d'image."""
+    def floats(special, low, high):
+        values = [*special, *(rng.uniform(low, high) for _ in range(lanes))][:lanes]
+        return [f32_bits(value) for value in values]
+
+    # décalages _o petits (-3 à 3, pour rester près de l'image 4 x 4), un quart au hasard sur 16 bits
+    offsets = [rng.getrandbits(16) if rng.random() < 0.25 else
+               (rng.randrange(-3, 4) & 0x3F) | (rng.randrange(-3, 4) & 0x3F) << 8 for _ in range(lanes)]
+    depth = floats((0.5, float("nan"), 0.0, 1.0), -0.2, 1.2)
+    s = floats(SPECIAL_COORDINATES, -0.6, 1.6)
+    t = floats(SPECIAL_COORDINATES[::-1], -0.6, 1.6)
+    lod = floats((0.0, 1.0, -1.0, float("nan"), -0.0), -1.0, 1.0)
+    x = [rng.randrange(6) for _ in range(lanes)]
+    y = [rng.randrange(6) for _ in range(lanes)]
+    mip = [int(rng.random() < 0.2) for _ in range(lanes)]
+    return [offsets, depth, s, t, lod, x, y, mip]
+
+
+def image_memory(rng, lanes, fmt):
+    words_per_image = 16 * rdna2_image.TEXEL_BYTES[fmt] // 4 + 1
+    if fmt in (rdna2_image.FORMAT_32_FLOAT, rdna2_image.FORMAT_32_32_FLOAT, rdna2_image.FORMAT_32_32_32_32_FLOAT):
+        texels = [f32_bits(rng.uniform(-4.0, 4.0)) for _ in range(words_per_image)]
+    else:
+        texels = [rng.getrandbits(32) for _ in range(words_per_image)]
+    coordinates = [value for array in lane_values(rng, lanes) for value in array + [0] * (64 - lanes)]
+    return [(COORDINATES, coordinates), (IMAGE_ADDRESS, texels)]
+
+
+SAMPLERS = [
+    rdna2_image.encode_sampler(),                                                     # 6 : point, bord
+    rdna2_image.encode_sampler(1, 1, min_filter=1),                                   # 7 : mirror, min linéaire
+    rdna2_image.encode_sampler(0, 0, mag_filter=1, min_filter=1),                     # 8 : wrap, bilinéaire
+    rdna2_image.encode_sampler(6, 6, mag_filter=1, min_filter=1, depth_compare=1),    # 9 : bordure, LESS
+    rdna2_image.encode_sampler(7, 7, depth_compare=6, border_color=2),                # 10 : GEQUAL, blanc
+    rdna2_image.encode_sampler(6, 7, border_color=1),                                 # 11 : noir opaque
+    rdna2_image.encode_sampler(3, 3, unnormalized=1, mag_filter=1),                   # 12 : non normalisé
+    rdna2_image.encode_sampler(2, 1, mag_filter=1, depth_compare=5),                  # 13 : NOTEQUAL
+]
+
+
+def image_program(fmt):
+    """Charge les coordonnées par ligne, puis lit, échantillonne et écrit l'image 4 x 4 de format `fmt`."""
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)
+    loads = [mubuf("buffer_load_dword", vdata=10 + k, vaddr=4, srsrc=2, offen=1, offset=k * 0x100) for k in range(8)]
+    # v10 décalages, v11 z, v12 s, v13 t, v14 lod, v15 x, v16 y, v17 mip
+    body = [
+        mimg("image_load", vdata=20, vaddr=15),
+        mimg("image_load_mip", vdata=24, vaddr=15, dmask=0b1010),
+        mimg("image_get_resinfo", vdata=26, vaddr=17),
+        mimg("image_sample", vdata=30, vaddr=12, ssamp=6),
+        mimg("image_sample_l", vdata=34, vaddr=12, ssamp=7),
+        mimg("image_sample_lz_o", vdata=38, vaddr=10, ssamp=8, dmask=0b0111, nsa=(12, 13)),
+        mimg("image_sample_c_l_o", vdata=42, vaddr=10, ssamp=9),
+        mimg("image_sample_c", vdata=46, vaddr=11, ssamp=10, dmask=0b1001),
+        mimg("image_gather4_o", vdata=50, vaddr=10, ssamp=11, dmask=0b0100, nsa=(12, 13)),
+        mimg("image_gather4_l", vdata=54, vaddr=12, ssamp=8, dmask=0b0001),
+        mimg("image_sample", vdata=58, vaddr=12, ssamp=8, unorm=1),
+        mimg("image_sample_o", vdata=62, vaddr=10, ssamp=12, nsa=(12, 13)),
+        mimg("image_sample_c_lz", vdata=66, vaddr=11, ssamp=13),
+        mimg("image_gather4", vdata=70, vaddr=12, ssamp=7, dmask=0b1000),
+        mimg("image_store", vdata=30, vaddr=15, dmask=0xF),
+        mimg("image_store_mip", vdata=34, vaddr=15, dmask=0b0101),
+        mimg("image_store", vdata=58, vaddr=15, dmask=0b1110),
+        mimg("image_load", vdata=74, vaddr=15),
+    ]
+    return words(lane4, *loads, *body)
+
+
+def image_scalars(fmt, swizzle):
+    scalars = buffer_descriptor(2, IDENTITY | 20 << 12, base=COORDINATES, records=0x800)
+    scalars += list(enumerate(rdna2_image.encode_image(IMAGE_ADDRESS, fmt, 4, 4, swizzle), start=16))
+    for k, sampler_words in enumerate(SAMPLERS):
+        scalars += list(enumerate(sampler_words, start=(6 + k) * 4))
+    return [(index, value) for index, value in scalars if value]
+
+
+IMAGE_FORMATS = (
+    (rdna2_image.FORMAT_8_UNORM, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_8_8_UNORM, (5, 4, 1, 0)),
+    (rdna2_image.FORMAT_8_8_8_8_UNORM, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_8_8_8_8_UNORM, (7, 6, 5, 4)),
+    (rdna2_image.FORMAT_32_FLOAT, (4, 4, 1, 0)),
+    (rdna2_image.FORMAT_32_32_FLOAT, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_32_32_32_32_FLOAT, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_32_32_32_32_FLOAT, (6, 7, 2, 4)),
+)
+
+
+def test_image_programs_match_the_python_model():
+    exe = binary()
+    rng = random.Random(SEED)
+    for fmt, swizzle in IMAGE_FORMATS:
+        for lanes in (32, 64):
+            memory = image_memory(rng, lanes, fmt)
+            scalars, program_words = image_scalars(fmt, swizzle), image_program(fmt)
+            python = run_python(lanes, False, scalars, program_words, memory)
+            assert python.startswith("steps"), f"le cas doit s'exécuter : {python}"
+            assert_same(exe, lanes, False, scalars, program_words, memory)
+
+
+def refused_image_cases():
+    """(T#, S#, instruction) que les deux modèles refusent."""
+    good = rdna2_image.encode_image(IMAGE_ADDRESS, rdna2_image.FORMAT_32_FLOAT, 4, 4)
+    sampler = rdna2_image.encode_sampler()
+    sample = mimg("image_sample", vdata=8, vaddr=0)
+    return [
+        (good, sampler, mimg("image_sample_d", vdata=8)),                        # non pris en charge
+        (good, sampler, mimg("image_atomic_add", vdata=8)),
+        (good, sampler, mimg("image_sample", vdata=8, dim=2)),                   # 3D
+        (good, sampler, mimg("image_sample", vdata=8, first_flags=1 << 16)),     # tfe
+        (good, sampler, mimg("image_sample", vdata=8, first_flags=1 << 15)),     # r128
+        (good, sampler, mimg("image_sample", vdata=8, first_flags=1 << 17)),     # lwe
+        (good, sampler, mimg("image_sample", vdata=8, second_flags=1 << 30)),    # a16
+        (good, sampler, mimg("image_load", vdata=8, second_flags=1 << 31)),      # d16
+        (good, sampler, mimg("image_gather4", vdata=8, dmask=0b0011)),           # deux canaux
+        (rdna2_image.encode_image(IMAGE_ADDRESS, 2, 4, 4), sampler, sample),     # 8_SNORM
+        (rdna2_image.encode_image(IMAGE_ADDRESS, 22, 4, 4, last_level=1), sampler, sample),
+        (good[:3] + [good[3] & ~(0xF << 28) | 8 << 28] + good[4:], sampler, sample),  # type 1D
+        (good, rdna2_image.encode_sampler(4, 2), sample),                        # adressage 4
+        (good, rdna2_image.encode_sampler(mag_filter=2), sample),                # anisotrope
+        (good, rdna2_image.encode_sampler(border_color=3), sample),              # bordure du registre
+    ]
+
+
+def test_refused_image_instructions_match_the_python_model():
+    exe = binary()
+    for image_words, sampler_words, instruction in refused_image_cases():
+        scalars = [(16 + i, value) for i, value in enumerate(image_words) if value]
+        scalars += [(24 + i, value) for i, value in enumerate(sampler_words) if value]
+        program_words = words(instruction)
+        assert run_python(32, False, scalars, program_words) == "error untranslated\n", instruction
         assert_same(exe, 32, False, scalars, program_words)
