@@ -7,6 +7,7 @@
 //! instructions and the branches (`scalar`, `exec`). Not yet: the vector families (VOP1, VOP2,
 //! VOPC, VOP3, VOP3P), memory, images and graphics; they refuse with `Error::Untranslated`.
 
+pub mod compare;
 pub mod decode;
 pub mod error;
 pub mod exec;

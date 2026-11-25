@@ -19,7 +19,8 @@ import pytest
 
 from emu import rdna2_exec
 from emu.rdna2_exec import VOP2_CARRY, Wave
-from emu.rdna2_exec_ops import BRANCHES, NO_OPERATION, SCALAR, VECTOR, VECTOR_NO_OPERATION
+from emu.rdna2_exec_cmp64 import COMPARE64
+from emu.rdna2_exec_ops import BRANCHES, NO_OPERATION, SCALAR, VECTOR, VECTOR_COMPARE, VECTOR_NO_OPERATION
 from emu.rdna2_ops import MNEMONICS
 
 REPO = Path(__file__).resolve().parents[1]
@@ -212,11 +213,13 @@ def random_program(rng):
 
     Les branches sautent vers le début d'une instruction plus loin dans le programme (ou vers s_endpgm) :
     sans cela un saut tombe dans un mot de données, qui se décode en instruction mémoire (hors du modèle)."""
-    names = {family: [] for family in SCALAR_FAMILIES + VECTOR_FAMILIES}
+    names = {family: [] for family in (*SCALAR_FAMILIES, *VECTOR_FAMILIES, "VOPC")}
     for (family, opcode), name in MNEMONICS.items():
         if family in SCALAR_FAMILIES and name != "s_endpgm" and (
             name in SCALAR or name in BRANCHES or name in NO_OPERATION
         ):
+            names[family].append((opcode, name))
+        if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
             names[family].append((opcode, name))
         if family in VECTOR_FAMILIES and (name in VECTOR or name in VECTOR_NO_OPERATION or name in VOP2_CARRY):
             names[family].append((opcode, name))
@@ -241,7 +244,7 @@ def random_program(rng):
 
 def instruction(rng, names):
     """One random instruction: (its words, the branch template when it is a branch)."""
-    family = rng.choice((*SCALAR_FAMILIES, *VECTOR_FAMILIES))
+    family = rng.choice((*SCALAR_FAMILIES, *VECTOR_FAMILIES, "VOPC"))
     opcode, name = rng.choice(names[family])
     ssrc0, ssrc1 = rng.choice(OPERANDS), rng.choice(OPERANDS)
     # 64-bit results need the register after sdst: stay below s126 (s127 is the last).
@@ -262,6 +265,10 @@ def instruction(rng, names):
         # v_readfirstlane_b32 writes an SGPR through the vdst field: keep it below s128.
         vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(256)
         word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
+    elif family == "VOPC":
+        # A VGPR pair as source 0 (64-bit compares read v[n], v[n+1]): n + 1 stays below v256.
+        ssrc0 = rng.choice(OPERANDS + list(range(256, 511)))
+        word = 0x3E << 25 | opcode << 17 | rng.randrange(255) << 9 | ssrc0
     else:
         vdst, vsrc1 = rng.randrange(256), rng.randrange(256)
         word = opcode << 25 | vdst << 17 | vsrc1 << 9 | ssrc0
@@ -272,7 +279,7 @@ def instruction(rng, names):
         code = rng.choice(EXT_CODES)
         return [(word & ~0x1FF) | code, extension_word(rng, code, (word >> 9) & 0xFF if family == "VOP2" else None)], None
     # The operands each family reads from the source fields (vsrc1 of VOP2 is a VGPR, never a literal).
-    sources = {"SOP1": (ssrc0,), "VOP1": (ssrc0,), "VOP2": (ssrc0,), "SOP2": (ssrc0, ssrc1), "SOPC": (ssrc0, ssrc1)}
+    sources = {"SOP1": (ssrc0,), "VOP1": (ssrc0,), "VOP2": (ssrc0,), "SOP2": (ssrc0, ssrc1), "SOPC": (ssrc0, ssrc1), "VOPC": (ssrc0,)}
     needs_literal = LITERAL in sources.get(family, ()) or (family == "VOP2" and opcode in VOP2_WITH_LITERAL)
     return ([word, literal_bits(rng)] if needs_literal else [word]), None
 

@@ -5,6 +5,7 @@
 //! families refuse with `Untranslated`, which names the instruction, as the Python does for the
 //! instructions it has not written.
 
+use crate::compare;
 use crate::decode::{Classified, DWORD, classify, mnemonic};
 use crate::error::Error;
 use crate::ext;
@@ -88,7 +89,8 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         ))
     };
     let vector_family = VECTOR_FAMILIES.contains(&family);
-    if !SCALAR_FAMILIES.contains(&family) && !vector_family {
+    let compare_family = family == "VOPC";
+    if !SCALAR_FAMILIES.contains(&family) && !vector_family && !compare_family {
         return Err(refused());
     }
     if wave.pc + size * DWORD > data.len() {
@@ -102,6 +104,16 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let literal = (size > 1).then(|| word_at(data, wave.pc + DWORD));
     let fields = scalar::fields(word);
     let next_pc = wave.pc + size * DWORD;
+    if compare_family {
+        // The SDWA and DPP forms of VOPC are not modelled yet: refused, as untranslated.
+        let (src0, vsrc1) = (word & 0x1FF, (word >> 9) & 0xFF);
+        if EXTENSION_CODES.contains(&src0) || !compare::execute(wave, &name, src0, vsrc1, literal)?
+        {
+            return Err(refused());
+        }
+        wave.pc = next_pc;
+        return Ok(true);
+    }
     if vector_family {
         if !execute_vector(wave, &name, family, word, literal)? {
             return Err(refused());
@@ -175,10 +187,10 @@ mod tests {
 
     #[test]
     fn an_unknown_instruction_is_named_as_untranslated() {
-        let data = program(&[0x3E << 25]); // a VOPC the model does not execute yet
+        let data = program(&[0x35 << 26, 0]); // a VOP3 the model does not execute yet
         let mut wave = Wave::new(32).unwrap();
         match run(&data, &mut wave) {
-            Err(Error::Untranslated(message)) => assert!(message.contains("VOPC"), "{message}"),
+            Err(Error::Untranslated(message)) => assert!(message.contains("VOP3"), "{message}"),
             other => panic!("expected untranslated, got {other:?}"),
         }
     }
