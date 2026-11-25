@@ -24,7 +24,7 @@ unsafe extern "system" {
     ) -> i32;
 }
 
-fn widen(value: &[u8]) -> Option<OsString> {
+pub fn widen(value: &[u8]) -> Option<OsString> {
     let length = i32::try_from(value.len()).ok()?;
     if length == 0 {
         return Some(OsString::new());
