@@ -261,8 +261,26 @@ def _lds_exchange2(wave, spec, base, offsets, sources, vdst, lane):
 
 # --- FLAT / GLOBAL et MUBUF : mémoire vectorielle ------------------------------------------
 
+FLAT_OFFSET_SIGN = 0x800
+
+
+def flat_offset(family, word):
+    """Byte offset of a FLAT, GLOBAL or SCRATCH instruction, or None when it is not defined.
+
+    ISA section 9.1 (p. 83): "Scratch, Global: 12-bit signed byte offset. Flat: must be positive."; llvm-mc 20
+    (gfx1030) only accepts an 11-bit unsigned offset on FLAT and disassembles bit 11 as +2048. What the
+    hardware does with bit 11 set on FLAT is not documented, so the callers refuse it by name.
+    """
+    if family == "FLAT":
+        return None if word & FLAT_OFFSET_SIGN else word & (FLAT_OFFSET_SIGN - 1)
+    return signed(word & 0xFFF, 12)
+
+
 def _flat(wave, family, name, word):
-    offset = signed(word & 0xFFF, 12)
+    offset = flat_offset(family, word)
+    if offset is None:
+        from emu.rdna2_exec import Untranslated
+        raise Untranslated(f"{name}: FLAT offset with bit 11 set (the ISA requires a positive offset)")
     addr, data, saddr, vdst = (word >> 32) & 0xFF, (word >> 40) & 0xFF, (word >> 48) & 0x7F, (word >> 56) & 0xFF
     if name in ADD_TID:
         return _add_tid(wave, name, offset, data, saddr, vdst)
