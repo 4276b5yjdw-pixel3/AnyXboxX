@@ -350,6 +350,14 @@ name = "anyxboxx-xcrdapi"
 version = "0.1.0"
 
 [[package]]
+name = "anyxboxx-xmem"
+version = "0.1.0"
+dependencies = [
+ "victory-hle",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "arboard"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
