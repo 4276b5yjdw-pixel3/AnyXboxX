@@ -48,6 +48,10 @@
 .PARAMETER BatchCardRehash
   Optional. Sets VICTORY_CARD_REHASH_RUNS=1 even with -NoTunedSettings (Neptune's switch set already sets it).
 
+.PARAMETER Override
+  Optional. A hashtable of VICTORY_* variables set after the tuned set (and after -NoTunedSettings), for A/B runs:
+  -Override @{ VICTORY_RELAY = '0'; VICTORY_PIPELINE_WAIT_MS = '12000' }. Applied last, so it wins over the set.
+
 .NOTES
   The switch set is Neptune (VIctory Edit.) 2026-11-25c's play.ps1 for the Series X path (no PC FidelityFX DLL, no
   VICTORY_AUTO_A unless -AutoA). Measured by the maintainer on 2026-11-25 (RTX 4070 SUPER, i7-13700KF, Series X 4K,
@@ -73,7 +77,8 @@ param(
     [switch]$Dred,
     [string]$XgDll,
     [ValidateSet('real', 'compare')][string]$XgMode = 'real',
-    [switch]$BatchCardRehash
+    [switch]$BatchCardRehash,
+    [hashtable]$Override = @{}
 )
 
 $ErrorActionPreference = 'Stop'
@@ -165,6 +170,10 @@ if (-not $NoTunedSettings) {
     foreach ($name in $tuned.Keys) {
         Set-Item -Path "Env:$name" -Value $tuned[$name]
     }
+}
+foreach ($name in $Override.Keys) {
+    if ($name -notlike 'VICTORY_*') { throw "-Override takes VICTORY_* names only: '$name'." }
+    Set-Item -Path "Env:$name" -Value ([string]$Override[$name])
 }
 if ($AutoA) {
     $env:VICTORY_AUTO_A = '150'
