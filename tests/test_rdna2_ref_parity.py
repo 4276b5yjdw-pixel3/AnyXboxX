@@ -1490,3 +1490,19 @@ def test_program_counter_programs_match_the_python_model():
             outcomes[run_python(lanes, False, scalars, words).split()[0]] += 1
             assert_same(exe, lanes, False, scalars, words)
     assert outcomes == {"steps": 10, "error": 22}, outcomes
+
+
+def test_buffer_cache_controls_match_the_python_model():
+    """buffer_gl0_inv et buffer_gl1_inv : aucun effet, quels que soient leurs champs, entre deux accès."""
+    exe = binary()
+    rng = random.Random(SEED)
+    scalars = [(4, 0x1000), (5, 0), (6, 0x100), (7, 0)]
+    for lanes in (32, 64):
+        for name in ("buffer_gl0_inv", "buffer_gl1_inv"):
+            for _ in range(8):
+                low, high = mubuf(name)
+                noise = rng.getrandbits(64) & ~(0x3F << 26 | 0x7F << 18 | 1 << 25)
+                words = program(*mubuf("buffer_store_dword", vdata=0, vaddr=0, srsrc=1, offen=1),
+                                low | noise & 0xFFFF_FFFF, high | noise >> 32,
+                                *mubuf("buffer_load_dword", vdata=3, vaddr=0, srsrc=1, offen=1))
+                assert_same(exe, lanes, False, scalars, words)

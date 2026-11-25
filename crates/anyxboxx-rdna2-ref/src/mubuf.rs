@@ -7,6 +7,9 @@
 //! the descriptor, plus SOFFSET, plus INDEX times the stride, plus the byte offset. With a stride, the
 //! access is inside when its index is below the record count; without one, when the whole access fits
 //! in the records. Outside, a load reads zeros and a store or an atomic does nothing.
+//!
+//! buffer_gl0_inv and buffer_gl1_inv invalidate caches this model does not have: they do nothing, whatever
+//! their fields, as in the Python (`CACHE_CONTROL` in `emu/rdna2_exec_memory.py`).
 
 use crate::error::Error;
 use crate::memory::descriptor;
@@ -14,6 +17,8 @@ use crate::vmem;
 use crate::wave::Wave;
 
 const NULL: u32 = 125;
+/// The MUBUF cache controls (`CACHE_CONTROL`).
+const CACHE_CONTROL: [&str; 2] = ["buffer_gl0_inv", "buffer_gl1_inv"];
 const VECTOR_REGISTERS: usize = 256;
 
 /// The register `index` of the lane, refused past the last VGPR.
@@ -28,6 +33,9 @@ fn vgpr(wave: &Wave, index: usize, lane: usize) -> Result<u32, Error> {
 
 /// Executes a MUBUF instruction whose 64-bit word is `word`, for every lane of EXEC.
 pub fn execute(wave: &mut Wave, name: &str, word: u64) -> Result<(), Error> {
+    if CACHE_CONTROL.contains(&name) {
+        return Ok(());
+    }
     let kind = vmem::shape(name)
         .ok_or_else(|| Error::Untranslated(format!("instruction non traduite : {name} (MUBUF)")))?;
     let size = match kind {
@@ -71,4 +79,28 @@ pub fn execute(wave: &mut Wave, name: &str, word: u64) -> Result<(), Error> {
         vmem::access(wave, kind, address, (vdata, vdata), lane, inside, returns)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cache_controls_change_nothing_whatever_their_fields() {
+        let mut wave = Wave::new(32).unwrap();
+        let before = wave.clone();
+        for name in CACHE_CONTROL {
+            execute(&mut wave, name, u64::MAX).unwrap();
+        }
+        assert_eq!(wave, before);
+    }
+
+    #[test]
+    fn other_names_without_a_shape_are_refused() {
+        let mut wave = Wave::new(32).unwrap();
+        assert!(matches!(
+            execute(&mut wave, "buffer_load_format_x", 0),
+            Err(Error::Untranslated(_))
+        ));
+    }
 }
