@@ -171,3 +171,33 @@ fn decodes_named_and_ordinal_imports_and_rejects_truncated_tables() {
     put64(&mut file, 0x380, 0x4000);
     assert!(imports(&Image::parse(&file).unwrap()).is_err());
 }
+
+#[cfg(windows)]
+#[test]
+fn resolves_system_import_and_refuses_unpatched_local_dll() {
+    use anyxboxx_native_launcher::{
+        libraries::{LOAD_LIBRARY_SEARCH_SYSTEM32, Module},
+        resolver::{ResolveError, bind},
+    };
+    use std::path::Path;
+    let mut file = fixture();
+    put32(&mut file, 0x98 + 112 + 8, 0x1140);
+    put32(&mut file, 0x340, 0x1180);
+    put32(&mut file, 0x34c, 0x11c0);
+    put32(&mut file, 0x350, 0x11a0);
+    put64(&mut file, 0x380, 0x11d0);
+    file[0x3c0..0x3cd].copy_from_slice(b"kernel32.dll\0");
+    file[0x3d2..0x3e6].copy_from_slice(b"GetCurrentProcessId\0");
+    let system = Module::load(Path::new("kernel32.dll"), LOAD_LIBRARY_SEARCH_SYSTEM32).unwrap();
+    let mut image = Image::parse(&file).unwrap();
+    let absent = Path::new(r"Z:\AnyXboxXMissingFolder");
+    bind(&mut image, &[system; 6], absent, absent, false).unwrap();
+    assert_ne!(&image.bytes[0x11a0..0x11a8], &[0; 8]);
+    let mut image = Image::parse(&file).unwrap();
+    let windows = std::env::var_os("SystemRoot").unwrap();
+    let local = Path::new(&windows).join("System32");
+    assert!(matches!(
+        bind(&mut image, &[system; 6], &local, absent, false),
+        Err(ResolveError::LocalModulePatching(_))
+    ));
+}
