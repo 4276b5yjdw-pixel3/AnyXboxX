@@ -353,6 +353,7 @@ version = "0.1.0"
 name = "anyxboxx-xgameruntime"
 version = "0.1.0"
 dependencies = [
+ "victory-hle",
  "windows-sys 0.61.2",
 ]
 
