@@ -25,6 +25,7 @@ pub mod float;
 pub mod memory;
 pub mod mnemonics;
 pub mod movrel;
+pub mod mubuf;
 pub mod sad;
 pub mod scalar;
 pub mod smem;

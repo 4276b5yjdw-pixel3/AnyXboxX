@@ -659,3 +659,35 @@ def test_flat_global_scratch_programs_match_the_python_model():
         python = run_python(lanes, False, scalars, program_words, memory)
         assert python.startswith("steps"), "le cas doit s'exécuter"
         assert_same(exe, lanes, False, scalars, program_words, memory)
+
+
+def mubuf(name, vdata=0, vaddr=0, srsrc=0, soffset=125, offset=0, offen=0, idxen=0, glc=0):
+    """Les deux mots d'une instruction MUBUF (décalage, OFFEN, IDXEN, GLC ; VADDR, VDATA, SRSRC en quadruplets
+    de SGPR, SOFFSET)."""
+    first = 0x38 << 26 | OPCODES["MUBUF", name] << 18 | glc << 14 | idxen << 13 | offen << 12 | offset & 0xFFF
+    return first, vaddr | vdata << 8 | srsrc << 16 | soffset << 24
+
+
+def test_buffer_programs_match_the_python_model():
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4
+    cases = [
+        # descripteur à pas nul : adresse de base 0x2000, 256 octets ; accès hors des enregistrements
+        (32, [(8, 0x2000), (9, 0), (10, 0x100)], [(0x2000, list(range(128)))], words(
+            lane4,
+            mubuf("buffer_load_dword", vdata=6, vaddr=4, srsrc=2, offen=1),
+            mubuf("buffer_store_dword", vdata=6, vaddr=4, srsrc=2, offen=1, offset=0x80),
+            mubuf("buffer_load_ubyte", vdata=8, vaddr=4, srsrc=2, offen=1, offset=0x10),
+            mubuf("buffer_load_dword", vdata=10, vaddr=4, srsrc=2, idxen=1),
+            mubuf("buffer_atomic_add", vdata=6, vaddr=4, srsrc=2, offen=1, offset=0x40, glc=1))),
+        # pas de 16 octets avec indice : seuls les indices inférieurs à 8 existent (wave64)
+        (64, [(8, 0x3000), (9, 16 << 16), (10, 8)], [(0x3000, list(range(64)))], words(
+            lane4,
+            mubuf("buffer_load_dword", vdata=6, vaddr=4, srsrc=2, idxen=1),
+            mubuf("buffer_store_dword", vdata=6, vaddr=4, srsrc=2, idxen=1, offset=4),
+            mubuf("buffer_load_sbyte", vdata=12, vaddr=4, srsrc=2, idxen=1, offen=0, glc=0))),
+    ]
+    for lanes, scalars, memory, program_words in cases:
+        python = run_python(lanes, False, scalars, program_words, memory)
+        assert python.startswith("steps"), "le cas doit s'exécuter"
+        assert_same(exe, lanes, False, scalars, program_words, memory)

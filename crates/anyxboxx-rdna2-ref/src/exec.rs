@@ -11,6 +11,7 @@ use crate::ds;
 use crate::error::Error;
 use crate::ext;
 use crate::flat;
+use crate::mubuf;
 use crate::scalar;
 use crate::smem;
 use crate::vector;
@@ -124,6 +125,7 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let smem_family = family == "SMEM";
     let ds_family = family == "DS";
     let flat_family = flat::is_family(family);
+    let mubuf_family = family == "MUBUF";
     if !SCALAR_FAMILIES.contains(&family)
         && !vector_family
         && !compare_family
@@ -132,6 +134,7 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         && !smem_family
         && !ds_family
         && !flat_family
+        && !mubuf_family
     {
         return Err(refused());
     }
@@ -157,6 +160,13 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         // Two words: the offset, the registers and the GLC bit are in the first, the registers in the second.
         let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
         flat::execute(wave, family, &name, wide)?;
+        wave.pc = next_pc;
+        return Ok(true);
+    }
+    if mubuf_family {
+        // Two words: the offset and the flags are in the first, the registers and the descriptor in the second.
+        let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
+        mubuf::execute(wave, &name, wide)?;
         wave.pc = next_pc;
         return Ok(true);
     }
