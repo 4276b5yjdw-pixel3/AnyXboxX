@@ -79,7 +79,7 @@ def test_failure_parity(runners, tmp_path):
     memory.write_bytes(bytes(16))
     invalid = tmp_path / "invalid.dxil"
     invalid.write_bytes(b"invalid DXIL")
-    for args in ([missing, memory], [invalid, memory], ["--draw"]):
+    for args in ([], [missing, memory], [invalid, memory], ["--draw"]):
         results = [invoke(runner, args) for runner in runners]
         assert results[0].returncode != 0
         assert (results[1].returncode, results[1].stdout, results[1].stderr) == (

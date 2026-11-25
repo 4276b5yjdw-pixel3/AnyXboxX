@@ -117,6 +117,20 @@ fn run(args: &[OsString], draw: bool) -> i32 {
     }
     0
 }
+// The C++ usage message goes through fwprintf, which uses the Windows ANSI code page.
+fn usage() {
+    use std::io::Write;
+    use windows::Win32::Globalization::{CP_ACP, WideCharToMultiByte};
+    let message = "Usage : anyxboxx_gpu_run.exe <shader.dxil> <m\u{e9}moire.bin> [groupes]\r\n        anyxboxx_gpu_run.exe --draw <vs.dxil> <ps.dxil|-> <m\u{e9}moire.bin> <sommets> <largeur> <hauteur>\r\n        anyxboxx_gpu_run.exe --adaptateur\r\n";
+    let wide: Vec<u16> = message.encode_utf16().collect();
+    unsafe {
+        let size = WideCharToMultiByte(CP_ACP, 0, &wide, None, None, None);
+        let mut bytes = vec![0; size as usize];
+        WideCharToMultiByte(CP_ACP, 0, &wide, Some(&mut bytes), None, None);
+        let _ = std::io::stderr().write_all(&bytes);
+    }
+}
+
 fn main() {
     let args: Vec<_> = std::env::args_os().collect();
     let status = if args.get(1).is_some_and(|s| s == "--adaptateur") {
@@ -128,9 +142,7 @@ fn main() {
     } else if args.get(1).is_some_and(|s| s == "--draw") {
         run(&args, true)
     } else if args.len() < 3 {
-        eprintln!(
-            "Usage : anyxboxx_gpu_run.exe <shader.dxil> <mémoire.bin> [groupes]\r\n        anyxboxx_gpu_run.exe --draw <vs.dxil> <ps.dxil|-> <mémoire.bin> <sommets> <largeur> <hauteur>\r\n        anyxboxx_gpu_run.exe --adaptateur"
-        );
+        usage();
         2
     } else {
         run(&args, false)
