@@ -15,8 +15,12 @@ ORACLE = ROOT / "runtime" / "build" / "bin" / "anyxboxx_gpu_run_cpp.exe"
 @pytest.fixture
 def runners():
     oracle = Path(os.environ.get("ANYXBOXX_GPU_ORACLE", str(ORACLE)))
-    if not oracle.is_file() or rdna2_gpu.find_dxc() is None:
-        pytest.skip("C++ GPU oracle or dxc is unavailable")
+    if not oracle.is_file():
+        if os.environ.get("ANYXBOXX_REQUIRE_RUNTIME") == "1":
+            pytest.fail(f"C++ GPU oracle is missing: {oracle}")
+        pytest.skip("C++ GPU oracle is unavailable")
+    if rdna2_gpu.find_dxc() is None:
+        pytest.skip("dxc is unavailable")
     assert RUST.is_file(), "build the Rust GPU runner with cargo build --release"
     return oracle, RUST
 
@@ -67,3 +71,17 @@ def test_draw_parity(runners, tmp_path, pixel):
         results.append((result.returncode, result.stdout, result.stderr, memory.read_bytes()))
     assert results[0][0] == 0, results[0][2]
     assert results[1] == results[0]
+
+
+def test_failure_parity(runners, tmp_path):
+    missing = tmp_path / "missing.dxil"
+    memory = tmp_path / "memory.bin"
+    memory.write_bytes(bytes(16))
+    invalid = tmp_path / "invalid.dxil"
+    invalid.write_bytes(b"invalid DXIL")
+    for args in ([missing, memory], [invalid, memory], ["--draw"]):
+        results = [invoke(runner, args) for runner in runners]
+        assert results[0].returncode != 0
+        assert (results[1].returncode, results[1].stdout, results[1].stderr) == (
+            results[0].returncode, results[0].stdout, results[0].stderr)
+        assert memory.read_bytes() == bytes(16)

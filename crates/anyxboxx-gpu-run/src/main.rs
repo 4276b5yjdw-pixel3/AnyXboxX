@@ -1,3 +1,11 @@
+// The C++ runner uses the Windows CRT in text mode, including CRLF on pipes.
+macro_rules! println {
+    ($($arg:tt)*) => { std::print!("{}\r\n", format_args!($($arg)*)) };
+}
+macro_rules! eprintln {
+    ($($arg:tt)*) => { std::eprint!("{}\r\n", format_args!($($arg)*)) };
+}
+
 mod adapter;
 mod gpu;
 
@@ -8,7 +16,20 @@ fn fail(message: &str) -> i32 {
     1
 }
 fn number(value: &OsString) -> u32 {
-    value.to_string_lossy().trim().parse::<i32>().unwrap_or(0) as u32
+    let text = value.to_string_lossy();
+    let text = text.trim_start();
+    let (negative, digits) = match text.as_bytes().first() {
+        Some(b'-') => (true, &text[1..]),
+        Some(b'+') => (false, &text[1..]),
+        _ => (false, text),
+    };
+    let n = digits
+        .bytes()
+        .take_while(u8::is_ascii_digit)
+        .fold(0u32, |n, c| {
+            n.wrapping_mul(10).wrapping_add(u32::from(c - b'0'))
+        });
+    if negative { n.wrapping_neg() } else { n }
 }
 fn read(path: &OsString) -> std::io::Result<Vec<u8>> {
     fs::read(Path::new(path))
@@ -108,11 +129,28 @@ fn main() {
         run(&args, true)
     } else if args.len() < 3 {
         eprintln!(
-            "Usage : anyxboxx_gpu_run.exe <shader.dxil> <mémoire.bin> [groupes]\n        anyxboxx_gpu_run.exe --draw <vs.dxil> <ps.dxil|-> <mémoire.bin> <sommets> <largeur> <hauteur>\n        anyxboxx_gpu_run.exe --adaptateur"
+            "Usage : anyxboxx_gpu_run.exe <shader.dxil> <mémoire.bin> [groupes]\r\n        anyxboxx_gpu_run.exe --draw <vs.dxil> <ps.dxil|-> <mémoire.bin> <sommets> <largeur> <hauteur>\r\n        anyxboxx_gpu_run.exe --adaptateur"
         );
         2
     } else {
         run(&args, false)
     };
     std::process::exit(status);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn numbers_accept_the_same_prefix_as_wtoi() {
+        for (input, expected) in [
+            ("  +12xyz", 12),
+            ("-2tail", u32::MAX - 1),
+            ("no digits", 0),
+            ("", 0),
+        ] {
+            assert_eq!(number(&input.into()), expected);
+        }
+    }
 }
