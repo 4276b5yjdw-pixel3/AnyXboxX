@@ -30,9 +30,19 @@ const STORE_WORDS: [(&str, usize); 3] = [("dword", 1), ("dwordx2", 2), ("dwordx4
 enum Shape {
     MemTime,
     CacheControl,
-    Load { buffer: bool, words: usize },
-    Store { buffer: bool, words: usize },
-    Atomic { buffer: bool, kind: &'static str, width: u32 },
+    Load {
+        buffer: bool,
+        words: usize,
+    },
+    Store {
+        buffer: bool,
+        words: usize,
+    },
+    Atomic {
+        buffer: bool,
+        kind: &'static str,
+        width: u32,
+    },
 }
 
 /// The fields of the word, with SOFFSET already added to the offset.
@@ -44,7 +54,10 @@ struct Access {
 }
 
 fn words_of(table: &[(&str, usize)], suffix: &str) -> Option<usize> {
-    table.iter().find(|(name, _)| *name == suffix).map(|(_, words)| *words)
+    table
+        .iter()
+        .find(|(name, _)| *name == suffix)
+        .map(|(_, words)| *words)
 }
 
 fn shape(name: &str) -> Option<Shape> {
@@ -59,10 +72,16 @@ fn shape(name: &str) -> Option<Shape> {
         None => (false, name.strip_prefix("s_")?),
     };
     if let Some(suffix) = rest.strip_prefix("load_") {
-        return Some(Shape::Load { buffer, words: words_of(&LOAD_WORDS, suffix)? });
+        return Some(Shape::Load {
+            buffer,
+            words: words_of(&LOAD_WORDS, suffix)?,
+        });
     }
     if let Some(suffix) = rest.strip_prefix("store_") {
-        return Some(Shape::Store { buffer, words: words_of(&STORE_WORDS, suffix)? });
+        return Some(Shape::Store {
+            buffer,
+            words: words_of(&STORE_WORDS, suffix)?,
+        });
     }
     let suffix = rest.strip_prefix("atomic_")?;
     let (kind, wide) = match suffix.strip_suffix("_x2") {
@@ -70,7 +89,11 @@ fn shape(name: &str) -> Option<Shape> {
         None => (suffix, false),
     };
     let kind = atomic::KINDS.iter().find(|known| **known == kind)?;
-    Some(Shape::Atomic { buffer, kind, width: if wide { 64 } else { 32 } })
+    Some(Shape::Atomic {
+        buffer,
+        kind,
+        width: if wide { 64 } else { 32 },
+    })
 }
 
 /// Whether the interpreter executes this SMEM mnemonic.
@@ -80,7 +103,9 @@ pub fn supports(name: &str) -> bool {
 
 fn check(first: usize, count: usize) -> Result<(), Error> {
     if first + count > SCALAR_REGISTERS {
-        return Err(Error::Operand(format!("registre scalaire hors plage : s{first}")));
+        return Err(Error::Operand(format!(
+            "registre scalaire hors plage : s{first}"
+        )));
     }
     Ok(())
 }
@@ -104,7 +129,13 @@ fn access(wave: &Wave, word: u64) -> Access {
 }
 
 /// The address of an access of `size` bytes at `offset`, and whether it lies inside the buffer.
-fn place(wave: &Wave, buffer: bool, sbase: usize, offset: i64, size: u64) -> Result<(u64, bool), Error> {
+fn place(
+    wave: &Wave,
+    buffer: bool,
+    sbase: usize,
+    offset: i64,
+    size: u64,
+) -> Result<(u64, bool), Error> {
     if buffer {
         check(sbase, 3)?;
         let (base, _, records) = descriptor(wave, sbase as u32);
@@ -118,11 +149,16 @@ fn place(wave: &Wave, buffer: bool, sbase: usize, offset: i64, size: u64) -> Res
 
 /// The little-endian value of `count` SGPRs from `first`.
 fn register_value(wave: &Wave, first: usize, count: usize) -> u64 {
-    (0..count).fold(0, |value, i| value | u64::from(wave.s[first + i]) << (32 * i))
+    (0..count).fold(0, |value, i| {
+        value | u64::from(wave.s[first + i]) << (32 * i)
+    })
 }
 
 fn le_value(bytes: &[u8]) -> u64 {
-    bytes.iter().rev().fold(0, |value, byte| value << 8 | u64::from(*byte))
+    bytes
+        .iter()
+        .rev()
+        .fold(0, |value, byte| value << 8 | u64::from(*byte))
 }
 
 fn load(wave: &mut Wave, buffer: bool, words: usize, word: u64) -> Result<(), Error> {
@@ -144,7 +180,13 @@ fn load(wave: &mut Wave, buffer: bool, words: usize, word: u64) -> Result<(), Er
 fn store(wave: &mut Wave, buffer: bool, words: usize, word: u64) -> Result<(), Error> {
     let access = access(wave, word);
     check(access.sdata, words)?;
-    let (address, inside) = place(wave, buffer, access.sbase, access.offset, (words * DWORD) as u64)?;
+    let (address, inside) = place(
+        wave,
+        buffer,
+        access.sbase,
+        access.offset,
+        (words * DWORD) as u64,
+    )?;
     if inside {
         let values = wave.s[access.sdata..access.sdata + words].to_vec();
         wave.memory.write_words(address, &values);
@@ -152,7 +194,13 @@ fn store(wave: &mut Wave, buffer: bool, words: usize, word: u64) -> Result<(), E
     Ok(())
 }
 
-fn atomic_access(wave: &mut Wave, buffer: bool, kind: &str, width: u32, word: u64) -> Result<(), Error> {
+fn atomic_access(
+    wave: &mut Wave,
+    buffer: bool,
+    kind: &str,
+    width: u32,
+    word: u64,
+) -> Result<(), Error> {
     let access = access(wave, word);
     let count = (width / 32) as usize;
     let cmpswap = kind == "cmpswap";
@@ -192,7 +240,11 @@ pub fn execute(wave: &mut Wave, name: &str, word: u64) -> Result<(), Error> {
         }
         Some(Shape::Load { buffer, words }) => load(wave, buffer, words, word),
         Some(Shape::Store { buffer, words }) => store(wave, buffer, words, word),
-        Some(Shape::Atomic { buffer, kind, width }) => atomic_access(wave, buffer, kind, width, word),
+        Some(Shape::Atomic {
+            buffer,
+            kind,
+            width,
+        }) => atomic_access(wave, buffer, kind, width, word),
         None => Err(Error::Untranslated(format!(
             "instruction non traduite : {name} (SMEM)"
         ))),

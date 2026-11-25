@@ -45,7 +45,10 @@ impl Memory {
             let page = address / PAGE;
             let offset = (address % PAGE) as usize;
             let count = rest.len().min(PAGE as usize - offset);
-            let bytes = self.pages.entry(page).or_insert_with(|| Box::new([0u8; PAGE as usize]));
+            let bytes = self
+                .pages
+                .entry(page)
+                .or_insert_with(|| Box::new([0u8; PAGE as usize]));
             bytes[offset..offset + count].copy_from_slice(&rest[..count]);
             address = address.wrapping_add(count as u64);
             rest = &rest[count..];
@@ -60,7 +63,9 @@ impl Memory {
 
     /// The created pages, in address order: (address of the page, its bytes).
     pub fn pages(&self) -> impl Iterator<Item = (u64, &[u8; PAGE as usize])> {
-        self.pages.iter().map(|(page, bytes)| (page * PAGE, &**bytes))
+        self.pages
+            .iter()
+            .map(|(page, bytes)| (page * PAGE, &**bytes))
     }
 }
 

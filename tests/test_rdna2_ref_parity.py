@@ -539,3 +539,52 @@ def test_local_data_share_programs_match_the_python_model():
         python = run_python(lanes, False, [], program_words)
         assert python.startswith("steps"), "le cas doit s'exécuter"
         assert_same(exe, lanes, False, [], program_words)
+
+
+def test_lds_atomic_programs_match_the_python_model():
+    """Atomiques LDS : formes simples, étendues (_rtn ou non), wrxchg2 ; les résultats sont relus
+    dans les VGPR (la LDS n'est pas dans l'état rendu)."""
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4
+    lane8 = vop2("v_lshlrev_b32", 5, 131, 0)     # v5 = lane * 8
+    cases = [
+        # formes simples 32 bits : add rtn, sub sans retour, max signé rtn, lecture finale
+        (32, words(lane4, vop1("v_mov_b32", 1, 255), 0x00000010, vop1("v_mov_b32", 2, 255), 0xFFFFFFFF,
+                   vop1("v_mov_b32", 3, 255), 0x00000005,
+                   ds("ds_write_b32", addr=4, data0=1),
+                   ds("ds_add_rtn_u32", vdst=6, addr=4, data0=3),
+                   ds("ds_sub_u32", addr=4, data0=3),
+                   ds("ds_max_rtn_i32", vdst=7, addr=4, data0=2),
+                   ds("ds_read_b32", vdst=8, addr=4))),
+        # formes étendues 64 bits : add, min non signé, rsub, lecture 64 bits
+        (32, words(lane8, vop1("v_mov_b32", 1, 255), 0x00000007, vop1("v_mov_b32", 2, 255), 0x00000001,
+                   ds("ds_write_b64", addr=5, data0=1),
+                   vop1("v_mov_b32", 3, 255), 0x00000003, vop1("v_mov_b32", 4, 255), 0x00000000,
+                   ds("ds_add_rtn_u64", vdst=10, addr=5, data0=3),
+                   ds("ds_min_rtn_u64", vdst=12, addr=5, data0=1),
+                   ds("ds_xor_rtn_b64", vdst=14, addr=5, data0=1),
+                   ds("ds_read_b64", vdst=16, addr=5))),
+        # mskor, cmpst (DATA0 compare, DATA1 écrit), wrap, rsub, wrxchg, b32 avec retour
+        (32, words(lane4, vop1("v_mov_b32", 1, 255), 0xFFFF0000, vop1("v_mov_b32", 2, 255), 0xFF00FF00,
+                   vop1("v_mov_b32", 3, 255), 0x000000AB, vop1("v_mov_b32", 5, 255), 0x00000004,
+                   ds("ds_write_b32", addr=4, data0=1),
+                   ds("ds_mskor_rtn_b32", vdst=6, addr=4, data0=2, data1=3),
+                   ds("ds_cmpst_rtn_b32", vdst=7, addr=4, data0=3, data1=5),
+                   ds("ds_wrap_rtn_b32", vdst=8, addr=4, data0=5, data1=3),
+                   ds("ds_rsub_rtn_u32", vdst=9, addr=4, data0=2),
+                   ds("ds_wrxchg_rtn_b32", vdst=10, addr=4, data0=3),
+                   ds("ds_read_b32", vdst=11, addr=4))),
+        # wrxchg2 : deux échanges à décalages de 1 élément, puis wave64 avec st64 en b64
+        (32, words(lane4, vop1("v_mov_b32", 1, 255), 0x11111111, vop1("v_mov_b32", 2, 255), 0x22222222,
+                   ds("ds_write2_b32", addr=4, data0=1, data1=2, offset0=0, offset1=1),
+                   ds("ds_wrxchg2_rtn_b32", vdst=6, addr=4, data0=2, data1=1, offset0=0, offset1=1),
+                   ds("ds_read2_b32", vdst=8, addr=4, offset0=0, offset1=1))),
+        (64, words(lane8, vop1("v_mov_b32", 1, 255), 0x00000001, vop1("v_mov_b32", 2, 255), 0x00000002,
+                   vop1("v_mov_b32", 20, 255), 0x00000003, vop1("v_mov_b32", 21, 255), 0x00000004,
+                   ds("ds_wrxchg2st64_rtn_b64", vdst=10, addr=5, data0=1, data1=20, offset0=0, offset1=1),
+                   ds("ds_read_b64", vdst=16, addr=5, offset1=2))),
+    ]
+    for lanes, program_words in cases:
+        python = run_python(lanes, False, [], program_words)
+        assert python.startswith("steps"), "le cas doit s'exécuter"
+        assert_same(exe, lanes, False, [], program_words)
