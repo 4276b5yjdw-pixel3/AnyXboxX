@@ -21,6 +21,19 @@ Le lanceur pose aussi `VICTORY_OCEAN_READBACK=1`, avec ou sans `-NoTunedSettings
 
 Mesuré par le mainteneur le 25 novembre (RTX 4070 SUPER, i7-13700KF, chemin Series X en 4K, monde, après `warm`, build release) : médiane d'environ 12,5 fps, environ 15 fps sur la dernière minute, pointes à 30, environ 7 500 draws par image, sans plantage ; la base précédente tournait à environ 5 fps au même endroit. Problèmes connus (notes de Neptune) : objets et vêtements noirs un instant pendant le remplacement de leurs textures, parties du monde absentes derrière certaines portes et sur certains toits, pas d'animation faciale, sauts du temps d'image pendant le streaming ; la lumière intérieure est une lumière ambiante uniforme à la place de l'éclairage en lancer de rayons.
 
+### Sous Linux (Proton, AMD)
+
+La base Neptune ne reprend pas les 57 commits Proton/AMD de la base précédente (section suivante) : `main` a besoin de quatre choses sous Proton. `tools/lancer_victory.ps1` ne tourne que sous Windows : posez ces réglages à la main autour de `wine victory.exe run <dossier du jeu>\game_scarlett_master.exe --execute`, avec les mêmes variables que le lanceur.
+
+| Quoi | Pourquoi |
+| --- | --- |
+| La `d3dcompiler_47.dll` de Microsoft à côté de `victory.exe`, et `WINEDLLOVERRIDES` avec `d3dcompiler_47=n` | VIctory compile ses propres shaders d'appoint (bornage des arguments indirects, comparaison sur la carte, passe des plans de profondeur) avec `D3DCompile`. Le compilateur intégré de Wine les refuse (`'InterlockedMax' is not defined on type 'RWByteAddressBuffer'`) : sans le bornage, tous les draws indirects sont abandonnés et seule l'interface s'affiche sur un monde noir. Neptune n'a pas de repli DXC, donc `VICTORY_DXC` n'aide pas. La DLL vient de votre propre installation de Windows ou du Windows SDK ; ne la committez jamais. |
+| `VKD3D_CONFIG=descriptor_heap` | Le titre demande 1 245 184 vues, plus que la limite par défaut de vkd3d-proton. |
+| `VICTORY_LATE_WAIT=0` | Le jeu de réglages de Neptune allume le relais (`VICTORY_RELAY=2`), et avec le relais un `VICTORY_LATE_WAIT` non posé vaut l'étape 3. Sous RADV, le périphérique a alors été perdu après environ 80 s et 105 s (`0x887A0005`, le noyau signalant une faute de page GPU sur des lectures de données d'un shader) ; avec `0`, quatre lancements de 2,6 à 20 minutes n'en ont perdu aucun. |
+| Pas de `warm` | `victory.exe warm` a traduit tous les shaders et créé les pipelines de calcul, puis s'est figé sous Proton (aucun temps CPU, tous les threads en attente). Laissez-le de côté : le jeu traduit ce dont il a besoin au premier lancement. |
+
+Mesuré sous Linux seulement (Fedora 44, RX 9070 XT 16 Go, RADV via vkd3d-proton, GE-Proton11-12 avec le wineserver view-tree, build release de `main` avec le jeu de réglages du lanceur et `VICTORY_OCEAN_READBACK=1`) : le monde s'affiche, un lancement de 20 minutes dans le chapitre 1 s'est terminé à la fermeture de la fenêtre. Deux pertes sans lui, quatre lancements sans perte avec lui : `VICTORY_LATE_WAIT=0` est mesuré, pas prouvé. Pas mesuré : d'autres pilotes AMD, NVIDIA sous Proton.
+
 ## Correctifs Proton et AMD (25 novembre)
 
 `third_party/victory` n'est plus un sous-module : il contient une copie de VIctory à l'épinglage précédent `80d58f8` (section suivante, inchangée), suivie dans l'historique de ce dépôt de 57 commits pour Proton et les cartes AMD (`git log -- third_party/victory`). Chaque commit nomme sa source ; un commit repris de quelqu'un d'autre se termine par les lignes `Source:` et `Co-authored-by:`. Chaque dépôt d'origine est listé dans [THIRD_PARTY.md](../../THIRD_PARTY.md).

@@ -21,6 +21,19 @@ The launcher also sets `VICTORY_OCEAN_READBACK=1`, with or without `-NoTunedSett
 
 Measured by the maintainer on 25 November (RTX 4070 SUPER, i7-13700KF, Series X path at 4K, world, after `warm`, release build): median about 12.5 fps, about 15 fps over the last minute, peaks at 30, about 7,500 draws per frame, no crash; the previous base ran at about 5 fps there. Known issues (Neptune's notes): objects and clothes briefly black while their textures are swapped, parts of the world missing behind some doors and on some roofs, no facial animation, frame time jumps while the game streams; indoor light is an even ambient stand-in for the ray-traced lighting.
 
+### On Linux (Proton, AMD)
+
+The Neptune base does not carry the 57 Proton/AMD commits of the previous base (next section), so `main` needs four things under Proton. `tools/lancer_victory.ps1` is Windows only: set these by hand around `wine victory.exe run <game folder>\game_scarlett_master.exe --execute`, with the same variables as the launcher.
+
+| What | Why |
+| --- | --- |
+| Microsoft's `d3dcompiler_47.dll` next to `victory.exe`, and `WINEDLLOVERRIDES` with `d3dcompiler_47=n` | VIctory compiles its own helper shaders (indirect argument clamp, card compare, depth plane pass) with `D3DCompile`. Wine's builtin compiler refuses them (`'InterlockedMax' is not defined on type 'RWByteAddressBuffer'`): without the clamp every indirect draw is dropped, and only the UI is drawn over a black world. Neptune has no DXC fallback, so `VICTORY_DXC` does not help. The DLL comes from your own Windows or Windows SDK install; never commit it. |
+| `VKD3D_CONFIG=descriptor_heap` | The title asks for 1,245,184 views, more than vkd3d-proton's default cap. |
+| `VICTORY_LATE_WAIT=0` | Neptune's switch set turns the relay on (`VICTORY_RELAY=2`), and with the relay an unset `VICTORY_LATE_WAIT` means stage 3. On RADV the device was then lost after about 80 s and 105 s (`0x887A0005`, the kernel naming a GPU page fault from shader data loads); with `0`, four runs of 2.6 to 20 minutes had none. |
+| No `warm` | `victory.exe warm` translated every shader and made the compute pipelines, then hung under Proton (no CPU time, every thread waiting). Leave it out: the game translates what it needs on the first launch. |
+
+Measured on Linux only (Fedora 44, RX 9070 XT 16 GB, RADV through vkd3d-proton, GE-Proton11-12 with the view-tree wineserver, release build of `main` with the launcher's switch set and `VICTORY_OCEAN_READBACK=1`): the world draws, a 20-minute run into chapter 1 ended when the window was closed. Two losses without it, four runs without a loss with it: treat `VICTORY_LATE_WAIT=0` as measured, not proven. Not measured: other AMD drivers, NVIDIA under Proton.
+
 ## Proton and AMD fixes (25 November)
 
 `third_party/victory` is no longer a submodule: it holds a copy of VIctory at the previous pin `80d58f8` (next section, unchanged), followed in this repository's history by 57 commits for Proton and AMD cards (`git log -- third_party/victory`). Each commit names its source; one taken from someone else ends with `Source:` and `Co-authored-by:` lines. Every source repository is listed in [THIRD_PARTY.md](../THIRD_PARTY.md).
