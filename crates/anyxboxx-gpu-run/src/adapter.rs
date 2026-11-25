@@ -78,7 +78,7 @@ pub fn chosen() -> Result<(IDXGIAdapter1, ID3D12Device, &'static str)> {
     let device = match device(&adapter) {
         Ok(device) => device,
         Err(error) => {
-            eprintln!("[gpu] pas de p?riph?rique D3D12 sur ? {} ?", name(&adapter));
+            eprintln!("[gpu] pas de périphérique D3D12 sur « {} »", name(&adapter));
             return Err(error);
         }
     };
@@ -98,7 +98,7 @@ pub fn create() -> Result<(ID3D12Device, &'static str)> {
         else {
             let names = adapters.iter().map(name).collect::<Vec<_>>().join(", ");
             eprintln!(
-                "[gpu] aucun adaptateur mat?riel ne contient ? {filter} ? ; adaptateurs : {}",
+                "[gpu] aucun adaptateur matériel ne contient « {filter} » ; adaptateurs : {}",
                 if names.is_empty() { "aucun" } else { &names }
             );
             return Err(windows::core::Error::from_hresult(windows::core::HRESULT(
@@ -106,10 +106,10 @@ pub fn create() -> Result<(ID3D12Device, &'static str)> {
             )));
         };
         return match device(adapter) {
-            Ok(device) => Ok((device, "mat?riel")),
+            Ok(device) => Ok((device, "matériel")),
             Err(error) => {
                 eprintln!(
-                    "[gpu] pas de p?riph?rique D3D12 sur ? {} ? (0x{:08x})",
+                    "[gpu] pas de périphérique D3D12 sur « {} » (0x{:08x})",
                     name(adapter),
                     error.code().0 as u32
                 );
@@ -130,7 +130,7 @@ pub fn create() -> Result<(ID3D12Device, &'static str)> {
         {
             return Ok((
                 result.expect("D3D12CreateDevice returned no device"),
-                "mat?riel",
+                "matériel",
             ));
         }
     }

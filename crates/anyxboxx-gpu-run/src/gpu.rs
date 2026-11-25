@@ -38,7 +38,11 @@ pub fn root(device: &ID3D12Device) -> Result<ID3D12RootSignature> {
 }
 fn bytecode(bytes: &[u8]) -> D3D12_SHADER_BYTECODE {
     D3D12_SHADER_BYTECODE {
-        pShaderBytecode: bytes.as_ptr().cast(),
+        pShaderBytecode: if bytes.is_empty() {
+            ptr::null()
+        } else {
+            bytes.as_ptr().cast()
+        },
         BytecodeLength: bytes.len(),
     }
 }
