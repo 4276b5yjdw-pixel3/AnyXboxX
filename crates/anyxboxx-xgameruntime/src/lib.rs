@@ -12,12 +12,17 @@
 
 #![allow(non_snake_case)]
 
+mod dxgi_factory;
 mod entry;
 mod events;
+mod frame_counter;
 mod game_config;
+mod gamer_picture;
 mod guid;
 mod hdr;
+mod hdr_display;
 mod log;
+mod networking;
 mod object;
 mod registry;
 mod served;

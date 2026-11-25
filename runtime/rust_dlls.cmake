@@ -5,7 +5,7 @@
 #
 # A missing Rust DLL stops the build with the command to run: no stale or partial runtime folder.
 string(REPLACE "," ";" pairs "${DLLS}")
-# A fresh build tree has no bin folder yet: this target can run before any C++ target makes it.
+# file(COPY_FILE) does not create folders: on a clean build runtime/build/bin does not exist yet.
 file(MAKE_DIRECTORY "${BIN}")
 foreach(pair IN LISTS pairs)
   string(REPLACE "=" ";" names "${pair}")

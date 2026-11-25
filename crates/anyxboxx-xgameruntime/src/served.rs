@@ -86,6 +86,8 @@ fn object_for(name: &str, pairs: &[(Guid, Guid)], gdk: &[tables::GdkApi]) -> *co
         | "ActivationInterface"
         | "ProtocolInterface"
         | "ErrorInterface" => crate::events::methods(name),
+        "HdrDisplayInterface" => crate::hdr_display::methods(),
+        "NetworkingInterface" => crate::networking::methods(),
         _ => Vec::new(),
     };
     let object: &'static Object = object::build(slots, query_interface as *const c_void, &methods);
