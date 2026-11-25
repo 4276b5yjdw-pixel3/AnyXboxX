@@ -9,7 +9,7 @@
 
 use crate::atomic;
 use crate::error::Error;
-use crate::memory::descriptor;
+use crate::memory::{descriptor, le_words};
 use crate::wave::{SCALAR_REGISTERS, Wave};
 
 const NULL: usize = 125;
@@ -159,13 +159,6 @@ fn le_value(bytes: &[u8]) -> u64 {
         .iter()
         .rev()
         .fold(0, |value, byte| value << 8 | u64::from(*byte))
-}
-
-fn le_words(bytes: &[u8]) -> Vec<u32> {
-    bytes
-        .chunks_exact(DWORD)
-        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-        .collect()
 }
 
 fn load(wave: &mut Wave, buffer: bool, words: usize, word: u64) -> Result<(), Error> {

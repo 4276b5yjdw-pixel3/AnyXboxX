@@ -497,3 +497,45 @@ def test_scalar_memory_programs_match_the_python_model():
     for lanes, scc, scalars, memory, words in cases:
         assert run_python(lanes, scc, scalars, words, memory).startswith("steps"), "le cas doit s'exécuter"
         assert_same(exe, lanes, scc, scalars, words, memory)
+
+
+def ds(name, vdst=0, addr=0, data0=0, data1=0, offset0=0, offset1=0):
+    """Les deux mots d'une instruction DS (décalages, ADDR, DATA0, DATA1, VDST)."""
+    first = 0x36 << 26 | OPCODES["DS", name] << 18 | offset1 << 8 | offset0
+    return first, addr | data0 << 8 | data1 << 16 | vdst << 24
+
+
+def words(*items):
+    """Mots d'un programme : les tuples (instructions à deux mots) sont aplatis."""
+    flat = []
+    for item in items:
+        flat.extend(item if isinstance(item, tuple) else [item])
+    return flat
+
+
+def test_local_data_share_programs_match_the_python_model():
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4
+    lane8 = vop2("v_lshlrev_b32", 5, 131, 0)     # v5 = lane * 8
+    cases = [
+        # mots 32 bits, puis lecture avec ou sans signe, 64 bits, sous-mots
+        (32, words(lane4, vop1("v_mov_b32", 1, 255), 0xDEADBEEF,
+                   ds("ds_write_b32", addr=4, data0=1), ds("ds_read_b32", vdst=6, addr=4))),
+        (32, words(lane8, vop1("v_mov_b32", 1, 255), 0x0000FF80, vop1("v_mov_b32", 2, 255), 0x55AA55AA,
+                   ds("ds_write_b64", addr=5, data0=1), ds("ds_read_b64", vdst=8, addr=5),
+                   ds("ds_read_i8", vdst=10, addr=5), ds("ds_read_u8", vdst=11, addr=5),
+                   ds("ds_read_i16", vdst=12, addr=5), ds("ds_read_u16", vdst=13, addr=5))),
+        # read2 et write2 (offsets en octets), écriture de 96 bits et lecture de 128 bits
+        (32, words(lane4, vop1("v_mov_b32", 1, 255), 0x01020304, vop1("v_mov_b32", 2, 255), 0xA0B0C0D0,
+                   ds("ds_write2_b32", addr=4, data0=1, data1=2, offset0=0, offset1=1),
+                   ds("ds_read2_b32", vdst=6, addr=4, offset0=0, offset1=1),
+                   ds("ds_write_b96", addr=4, data0=1), ds("ds_read_b128", vdst=10, addr=4))),
+        # formes st64 (décalages × 64 éléments), ds_nop, wave64
+        (64, words(lane4, vop1("v_mov_b32", 1, 255), 0x77770001, vop1("v_mov_b32", 2, 255), 0x88880002,
+                   ds("ds_write2st64_b32", addr=4, data0=1, data1=2, offset0=0, offset1=1),
+                   ds("ds_read2st64_b32", vdst=6, addr=4, offset0=0, offset1=1), ds("ds_nop"))),
+    ]
+    for lanes, program_words in cases:
+        python = run_python(lanes, False, [], program_words)
+        assert python.startswith("steps"), "le cas doit s'exécuter"
+        assert_same(exe, lanes, False, [], program_words)
