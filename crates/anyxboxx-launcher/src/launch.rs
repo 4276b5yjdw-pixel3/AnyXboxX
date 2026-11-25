@@ -22,10 +22,7 @@ pub struct Plan {
 pub fn play_steps(plan: &Plan, precompile: bool) -> Result<Vec<Step>, RunError> {
     let victory = Victory::locate(&plan.repo)?;
     anyxboxx::run::game_exe(&plan.game_dir)?;
-    let mut steps = vec![Step {
-        label: "Building VIctory".to_string(),
-        command: victory.build_command(),
-    }];
+    let mut steps: Vec<Step> = build_step(&victory).into_iter().collect();
     if precompile {
         steps.push(precompile_step(&victory, plan)?);
     }
@@ -40,13 +37,17 @@ pub fn play_steps(plan: &Plan, precompile: bool) -> Result<Vec<Step>, RunError> 
 pub fn precompile_steps(plan: &Plan) -> Result<Vec<Step>, RunError> {
     let victory = Victory::locate(&plan.repo)?;
     anyxboxx::run::game_exe(&plan.game_dir)?;
-    Ok(vec![
-        Step {
-            label: "Building VIctory".to_string(),
-            command: victory.build_command(),
-        },
-        precompile_step(&victory, plan)?,
-    ])
+    let mut steps: Vec<Step> = build_step(&victory).into_iter().collect();
+    steps.push(precompile_step(&victory, plan)?);
+    Ok(steps)
+}
+
+/// The cargo build of VIctory; `None` for a `victory.exe` built beforehand.
+fn build_step(victory: &Victory) -> Option<Step> {
+    victory.build_command().map(|command| Step {
+        label: "Building VIctory".to_string(),
+        command,
+    })
 }
 
 fn precompile_step(victory: &Victory, plan: &Plan) -> Result<Step, RunError> {
