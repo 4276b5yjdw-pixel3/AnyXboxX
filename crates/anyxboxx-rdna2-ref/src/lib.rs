@@ -14,6 +14,7 @@ pub mod error;
 pub mod exec;
 pub mod ext;
 pub mod float;
+pub mod memory;
 pub mod mnemonics;
 pub mod movrel;
 pub mod sad;

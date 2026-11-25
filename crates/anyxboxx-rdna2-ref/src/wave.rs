@@ -6,6 +6,7 @@
 
 use crate::error::Error;
 use crate::float;
+use crate::memory::Memory;
 
 /// SGPRs: s0 to s105, then VCC, TTMP, M0, NULL, EXEC.
 pub const SCALAR_REGISTERS: usize = 128;
@@ -29,6 +30,7 @@ pub struct Wave {
     pub scc: bool,
     pub pc: usize,
     pub steps: u64,
+    pub memory: Memory,
 }
 
 impl Wave {
@@ -47,6 +49,7 @@ impl Wave {
             scc: false,
             pc: 0,
             steps: 0,
+            memory: Memory::default(),
         };
         let all = if lanes == 64 {
             u64::MAX
