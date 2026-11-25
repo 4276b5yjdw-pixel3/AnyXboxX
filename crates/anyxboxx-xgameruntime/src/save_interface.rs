@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 
 use victory_hle::modules::xasync::AsyncBlock;
 
+use crate::handle::{checked, close, new_handle};
 use crate::object::{E_INVALIDARG, HResult, S_OK};
 use crate::save_async::{self, Completion};
 use crate::save_blobs::{BlobSet, GameSaveBlob, GameSaveBlobInfo};
@@ -42,15 +43,6 @@ pub struct GameSaveContainerInfo {
 type BlobCallback = Option<unsafe extern "system" fn(*const GameSaveBlobInfo, *mut c_void) -> bool>;
 type ContainerCallback =
     Option<unsafe extern "system" fn(*const GameSaveContainerInfo, *mut c_void) -> bool>;
-
-/// What every handle points at: its magic word, then the value (`repr(C)`, so the magic comes first).
-/// The magic is read through a pointer cast, before the kind of the value is known.
-#[repr(C)]
-#[allow(dead_code)]
-struct Handle<T> {
-    magic: u32,
-    value: T,
-}
 
 struct Provider {
     folder: PathBuf,
@@ -106,38 +98,6 @@ unsafe fn checked_name<'a>(text: *const c_char, max: usize) -> Option<&'a [u8]> 
     unsafe { c_bytes(text) }.filter(|name| save_store::valid_name(name, max))
 }
 
-/// A handle of kind `magic`, if `handle` is one and it is alive.
-///
-/// # Safety
-/// `handle` is null or a pointer the title received from this module (its magic word is readable).
-unsafe fn checked<'a, T>(handle: *mut c_void, magic: u32) -> Option<&'a mut T> {
-    if handle.is_null() {
-        return None;
-    }
-    // SAFETY: a non-null handle of this module starts with its magic word.
-    if unsafe { *handle.cast::<u32>() } != magic {
-        return None;
-    }
-    // SAFETY: the magic matched, so this is a `Handle<T>` we allocated, and nothing else borrows it.
-    Some(unsafe { &mut (*handle.cast::<Handle<T>>()).value })
-}
-
-/// Frees a handle of kind `magic`, if it is one.
-///
-/// # Safety
-/// As [`checked`]; the title does not use the handle afterwards.
-unsafe fn close<T>(handle: *mut c_void, magic: u32) {
-    // SAFETY: forwarded to the caller's contract.
-    if unsafe { checked::<T>(handle, magic) }.is_some() {
-        // SAFETY: a live handle of this kind, allocated by `new_handle`, freed exactly once.
-        drop(unsafe { Box::from_raw(handle.cast::<Handle<T>>()) });
-    }
-}
-
-fn new_handle<T>(magic: u32, value: T) -> *mut c_void {
-    Box::into_raw(Box::new(Handle { magic, value })).cast()
-}
-
 /// The XUID of a user handle, or `E_INVALIDARG`.
 ///
 /// # Safety
@@ -145,10 +105,6 @@ fn new_handle<T>(magic: u32, value: T) -> *mut c_void {
 unsafe fn xuid_of(user: *const c_void) -> Result<u64, HResult> {
     // SAFETY: forwarded to the caller's contract.
     unsafe { crate::user::local_user_xuid(user) }.ok_or(E_INVALIDARG)
-}
-
-fn root_and_title() -> Option<(PathBuf, u32)> {
-    save_store::root_folder().map(|root| (root, crate::game_config::title_id()))
 }
 
 fn path_bytes(path: &Path) -> Vec<u8> {
@@ -175,7 +131,7 @@ unsafe fn open_provider(
     let xuid = unsafe { xuid_of(user) }?;
     let configuration =
         unsafe { checked_name(configuration_id, MAX_CONFIGURATION_ID) }.ok_or(E_INVALIDARG)?;
-    let (root, title) = root_and_title().ok_or(E_PATH_NOT_FOUND)?;
+    let (root, title) = save_store::title_root().ok_or(E_PATH_NOT_FOUND)?;
     let folder =
         save_store::provider_folder(&root, title, configuration, xuid).ok_or(E_PATH_NOT_FOUND)?;
     Ok(new_handle(PROVIDER_MAGIC, Provider { folder }))
@@ -776,7 +732,7 @@ unsafe extern "system" fn files_folder_async(
     let (Ok(xuid), Some(configuration)) = (xuid, configuration) else {
         return E_INVALIDARG;
     };
-    let folder = root_and_title()
+    let folder = save_store::title_root()
         .and_then(|(root, title)| save_store::files_folder(&root, title, configuration, xuid));
     let (result, mut text) = match folder {
         Some(path) => (S_OK, path_bytes(&path)),
@@ -822,7 +778,7 @@ unsafe extern "system" fn files_remaining_quota(
     let (Ok(xuid), Some(configuration)) = (xuid, configuration) else {
         return E_INVALIDARG;
     };
-    let used = root_and_title()
+    let used = save_store::title_root()
         .and_then(|(root, title)| save_store::files_folder(&root, title, configuration, xuid))
         .map_or(0, |folder| used_by(&folder));
     // SAFETY: `remaining` is writable, per the title's contract.

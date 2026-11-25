@@ -73,6 +73,16 @@ pub fn root_folder() -> Option<PathBuf> {
         .map(|dir| PathBuf::from(dir).join("AnyXboxX"))
 }
 
+/// The save root and the Title ID of the running game; `None` when no root is configured.
+pub fn title_root() -> Option<(PathBuf, u32)> {
+    root_folder().map(|root| (root, crate::game_config::title_id()))
+}
+
+/// The local storage folder of the game (`local`), created on demand; `None` on failure.
+pub fn local_storage_folder(root: &Path, title_id: u32) -> Option<PathBuf> {
+    ensure_folder(title_folder(root, title_id).join("local"))
+}
+
 /// Whether a name the game gave is usable: not empty, at most `max` bytes.
 pub fn valid_name(name: &[u8], max: usize) -> bool {
     !name.is_empty() && name.len() <= max
@@ -487,6 +497,14 @@ mod tests {
         assert!(find_container(&provider, b"save-a").is_none());
         assert_eq!(delete_container(&provider, b"save-a"), S_OK);
         assert_eq!(list_containers(&provider, None).len(), 1);
+    }
+
+    #[test]
+    fn the_local_storage_folder_is_created_under_the_title() {
+        let dir = TempDir::new("local");
+        let folder = local_storage_folder(&dir.0, 0xABCD_0001).expect("created");
+        assert!(folder.is_dir());
+        assert_eq!(folder, dir.0.join("ABCD0001").join("local"));
     }
 
     #[test]
