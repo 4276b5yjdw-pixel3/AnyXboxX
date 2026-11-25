@@ -31,6 +31,8 @@ pub struct Wave {
     pub pc: usize,
     pub steps: u64,
     pub memory: Memory,
+    /// The local data share of the wave (`ds::LDS_SIZE` bytes).
+    pub lds: Vec<u8>,
 }
 
 impl Wave {
@@ -50,6 +52,7 @@ impl Wave {
             pc: 0,
             steps: 0,
             memory: Memory::default(),
+            lds: vec![0; crate::ds::LDS_SIZE],
         };
         let all = if lanes == 64 {
             u64::MAX

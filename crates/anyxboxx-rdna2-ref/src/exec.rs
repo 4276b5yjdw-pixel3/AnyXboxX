@@ -7,6 +7,7 @@
 
 use crate::compare;
 use crate::decode::{Classified, DWORD, classify, mnemonic};
+use crate::ds;
 use crate::error::Error;
 use crate::ext;
 use crate::scalar;
@@ -120,12 +121,14 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let vop3_family = family == "VOP3";
     let vop3p_family = family == "VOP3P";
     let smem_family = family == "SMEM";
+    let ds_family = family == "DS";
     if !SCALAR_FAMILIES.contains(&family)
         && !vector_family
         && !compare_family
         && !vop3_family
         && !vop3p_family
         && !smem_family
+        && !ds_family
     {
         return Err(refused());
     }
@@ -140,6 +143,13 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let literal = (size > 1).then(|| word_at(data, wave.pc + DWORD));
     let fields = scalar::fields(word);
     let next_pc = wave.pc + size * DWORD;
+    if ds_family {
+        // Two words: the offsets, the addresses and the data registers are in the second.
+        let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
+        ds::execute(wave, &name, wide)?;
+        wave.pc = next_pc;
+        return Ok(true);
+    }
     if smem_family {
         // Two words: the second holds the offset (smem.rs decodes both).
         let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;

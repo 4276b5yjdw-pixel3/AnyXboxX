@@ -64,6 +64,14 @@ impl Memory {
     }
 }
 
+/// The little-endian 32-bit words of `bytes` (a whole number of words).
+pub fn le_words(bytes: &[u8]) -> Vec<u32> {
+    bytes
+        .chunks_exact(4)
+        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect()
+}
+
 /// The buffer descriptor (V#) at SGPRs `first`..`first+3`: (base address, stride, number of records).
 pub fn descriptor(wave: &Wave, first: u32) -> (u64, u32, u64) {
     let first = first as usize;
