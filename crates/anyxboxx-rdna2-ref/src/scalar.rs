@@ -205,6 +205,9 @@ pub fn execute(
     f: &Fields,
     literal: Option<u32>,
 ) -> Result<bool, Error> {
+    if crate::movrel::scalar(wave, name, f, literal)? {
+        return Ok(true);
+    }
     if sop2(wave, name, f, literal)? || sop1(wave, name, f, literal)? {
         return Ok(true);
     }

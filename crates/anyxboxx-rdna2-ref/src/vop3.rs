@@ -401,6 +401,15 @@ pub fn execute(
     if crate::vop3_forms::operation(wave, name, opcode, &fields, literal)? {
         return Ok(true);
     }
+    if crate::movrel::is_vector(name) {
+        let fields = Fields::new(word);
+        if fields.abs != 0 || fields.neg != 0 || fields.clamp || fields.omod != 0 {
+            return Err(Error::Untranslated(format!(
+                "{name} avec modificateurs VOP3"
+            )));
+        }
+        return crate::movrel::vector(wave, name, fields.vdst, fields.sources[0], literal);
+    }
     if !is_native(name) {
         return Ok(false);
     }

@@ -20,6 +20,7 @@ import pytest
 from emu import rdna2_exec
 from emu.rdna2_exec import VOP2_CARRY, Wave
 from emu.rdna2_exec_cmp64 import COMPARE64
+from emu.rdna2_exec_movrel import SCALAR as MOVREL_SCALAR, VECTOR as MOVREL_VECTOR
 from emu.rdna2_exec_wide import OPERATIONS as WIDE_OPERATIONS
 from emu.rdna2_exec_vop3 import VECTOR3
 from emu.rdna2_exec_ops import BRANCHES, NO_OPERATION, SCALAR, VECTOR, VECTOR_COMPARE, VECTOR_NO_OPERATION
@@ -219,6 +220,7 @@ def random_program(rng):
     names = {family: [] for family in (*SCALAR_FAMILIES, *VECTOR_FAMILIES, "VOPC", "VOP3")}
     for (family, opcode), name in MNEMONICS.items():
         if family in SCALAR_FAMILIES and name != "s_endpgm" and (
+            name in MOVREL_SCALAR or
             name in SCALAR or name in BRANCHES or name in NO_OPERATION
         ):
             names[family].append((opcode, name))
@@ -231,9 +233,10 @@ def random_program(rng):
             or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE + DIV_NAMES
             or name in COMPARE64
             or name in WIDE_GENERIC
+            or name in MOVREL_VECTOR
         ):
             names[family].append((opcode, name))
-        if family == "VOP1" and name in WIDE_GENERIC:
+        if family == "VOP1" and (name in WIDE_GENERIC or name in MOVREL_VECTOR):
             names[family].append((opcode, name))
         if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
             names[family].append((opcode, name))
@@ -270,6 +273,8 @@ def instruction(rng, names):
     if family == "SOP2":
         word = sop2_word(opcode, sdst, ssrc0, ssrc1)
     elif family == "SOP1":
+        if name in MOVREL_SCALAR:
+            ssrc0 = rng.randrange(106)                               # an indexed SGPR source (s0 to s105)
         word = 0x17D << 23 | sdst << 16 | opcode << 8 | ssrc0
     elif family == "SOPC":
         word = 0x17E << 23 | opcode << 16 | ssrc1 << 8 | ssrc0
@@ -280,6 +285,8 @@ def instruction(rng, names):
     elif family == "VOP1":
         # v_readfirstlane_b32 writes an SGPR through the vdst field: keep it below s128.
         vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(255 if name in WIDE_GENERIC else 256)
+        if name in MOVREL_VECTOR:
+            ssrc0 = rng.randrange(256, 511)                          # an indexed VGPR source
         word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
     elif family == "VOP3":
         return vop3_words(rng, opcode, name)
@@ -328,7 +335,9 @@ def vop3_words(rng, opcode, name):
         pool = [code for code in OPERANDS if code != LITERAL] + list(range(256, 511))
     sources = [rng.choice(OPERANDS + pool) for _ in range(3)]
     # The SAD forms refuse any modifier: most of them get none, so that the executed path is covered too.
-    plain = name in SAD_NAMES and rng.random() < 0.7
+    plain = (name in SAD_NAMES or name in MOVREL_VECTOR) and rng.random() < 0.7
+    if name in MOVREL_VECTOR:
+        sources[0] = rng.randrange(256, 511)
     abs_bits = 0 if plain else rng.randrange(8)
     clamp = 0 if plain else rng.randrange(2)
     vdst = rng.randrange(256)
@@ -362,6 +371,7 @@ def test_random_scalar_programs_match_the_python_model():
         lanes = rng.choice((32, 64))
         scc = rng.random() < 0.5
         scalars = [(index, rng.getrandbits(32) if rng.random() < 0.5 else rng.randrange(8)) for index in range(16)]
+        scalars.append((124, rng.randrange(256)))                    # M0, the index of the movrel forms
         words = program(*random_program(rng))
         assert_same(exe, lanes, scc, scalars, words)
 
