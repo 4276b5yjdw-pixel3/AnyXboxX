@@ -1169,3 +1169,36 @@ def test_float_atomic_programs_match_the_python_model():
             assert python.startswith("steps"), f"le cas doit s'exécuter : {python}"
             assert_same(exe, lanes, False, scalars, program_words, memory)
 
+
+def vop3p(name, vdst, sources, op_sel=0, op_sel_hi=0b111, neg_lo=0, neg_hi=0, clamp=0):
+    low = (0x33 << 26 | OPCODES["VOP3P", name] << 16 | vdst | neg_hi << 8 | op_sel << 11
+           | (op_sel_hi >> 2 & 1) << 14 | clamp << 15)
+    high = sources[0] | sources[1] << 9 | sources[2] << 18 | (op_sel_hi & 3) << 27 | neg_lo << 29
+    return low, high
+
+
+def vop3p_cases():
+    """(programme, exécuté) : les VOP3P hors produits scalaires et les produits scalaires avec op_sel,
+    neg ou clamp, que le modèle Python refuse, et un produit scalaire sans modificateur."""
+    sources = (V0 + 1, V0 + 2, V0 + 1)
+    cases = [(vop3p(name, 9, sources), False)
+             for (family, name) in sorted(OPCODES) if family == "VOP3P" and name not in DOT_OPERATIONS]
+    cases += [(vop3p("v_dot4_u32_u8", 9, sources, **flags), False)
+              for flags in ({"op_sel": 1}, {"op_sel_hi": 0b011}, {"neg_lo": 2}, {"neg_hi": 4}, {"clamp": 1})]
+    return cases + [(vop3p("v_dot2_i32_i16", 9, sources), True)]
+
+
+def assert_select_cases(cases):
+    exe = binary()
+    setup = [vop2("v_mul_u32_u24", 1, LITERAL, 0), 0x00810F7F, vop1("v_cvt_f32_u32", 2, V0)]
+    for instruction, runs in cases:
+        program_words = program(*words(*setup, instruction))
+        for lanes in (32, 64):
+            python = run_python(lanes, False, [], program_words)
+            assert python.startswith("steps") == runs, (instruction, python)
+            assert_same(exe, lanes, False, [], program_words)
+
+
+def test_vop3p_forms_match_the_python_model():
+    assert_select_cases(vop3p_cases())
+
