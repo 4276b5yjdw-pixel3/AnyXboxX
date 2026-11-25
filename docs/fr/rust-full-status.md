@@ -81,7 +81,7 @@ Profils (`crates/anyxboxx-launcher/profiles.toml`, un test chacun) :
 | `runtime/d3d12_xs` | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
 | `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, cdylib `no_std` | `test_native_tls.py`, `test_native_tls_callbacks.py`, table d'exports identique | **supprimé** |
 | `runtime/xmem` | `crates/anyxboxx-xmem` (attributs ERA partagés avec le module xmem de VIctory) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
-| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (file de tâches = `xasync` de VIctory) | 66 des 90 tests GDK passent contre elle | gardé : sauvegardes, boutique, plateforme (HDR, réseau), image du joueur et compteur d'images DXGI pas encore portés |
+| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (file de tâches = `xasync` de VIctory, qui sert déjà les méthodes XThread) | 66 des 90 tests GDK passaient à la dernière mesure complète ; pas re-mesuré depuis | portés depuis : magasin de sauvegardes et GameSave (`save_store.rs`, `save_interface.rs`), stockage local, XStore hors ligne (`store.rs`), HDR, réseau, image du joueur, compteur d'images DXGI. Encore en C++ : `package_interface.cpp` |
 | Lanceur graphique | `crates/anyxboxx-launcher` (nouveau) | 80 tests Rust | |
 
 Comment les DLL Rust du runtime arrivent dans le dossier du runtime : `cargo build --release` les compile, puis `runtime/CMakeLists.txt` les copie de `target/release` vers `runtime/build/bin` (`rust_dlls.cmake` ; s'il en manque une, la compilation s'arrête en donnant la commande à lancer). `cargo build --release` passe donc avant `cmake` (CI, AGENTS.md, README).
@@ -90,7 +90,7 @@ Constat sur la porteuse TLS : en cdylib `no_std`, son bloc TLS contient exacteme
 
 **Encore en C++ :**
 
-- `runtime/xgameruntime` (24 de ses 90 tests échouent encore avec la DLL Rust).
+- `runtime/xgameruntime` : `package_interface.cpp` (paquets et appels de paquets du Store). La DLL C++ se compile et se teste encore.
 - `runtime/launcher` (`anyxboxx.exe`) : la décision D4 le supprime, mais ses tests du mode natif n'ont pas encore d'équivalent Rust.
 - `runtime/gpu_runner` : phase 4.
 - `runtime/third_party/libhttpclient-task` : part avec xgameruntime.
@@ -99,7 +99,7 @@ Constat sur la porteuse TLS : en cdylib `no_std`, son bloc TLS contient exacteme
 
 - Le bac à sable Unicorn et ses fonctions HLE (abandonnés dans l'état final, D2).
 - `emu/modules.py`, `emu/loader.py`, `report.py`, `status_map.py`, `translation.py`, `bench.py`, `tools/jour_j.py` : ils ont un portage Rust avec parité, mais d'autres parties Python (la CLI, la fenêtre, le bac à sable) les importent encore. Ils partiront avec le bac à sable.
-- RDNA 2 (`emu/rdna2*.py`, phase 4). D'ici là, `anyxboxx traduction` lit la couverture RDNA 2 dans `crates/anyxboxx-report/data/rdna2-coverage.txt` ; un test échoue quand cette table s'écarte de la mesure Python, et `python tests/test_rust_traduction_parity.py` la régénère.
+- RDNA 2 (`emu/rdna2*.py`, phase 4). L'interpréteur de référence est en Rust, crate `anyxboxx-rdna2-ref` (décodeur, table de mnémoniques générée par `tools/rdna2_ref_tables.py`, état du wave, instructions scalaires, branchements, VOP1 et VOP2 avec SDWA et DPP, VOPC). Encore en Python : VOP3 et VOP3P, la mémoire (DS, tampons, FLAT, SMEM), les images, la géométrie et les autres familles. Parité avec le modèle Python : `tests/test_rdna2_ref_parity.py` (programmes fixes et 300 programmes aléatoires à graine fixe, comparés ligne à ligne). D'ici là, `anyxboxx traduction` lit la couverture RDNA 2 dans `crates/anyxboxx-report/data/rdna2-coverage.txt` ; un test échoue quand cette table s'écarte de la mesure Python, et `python tests/test_rust_traduction_parity.py` la régénère.
 - `tools/*.py` et la suite pytest (l'oracle).
 
 ## Vérifications sur cette branche (25/11/2026, Windows 11, Rust 1.98.1, Python 3.12)
@@ -110,7 +110,12 @@ python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools → All ch
 cargo test --release --workspace       → 198 passed, 0 failed
 cargo clippy --release --workspace --all-targets → 0 warnings
 cargo fmt --check                      → propre
+cargo test -p anyxboxx-xgameruntime   → 64 passed (magasin de sauvegardes, stockage local, boutique, poignées comprises)
+cargo test -p anyxboxx-rdna2-ref      → 29 passed (décodeur, wave, scalaires, vectoriel, SDWA/DPP, comparaisons, boucle d'exécution)
+python -m pytest tests/test_rdna2_ref_parity.py → 5 passed (programmes fixes et 300 aléatoires, modèle Python contre binaire Rust)
 ```
+
+Les chiffres ci-dessus pour `xgameruntime` et `rdna2-ref` viennent des exécutions de la crate dans le worktree de développement ; les 1251 et 198 ont été mesurés avant que ces crates grossissent, et ne sont pas relancés ici.
 
 Le runtime a été compilé depuis cette branche (cargo, puis CMake). Avec `ANYXBOXX_REQUIRE_RUNTIME=1`, les tests des DLL de TomBox demandent aussi `python tools/build_tombox.py`.
 
@@ -120,3 +125,6 @@ Le runtime a été compilé depuis cette branche (cargo, puis CMake). Avec `ANYX
 - VIctory n'écrit les i/s que dans le titre de sa fenêtre. Une ligne d'i/s sur stdout dans VIctory permettrait aux deux lanceurs de l'afficher.
 - Le test `a_read_in_place_never_meets_the_gap_of_a_remapping` de VIctory (victory-hle, xmem) est instable : il échoue environ 3 fois sur 8 sur le fichier non modifié.
 - Le profil Windows+NVIDIA a été corrigé après ton essai : les interrupteurs de la PR #199 à `0` n'ont rien changé (2-3 i/s sur `main`, 5-7 i/s sur le fork à `80d58f8`).
+- CI sur `rust/full` (première exécution via les déclencheurs de la PR #228) : le travail pytest échouait à la copie des DLL Rust, car `file(COPY_FILE)` ne crée pas `runtime/build/bin` sur une compilation propre. Corrigé dans `7bc532ba` (`file(MAKE_DIRECTORY)` d'abord). Une exécution `tests.yml` lancée à la main sur `rust/full` passe ensuite dans les trois travaux.
+- Le test xmem `graphics_blocks_get_their_own_region_flagged_by_the_query` échouait de temps en temps : les tests partagent un seul espace d'adressage, et une région libérée par un test était reprise par un autre qui tournait en même temps. Les tests xmem passent maintenant à tour de rôle sur un même verrou (`7b69e6fb`) ; 15 exécutions de suite passent.
+- Le générateur de parité RDNA 2 envoyait parfois les branchements dans des mots de données, décodés en instructions mémoire (hors du modèle). Les branchements tombent désormais sur des débuts d'instruction.
