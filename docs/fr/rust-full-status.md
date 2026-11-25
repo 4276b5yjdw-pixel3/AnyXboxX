@@ -21,6 +21,28 @@ cargo build --release --workspace
 - Les noms d'options PowerShell sont acceptés aussi (`--GameDir`, `--XgDll`, `--XgMode`, `--Precompile`, `--Dred`, `--NoTunedSettings`, `--SkipPipelines`, `--BatchCardRehash`). `anyxboxx run --help` les liste.
 - Un seul jeu à la fois : fermer d'abord un jeu déjà lancé. Le lanceur graphique le vérifie lui-même.
 
+### Linux (Proton)
+
+La compilation native sous Linux n'est pas prise en charge : VIctory, que l'espace racine utilise via `victory-hle`, ne compile que pour Windows (`victory-gpu` utilise sans condition ses modules `#[cfg(windows)]`). Compiler les deux espaces pour Windows depuis Linux, avec un CRT et un SDK MSVC sous Linux (par exemple [xwin](https://github.com/Jake-Shadle/xwin)) et `lld-link` :
+
+```bash
+cargo build --release --workspace --target x86_64-pc-windows-msvc \
+    --exclude anyxboxx-kernelx --exclude anyxboxx-d3d12-xs
+(cd third_party/victory && cargo build --profile diag -p victory --features diagnostics --target x86_64-pc-windows-msvc)
+```
+
+- `kernelx` et `d3d12_xs` ont besoin du `lib.exe` de MSVC pour produire le `.exp` de leur table de redirections (`anyxboxx-forwarders::link`) ; `llvm-lib /DEF` n'écrit que le `.lib`. Pas bloquant : le jeu passe par VIctory, qui ne charge pas ces DLL.
+- Il n'y a pas de cargo dans Proton : `anyxboxx.exe run` prend le VIctory compilé depuis Linux avec `--victory-exe` et saute la compilation (le dépôt n'est alors pas nécessaire). Le lancer avec le `wine` de Proton et le préfixe Wine de son choix, chemins écrits en `Z:\…` :
+
+```bash
+VKD3D_CONFIG=descriptor_heap "$PROTON/files/bin/wine" target/x86_64-pc-windows-msvc/release/anyxboxx.exe run \
+    --victory-exe 'Z:\…\third_party\victory\target\x86_64-pc-windows-msvc\diag\victory.exe' \
+    --game-dir 'Z:\…\votre dossier du jeu'
+```
+
+- `anyxboxx run` applique le jeu de réglages Windows (`TUNED`), pas le profil `linux-amd`, que seul le lanceur graphique lit. Wine transmet l'environnement Linux : exporter `VKD3D_CONFIG=descriptor_heap` (le tas de vues du titre dépasse le plafond par défaut de vkd3d-proton) et, pour les valeurs de `linux-amd`, ajouter `--no-tuned-settings` et les exporter soi-même.
+- Le lanceur graphique n'a pas encore de `--victory-exe` : ses pages Jouer et Shaders commencent par la compilation cargo, qui échoue sous Proton.
+
 ### Lanceur graphique (`crates/anyxboxx-launcher`)
 
 Il est fait avec egui via eframe 0.34 : du Rust pur, sans liaison C++ ni installeur. La fenêtre compte quatre pages avec des barres de progression, un journal et quelques boîtes de dialogue, qu'egui (mode immédiat) dessine en quelques centaines de lignes. Le Win32 brut aurait demandé des boucles de messages et une mise en page écrites à la main pour les mêmes pages. La logique vit dans des modules simples que la fenêtre ne fait qu'appeler : les 80 tests n'ouvrent jamais de fenêtre.

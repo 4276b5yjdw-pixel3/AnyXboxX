@@ -15,10 +15,11 @@ pub const SHADERS: &str = "shaders.rpf";
 /// Environment variables given to VIctory, in the order they are set.
 pub type Env = Vec<(String, OsString)>;
 
-/// Where VIctory's sources and its built `victory.exe` are.
+/// Where VIctory's sources and its built `victory.exe` are. `manifest` is `None` for a
+/// `victory.exe` built beforehand (`--victory-exe`): there is nothing to build.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Victory {
-    pub manifest: PathBuf,
+    pub manifest: Option<PathBuf>,
     pub exe: PathBuf,
 }
 
@@ -34,19 +35,33 @@ impl Victory {
         let target = std::env::var_os("CARGO_TARGET_DIR")
             .map_or_else(|| victory.join("target"), PathBuf::from);
         Ok(Victory {
-            manifest,
+            manifest: Some(manifest),
             exe: target.join("diag").join("victory.exe"),
         })
     }
 
+    /// A `victory.exe` built beforehand, used as is: under Proton there is no cargo, so VIctory
+    /// is cross-built on the Linux side (`--target x86_64-pc-windows-msvc`) and only run here.
+    pub fn prebuilt(exe: &Path) -> Result<Self, RunError> {
+        if !exe.is_file() {
+            return Err(RunError::NoVictoryExe(exe.display().to_string()));
+        }
+        Ok(Victory {
+            manifest: None,
+            exe: exe.to_path_buf(),
+        })
+    }
+
     /// `cargo build` of the diag profile with diagnostics: does nothing when victory.exe is
-    /// current, rebuilds it after a pull that changes third_party/victory.
-    pub fn build_command(&self) -> Command {
+    /// current, rebuilds it after a pull that changes third_party/victory. `None` for a
+    /// prebuilt `victory.exe`.
+    pub fn build_command(&self) -> Option<Command> {
+        let manifest = self.manifest.as_ref()?;
         let mut command = Command::new("cargo");
         command.args(["build", "--profile", "diag", "-p", "victory"]);
         command.args(["--features", "diagnostics", "--manifest-path"]);
-        command.arg(&self.manifest);
-        command
+        command.arg(manifest);
+        Some(command)
     }
 
     /// `victory translate --cache --pipelines --used-pipelines` on shaders.rpf, the game and its
