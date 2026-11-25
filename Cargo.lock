@@ -290,6 +290,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyxboxx-gpu-run"
+version = "0.1.0"
+dependencies = [
+ "windows",
+]
+
+[[package]]
 name = "anyxboxx-kernelx"
 version = "0.1.0"
 dependencies = [
