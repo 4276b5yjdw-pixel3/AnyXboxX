@@ -45,7 +45,7 @@ pub fn remove_subscription(token: u64) -> bool {
 
 /// Subscribe methods of the invite, activation and protocol objects: (this, queue, context,
 /// callback, token).
-unsafe extern "system" fn subscribe(
+pub(crate) unsafe extern "system" fn subscribe(
     _this: *mut c_void,
     _queue: *mut c_void,
     _context: *mut c_void,
@@ -56,7 +56,11 @@ unsafe extern "system" fn subscribe(
 }
 
 /// Unsubscribe methods: (this, token, wait).
-unsafe extern "system" fn unsubscribe(_this: *mut c_void, token: u64, _wait: bool) -> bool {
+pub(crate) unsafe extern "system" fn unsubscribe(
+    _this: *mut c_void,
+    token: u64,
+    _wait: bool,
+) -> bool {
     remove_subscription(token)
 }
 
