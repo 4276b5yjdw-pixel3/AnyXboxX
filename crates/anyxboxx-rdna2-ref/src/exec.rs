@@ -7,6 +7,7 @@
 
 use crate::decode::{Classified, DWORD, classify, mnemonic};
 use crate::error::Error;
+use crate::ext;
 use crate::scalar;
 use crate::vector;
 use crate::wave::{MAX_STEPS, Wave};
@@ -17,7 +18,8 @@ const VECTOR_FAMILIES: [&str; 2] = ["VOP1", "VOP2"];
 /// The source codes that announce an SDWA or DPP word: refused here, executed by the Python model.
 const EXTENSION_CODES: [u32; 4] = [0xE9, 0xEA, 0xF9, 0xFA];
 
-/// Runs one VOP1 or VOP2 instruction: no-ops, the carry chain, or the vector table.
+/// Runs one VOP1 or VOP2 instruction: no-ops, the carry chain, the vector table, or the SDWA and DPP
+/// forms when the source code announces an extension word (the literal slot holds that word).
 fn execute_vector(
     wave: &mut Wave,
     name: &str,
@@ -29,7 +31,16 @@ fn execute_vector(
         return Ok(true);
     }
     let fields = vector::fields(family, word);
-    if family == "VOP2" && vector::is_carry(name) {
+    let carry = family == "VOP2" && vector::is_carry(name);
+    if EXTENSION_CODES.contains(&(word & 0x1FF)) {
+        if carry {
+            return Ok(false);
+        }
+        let ext = literal.ok_or_else(|| Error::Operand("mot d'extension absent".into()))?;
+        ext::execute(wave, name, &fields, ext)?;
+        return Ok(true);
+    }
+    if carry {
         return vector::execute_carry(wave, name, &fields, literal);
     }
     vector::execute(wave, name, &fields, literal)
@@ -87,9 +98,6 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         )));
     }
     let word = word_at(data, wave.pc);
-    if vector_family && EXTENSION_CODES.contains(&(word & 0x1FF)) {
-        return Err(refused());
-    }
     wave.steps += 1;
     let literal = (size > 1).then(|| word_at(data, wave.pc + DWORD));
     let fields = scalar::fields(word);

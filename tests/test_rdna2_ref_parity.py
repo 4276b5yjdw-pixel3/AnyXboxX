@@ -184,6 +184,21 @@ SPECIAL_LITERALS = (
     0x8000_0001, 0x7F7F_FFFF, 0x3F80_0000, 0xC080_0000, 0x3F00_0000, 0x4000_0000,
 )
 VECTOR_FAMILIES = ("VOP1", "VOP2")
+# SDWA (0xF9), DPP16 (0xFA), DPP8 (0xE9) and DPP8_FI (0xEA): the source codes that announce a second word.
+EXT_CODES = (0xF9, 0xFA, 0xE9, 0xEA)
+EXT_PROBABILITY = 0.3
+
+
+def extension_word(rng, code, vsrc1):
+    """A random SDWA or DPP word whose scalar sources are readable: no SGPR read of the literal code 255,
+    and no scalar read of a VOP2 vsrc1 that is the literal code (both are Python TypeErrors)."""
+    word = rng.getrandbits(32)
+    if code == 0xF9:
+        if word & 0xFF == LITERAL:
+            word &= ~(1 << 23)
+        if vsrc1 == LITERAL:
+            word &= ~(1 << 31)
+    return word
 
 
 def literal_bits(rng):
@@ -193,8 +208,10 @@ VOP2_WITH_LITERAL = {0x20, 0x21, 0x2C, 0x2D, 0x37, 0x38}
 
 
 def random_program(rng):
-    """Instructions scalaires et vectorielles aléatoires, valides pour les deux modèles, branches vers
-    l'avant seulement."""
+    """Instructions scalaires et vectorielles aléatoires, valides pour les deux modèles.
+
+    Les branches sautent vers le début d'une instruction plus loin dans le programme (ou vers s_endpgm) :
+    sans cela un saut tombe dans un mot de données, qui se décode en instruction mémoire (hors du modèle)."""
     names = {family: [] for family in SCALAR_FAMILIES + VECTOR_FAMILIES}
     for (family, opcode), name in MNEMONICS.items():
         if family in SCALAR_FAMILIES and name != "s_endpgm" and (
@@ -203,39 +220,61 @@ def random_program(rng):
             names[family].append((opcode, name))
         if family in VECTOR_FAMILIES and (name in VECTOR or name in VECTOR_NO_OPERATION or name in VOP2_CARRY):
             names[family].append((opcode, name))
-    words = []
+    blocks = []  # (words, branch template or None): a branch's offset is patched once the layout is known
     for _ in range(rng.randrange(1, 11)):
-        family = rng.choice((*SCALAR_FAMILIES, *VECTOR_FAMILIES))
-        opcode, name = rng.choice(names[family])
-        ssrc0, ssrc1 = rng.choice(OPERANDS), rng.choice(OPERANDS)
-        # 64-bit results need the register after sdst: stay below s126 (s127 is the last).
-        sdst = rng.randrange(126)
-        if family == "SOP2":
-            word = sop2_word(opcode, sdst, ssrc0, ssrc1)
-        elif family == "SOP1":
-            word = 0x17D << 23 | sdst << 16 | opcode << 8 | ssrc0
-        elif family == "SOPC":
-            word = 0x17E << 23 | opcode << 16 | ssrc1 << 8 | ssrc0
-        elif family == "SOPK":
-            word = 0b1011 << 28 | opcode << 23 | sdst << 16 | rng.getrandbits(16)
-        elif family == "SOPP":
-            simm16 = rng.randrange(1, 4) if name in BRANCHES else rng.randrange(0, 3)
-            word = 0x17F << 23 | opcode << 16 | simm16
-        elif family == "VOP1":
-            # v_readfirstlane_b32 writes an SGPR through the vdst field: keep it below s128.
-            vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(256)
-            word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
-        else:
-            vdst, vsrc1 = rng.randrange(256), rng.randrange(256)
-            word = opcode << 25 | vdst << 17 | vsrc1 << 9 | ssrc0
-        words.append(word)
-        # The operands each family reads from the source fields (vsrc1 of VOP2 is a VGPR, never a literal).
-        sources = {"SOP1": (ssrc0,), "VOP1": (ssrc0,), "VOP2": (ssrc0,), "SOP2": (ssrc0, ssrc1), "SOPC": (ssrc0, ssrc1)}
-        needs_literal = LITERAL in sources.get(family, ())
-        needs_literal = needs_literal or (family == "VOP2" and opcode in VOP2_WITH_LITERAL)
-        if needs_literal:
-            words.append(literal_bits(rng))
-    return words
+        words, template = instruction(rng, names)
+        blocks.append((words, template))
+    starts, position = [], 0
+    for words, _ in blocks:
+        starts.append(position)
+        position += len(words)
+    program_words = []
+    for index, (words, template) in enumerate(blocks):
+        if template is not None:
+            # Target: a later instruction start, or s_endpgm (the position after the last block).
+            later = [starts[j] for j in range(index + 1, len(blocks))] + [position]
+            target = rng.choice(later[:3])
+            words = [template | (target - starts[index] - 1)]
+        program_words += words
+    return program_words
+
+
+def instruction(rng, names):
+    """One random instruction: (its words, the branch template when it is a branch)."""
+    family = rng.choice((*SCALAR_FAMILIES, *VECTOR_FAMILIES))
+    opcode, name = rng.choice(names[family])
+    ssrc0, ssrc1 = rng.choice(OPERANDS), rng.choice(OPERANDS)
+    # 64-bit results need the register after sdst: stay below s126 (s127 is the last).
+    sdst = rng.randrange(126)
+    if family == "SOPP" and name in BRANCHES:
+        return [0], 0x17F << 23 | opcode << 16
+    if family == "SOP2":
+        word = sop2_word(opcode, sdst, ssrc0, ssrc1)
+    elif family == "SOP1":
+        word = 0x17D << 23 | sdst << 16 | opcode << 8 | ssrc0
+    elif family == "SOPC":
+        word = 0x17E << 23 | opcode << 16 | ssrc1 << 8 | ssrc0
+    elif family == "SOPK":
+        word = 0b1011 << 28 | opcode << 23 | sdst << 16 | rng.getrandbits(16)
+    elif family == "SOPP":
+        word = 0x17F << 23 | opcode << 16 | rng.randrange(0, 3)
+    elif family == "VOP1":
+        # v_readfirstlane_b32 writes an SGPR through the vdst field: keep it below s128.
+        vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(256)
+        word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
+    else:
+        vdst, vsrc1 = rng.randrange(256), rng.randrange(256)
+        word = opcode << 25 | vdst << 17 | vsrc1 << 9 | ssrc0
+    if family in VECTOR_FAMILIES and rng.random() < EXT_PROBABILITY and not (
+        family == "VOP2" and opcode in VOP2_WITH_LITERAL
+    ):
+        # SDWA or DPP: the source code is the extension code, the next word is the extension word.
+        code = rng.choice(EXT_CODES)
+        return [(word & ~0x1FF) | code, extension_word(rng, code, (word >> 9) & 0xFF if family == "VOP2" else None)], None
+    # The operands each family reads from the source fields (vsrc1 of VOP2 is a VGPR, never a literal).
+    sources = {"SOP1": (ssrc0,), "VOP1": (ssrc0,), "VOP2": (ssrc0,), "SOP2": (ssrc0, ssrc1), "SOPC": (ssrc0, ssrc1)}
+    needs_literal = LITERAL in sources.get(family, ()) or (family == "VOP2" and opcode in VOP2_WITH_LITERAL)
+    return ([word, literal_bits(rng)] if needs_literal else [word]), None
 
 
 def sop2_word(opcode, sdst, ssrc0, ssrc1):
