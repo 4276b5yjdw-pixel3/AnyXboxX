@@ -31,7 +31,8 @@
   Optional. Passed unchanged to VICTORY_SKIP_PIPELINES when given.
 
 .PARAMETER NoTunedSettings
-  Optional. Does not set Neptune's switch set below (only VICTORY_GAME_DIR and VICTORY_DISCORD are set).
+  Optional. Does not set Neptune's switch set below (only VICTORY_GAME_DIR, VICTORY_DISCORD and
+  VICTORY_OCEAN_READBACK are set).
 
 .PARAMETER Dred
   Optional. Turns on device-removed data (VICTORY_D3D12_DRED) to diagnose a device loss; needs the diagnostics build,
@@ -53,6 +54,7 @@
   VICTORY_AUTO_A unless -AutoA). Measured by the maintainer on 2026-11-25 (RTX 4070 SUPER, i7-13700KF, Series X 4K,
   release build, after warm): about 12 fps in the world. It is tuned for a 16 GB card: on a smaller one, lower
   VICTORY_CARD_WINDOWS_MB and VICTORY_CARD_BUFFERS_MB first. Discord Rich Presence stays off (VICTORY_DISCORD=0).
+  The ocean's height maps are copied back for the title's CPU (VICTORY_OCEAN_READBACK=1), or boats sit on the sea bed.
 
 .EXAMPLE
   .\tools\lancer_victory.ps1 -GameDir D:\Games\MyPackage -Warm
@@ -121,6 +123,10 @@ if ($LASTEXITCODE -ne 0) { throw "cargo build failed (exit code $LASTEXITCODE)."
 $env:VICTORY_GAME_DIR = $GameDir
 # Neptune's Discord Rich Presence stays off (our copy also needs VICTORY_DISCORD=1 to turn it on).
 $env:VICTORY_DISCORD = '0'
+# The title's CPU reads the ocean height maps its wave passes write on the GPU: boats float on them. Off by default in
+# our copy (texback.rs); without it they read memory nothing wrote and boats sit on the sea bed. Linear layouts only
+# (VICTORY_TEXTURE_BACK_MODES left unset): the height maps are linear, XOR modes turned the water to foam.
+$env:VICTORY_OCEAN_READBACK = '1'
 if (-not $NoTunedSettings) {
     # Neptune (VIctory Edit.) 2026-11-25c, play.ps1, Series X path. Its VICTORY_WAVE_OWN_LDS_GROUPS is left out: no code
     # of this tree reads it (Neptune's shader translator, from soldsawn/victory-nvidia-8gb, dropped that wave rule).
