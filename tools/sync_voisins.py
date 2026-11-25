@@ -1,9 +1,9 @@
-"""Mise à jour automatique des voisins : TomBox, VIctory (notre fork) et Xbox2Windows.
+"""Mise à jour automatique des voisins : TomBox et Xbox2Windows (VIctory n'est pas suivi : third_party/victory est notre code).
 
     python -I tools/sync_voisins.py [--appliquer] [--rapport FICHIER] [--message FICHIER]
 
 Sans --appliquer : lecture seule, compare les versions épinglées aux dernières versions publiées.
-Avec --appliquer : avance les sous-modules (TomBox, VIctory sur sa branche anyxboxx/stable), recopie sans modification les fichiers déjà copiés dans
+Avec --appliquer : avance les sous-modules (TomBox), recopie sans modification les fichiers déjà copiés dans
 third_party/xbox2windows depuis le dernier commit, et change les numéros de commit
 dans leurs README et dans THIRD_PARTY.md. Rien n'est fusionné : le workflow voisins.yml pousse la branche
 auto/voisins, que la CI teste ; un mainteneur la relit et ouvre la pull request. Bibliothèque standard seulement ; le code téléchargé n'est jamais exécuté.
@@ -53,8 +53,7 @@ VOISINS = (
     Voisin("Xbox2Windows", "R0Y00/Xbox2Windows", "third_party/xbox2windows",
            portes=("src/era_heap.cpp", "src/era_heap.h", "src/era_query.cpp", "tools/bc7_blocks.py",
                    "tools/bc7_tiles.py")),
-    # Notre fork de VIctory : la branche stable (VIctory + PR + adaptations), pas la branche par défaut.
-    Voisin("VIctory", "LooperSalty/victory", "third_party/victory", sous_module=True, branche="anyxboxx/stable"),
+    # VIctory n'est pas suivi : third_party/victory est notre code, sans amont.
 )
 
 
