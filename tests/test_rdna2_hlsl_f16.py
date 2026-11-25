@@ -67,6 +67,14 @@ def test_vertex_and_pixel_shaders_carry_the_f16_helpers():
     assert "uint F16ToF32(uint h)" in rdna2_hlsl_graphics.translate_pixel(PIXEL_SHADER, WIDTH)
 
 
+def test_wave64_translation_carries_the_f16_helpers():
+    hlsl = rdna2_hlsl.translate(program(vop2("v_add_f16", 3, V + 1, 2), *vop3("v_fma_f16", 4, V + 1, V + 2, V + 3)),
+                                wave_size=64)
+    assert "uint F32ToF16(uint f)" in hlsl
+    assert "F16Add((v[1] & 0xFFFFu), (v[2] & 0xFFFFu))" in hlsl
+    assert "F16Fma(" in hlsl.split("[numthreads", 1)[1]
+
+
 @pytest.mark.parametrize("code", [0xE9, 0xEA, 0xF9, 0xFA])
 def test_sdwa_and_dpp_f16_forms_are_untranslatable(code):
     with pytest.raises(rdna2_hlsl.Untranslatable, match="v_add_f16.*SDWA/DPP"):
