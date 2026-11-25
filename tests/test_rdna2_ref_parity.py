@@ -20,6 +20,7 @@ import pytest
 from emu import rdna2_exec
 from emu.rdna2_exec import VOP2_CARRY, Wave
 from emu.rdna2_exec_cmp64 import COMPARE64
+from emu.rdna2_exec_wide import OPERATIONS as WIDE_OPERATIONS
 from emu.rdna2_exec_vop3 import VECTOR3
 from emu.rdna2_exec_ops import BRANCHES, NO_OPERATION, SCALAR, VECTOR, VECTOR_COMPARE, VECTOR_NO_OPERATION
 from emu.rdna2_ops import MNEMONICS
@@ -229,7 +230,10 @@ def random_program(rng):
             or (name in VECTOR_COMPARE and opcode < 0x100)
             or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE + DIV_NAMES
             or name in COMPARE64
+            or name in WIDE_GENERIC
         ):
+            names[family].append((opcode, name))
+        if family == "VOP1" and name in WIDE_GENERIC:
             names[family].append((opcode, name))
         if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
             names[family].append((opcode, name))
@@ -275,7 +279,7 @@ def instruction(rng, names):
         word = 0x17F << 23 | opcode << 16 | rng.randrange(0, 3)
     elif family == "VOP1":
         # v_readfirstlane_b32 writes an SGPR through the vdst field: keep it below s128.
-        vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(256)
+        vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(255 if name in WIDE_GENERIC else 256)
         word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
     elif family == "VOP3":
         return vop3_words(rng, opcode, name)
@@ -305,6 +309,8 @@ def instruction(rng, names):
 # for the Python model (which indexes SGPRs and register pairs directly).
 # Operations whose constant is a literal: the VOP3 form has no literal word unless a source is the literal code.
 LITERAL_OPERATION_NAMES = ("v_madmk_f32", "v_madak_f32", "v_fmamk_f32", "v_fmaak_f32")
+# The 64-bit operations; v_fma_f64 is left to its own test, where its operands cannot overflow the Python.
+WIDE_GENERIC = tuple(name for name in WIDE_OPERATIONS if name != "v_fma_f64")
 DIV_NAMES = (
     "v_div_scale_f32", "v_div_scale_f64", "v_div_fmas_f32", "v_div_fmas_f64", "v_div_fixup_f32", "v_div_fixup_f64",
 )
@@ -387,4 +393,29 @@ def test_division_helpers_match_the_python_model():
             (index, rng.choice(DIVISION_SPECIAL_WORDS) if rng.random() < 0.6 else rng.getrandbits(32))
             for index in range(8)
         ] + [(106, rng.getrandbits(32))]
+        assert_same(exe, 32, False, scalars, program(low, high))
+
+
+CURATED_DOUBLE_BITS = (
+    0x0000_0000_0000_0000, 0x8000_0000_0000_0000, 0x3FF0_0000_0000_0000, 0xC004_0000_0000_0000,
+    0x3F5F_F5E4_8E13_A95E, 0x4E33_F8D6_9C53_9B7D, 0xD34B_EE65_6C88_EC6E, 0x7FF0_0000_0000_0000,
+    0xFFF0_0000_0000_0000, 0x7FF8_0000_0000_0000, 0x7FF0_0000_0000_0001, 0x0000_0000_0000_0001,
+    0x3FE0_0000_0000_0000, 0x3DDB_7CDF_D9D7_BDBB, 0x4159_9A5D_3A7F_D000,
+)
+
+
+def test_wide_operations_match_the_python_model():
+    """64-bit operations (f64, 64-bit shifts, f64 fma included) on SGPR pairs of curated doubles."""
+    exe = binary()
+    rng = random.Random(SEED + 2)
+    names = tuple(name for name in WIDE_OPERATIONS if ("VOP3", name) in OPCODES)
+    for _ in range(200):
+        name = rng.choice(names)
+        opcode = OPCODES["VOP3", name]
+        low = 0x35 << 26 | opcode << 16 | rng.randrange(1) | rng.randrange(8) << 8 | rng.randrange(2) << 15
+        high = 0 | 2 << 9 | 4 << 18 | rng.randrange(4) << 27 | rng.randrange(8) << 29
+        scalars = []
+        for index in range(8):
+            value = rng.choice(CURATED_DOUBLE_BITS) if rng.random() < 0.7 else rng.getrandbits(64)
+            scalars += [(index, value & 0xFFFF_FFFF), (index + 8, value >> 32)]
         assert_same(exe, 32, False, scalars, program(low, high))

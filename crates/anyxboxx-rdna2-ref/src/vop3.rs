@@ -254,30 +254,6 @@ fn lerp_bytes(a: u32, b: u32, c: u32) -> u64 {
         .sum()
 }
 
-/// `_ldexp`: x × 2^n with the model's overflow (±infinity) and underflow (±0) results.
-fn ldexp(x: f64, n: i64) -> f64 {
-    if x == 0.0 || !x.is_finite() {
-        return x;
-    }
-    if n > 2200 {
-        return f64::INFINITY.copysign(x);
-    }
-    if n < -2200 {
-        return 0f64.copysign(x);
-    }
-    let mut value = x;
-    let mut remaining = n;
-    while remaining > 1000 {
-        value *= 2f64.powi(1000);
-        remaining -= 1000;
-    }
-    while remaining < -1000 {
-        value *= 2f64.powi(-1000);
-        remaining += 1000;
-    }
-    value * 2f64.powi(remaining as i32)
-}
-
 /// The float of a value's bits, combined with the three operands as floats (`_float3`).
 fn float3(a: u32, b: u32, c: u32, operation: impl Fn(f64, f64, f64) -> f64) -> u64 {
     u64::from(float_bits(operation(
@@ -303,7 +279,7 @@ fn compute(name: &str, a: u32, b: u32, c: u32) -> Option<u64> {
         "v_min3_f32" => float3(a, b, c, min3),
         "v_max3_f32" => float3(a, b, c, max3),
         "v_med3_f32" => float3(a, b, c, median),
-        "v_ldexp_f32" => u64::from(float_bits(ldexp(fa, sign_extend(bi, 32)))),
+        "v_ldexp_f32" => u64::from(float_bits(float::ldexp(fa, sign_extend(bi, 32)))),
         "v_cubeid_f32" => float3(a, b, c, |x, y, z| cube(x, y, z).0),
         "v_cubesc_f32" => float3(a, b, c, |x, y, z| cube(x, y, z).1),
         "v_cubetc_f32" => float3(a, b, c, |x, y, z| cube(x, y, z).2),
@@ -371,6 +347,19 @@ pub fn execute(
     word: u64,
     literal: Option<u32>,
 ) -> Result<bool, Error> {
+    if crate::wide::execute(
+        wave,
+        name,
+        &Fields::new(word).sources,
+        Fields::new(word).vdst,
+        literal,
+        Fields::new(word).abs,
+        Fields::new(word).neg,
+        Fields::new(word).clamp,
+        Fields::new(word).omod,
+    )? {
+        return Ok(true);
+    }
     if crate::div::execute(wave, name, &Fields::new(word), literal)? {
         return Ok(true);
     }
@@ -460,9 +449,9 @@ mod tests {
 
     #[test]
     fn ldexp_scales_by_powers_of_two_and_saturates() {
-        assert_eq!(ldexp(1.5, 3), 12.0);
-        assert_eq!(ldexp(1.0, 5000), f64::INFINITY);
-        assert_eq!(ldexp(-1.0, -5000), -0.0);
+        assert_eq!(crate::float::ldexp(1.5, 3), 12.0);
+        assert_eq!(crate::float::ldexp(1.0, 5000), f64::INFINITY);
+        assert_eq!(crate::float::ldexp(-1.0, -5000), -0.0);
     }
 
     #[test]

@@ -108,6 +108,30 @@ pub fn legacy_fma(x: f64, y: f64, z: f64) -> f64 {
     }
 }
 
+/// `ldexp` of the model: x × 2^n with the model's overflow (±infinity) and underflow (±0) results.
+pub fn ldexp(x: f64, n: i64) -> f64 {
+    if x == 0.0 || !x.is_finite() {
+        return x;
+    }
+    if n > 2200 {
+        return f64::INFINITY.copysign(x);
+    }
+    if n < -2200 {
+        return 0f64.copysign(x);
+    }
+    let mut value = x;
+    let mut remaining = n;
+    while remaining > 1000 {
+        value *= 2f64.powi(1000);
+        remaining -= 1000;
+    }
+    while remaining < -1000 {
+        value *= 2f64.powi(-1000);
+        remaining += 1000;
+    }
+    value * 2f64.powi(remaining as i32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
