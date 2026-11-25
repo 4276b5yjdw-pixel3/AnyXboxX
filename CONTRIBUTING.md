@@ -46,6 +46,20 @@ The implementation relies on public sources: AMD's RDNA 2 ISA documentation, Mic
 
 You may use your own copy of the game's executable and build: launch it (native, VIctory through `tools/lancer_victory.ps1`, AnyXboxX), measure, debug, analyse it statically and dynamically, and use what you learn to steer your PRs. Measurements and findings drawn from running it (summarised logs, counts, technical identifiers such as shader hashes or pass names, test results) may be cited in PRs and in the docs, with how they were obtained (measured, read statically, assumed). The limit: no file, code or asset of the game or the console in the repository. Three things drawn from the game are allowed, as in VIctory's policy (VIctory's `docs/asset-policy.md`): byte-pattern signatures (short patterns written by us, with masks) that locate functions or data in the executable, the per-build offsets of the functions we hook (under names we choose), and the build identity (hash of the executable, CodeView GUID/age).
 
+## Taking code from another repository
+
+The repository depends on no other repository to build: no new submodule, no pinned fork. `third_party/victory` is our code, with no upstream. To take a change from elsewhere (a commit, a pull request, a fork's branch):
+
+1. Commit it yourself: `git fetch <repository> <branch>` then `git cherry-pick -Xsubtree=third_party/<project> <commit>`, or a port by hand.
+2. End the message with the source repository and the author:
+
+   ```
+   Source: <repository> <PR or commit>
+   Co-authored-by: Name <email>
+   ```
+
+3. Add or update that repository's row in the sources table of [THIRD_PARTY.md](THIRD_PARTY.md). Its licence must be compatible (GPL-3.0 or more permissive).
+
 ## What is refused
 
 - Any game or console file added to the repository: executables, DLLs, `.rpf` archives, extracted shaders, textures, sounds, saves, dumps, keys, even partial ones and even in tests.
