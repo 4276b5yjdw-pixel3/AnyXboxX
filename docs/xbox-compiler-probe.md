@@ -1,4 +1,4 @@
-﻿# Local Xbox compiler probe
+# Local Xbox compiler probe
 
 `tools/sonde_compilateur_xbox.py` compiles an original, minimal HLSL pixel shader with locally supplied Xbox graphics tools. It copies the required files to a temporary directory, invokes the Windows SDK `dxc.exe` with the local `dxcompiler_xs.dll`, `xbsc_xs.dll` and `newbe_xs.dll`, and deletes the temporary output afterwards. It does not extract shaders from a game. The DLLs are neither included nor downloaded.
 

@@ -1,4 +1,4 @@
-﻿"""Compile an original synthetic shader with locally supplied Xbox graphics DLLs.
+"""Compile an original synthetic shader with locally supplied Xbox graphics DLLs.
 
 No SDK or game files are distributed. Output is temporary and never sent anywhere.
 """

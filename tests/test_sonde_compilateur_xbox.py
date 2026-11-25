@@ -1,4 +1,4 @@
-﻿"""Tests for the local synthetic Xbox shader compiler probe."""
+"""Tests for the local synthetic Xbox shader compiler probe."""
 import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
