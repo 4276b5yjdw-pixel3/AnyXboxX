@@ -312,6 +312,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyxboxx-native-launcher"
+version = "0.1.0"
+
+[[package]]
 name = "anyxboxx-pe"
 version = "0.1.0"
 dependencies = [
