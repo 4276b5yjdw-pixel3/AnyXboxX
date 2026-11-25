@@ -20,7 +20,6 @@ REPO = Path(__file__).resolve().parents[1]
 RUST_RELEASE = REPO / "target" / "release"
 # DLL name in the runtime folder → (Rust cdylib in target/release, pytest files of the C++ DLL).
 PORTED = {
-    "xmem.dll": ("xmem.dll", ["tests/test_xmem_era.py", "tests/test_xmem_virtual.py", "tests/test_runtime_cpp.py"]),
 }
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows DLLs")
 
