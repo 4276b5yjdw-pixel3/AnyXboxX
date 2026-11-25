@@ -23,13 +23,16 @@ pub(crate) struct ResultRing {
     used: u32,
     /// Whether stretches are reused before the area is empty ([`ResultRing::new`]).
     wraps: bool,
+    /// The most a plan asked for lately (each ask lowers it by a sixteenth before it is
+    /// compared with the new one): what the next plan is expected to need in one stretch.
+    peak: u32,
 }
 
 impl ResultRing {
     /// An empty area of `size` dwords. `wraps: false` keeps the former rule: nothing is
     /// reused until every plan is done with.
     pub(crate) fn new(size: u32, wraps: bool) -> ResultRing {
-        ResultRing { size, head: 0, taken: VecDeque::new(), used: 0, wraps }
+        ResultRing { size, head: 0, taken: VecDeque::new(), used: 0, wraps, peak: 0 }
     }
 
     /// Dwords taken by plans in the air.
@@ -42,6 +45,25 @@ impl ResultRing {
         self.size
     }
 
+    /// The longest stretch a plan could take now (a stretch given back out of order, behind
+    /// an older one still taken, is not counted: it is reused when the older one is back).
+    pub(crate) fn largest_free(&self) -> u32 {
+        match self.taken.front() {
+            None => self.size,
+            Some(_) if !self.wraps => self.size - self.head,
+            Some(&(oldest, _)) if oldest < self.head => (self.size - self.head).max(oldest),
+            Some(&(oldest, _)) => oldest - self.head,
+        }
+    }
+
+    /// Whether the next plan would likely find no stretch as long as plans asked for lately:
+    /// the free dwords may be enough in all and still split in two, the end of the area and
+    /// its start. The caller then lets the plans in the air land first, so that plans keep
+    /// being compared in full.
+    pub(crate) fn short_for_next(&self) -> bool {
+        !self.taken.is_empty() && self.largest_free() < self.peak
+    }
+
     /// Takes up to `need` dwords in one stretch for a plan: `(start, granted)`. Less than
     /// `need` (down to none) when the area has no stretch that long free; the plan then
     /// compares only the ranges that fit, as when the area ran out before.
@@ -49,6 +71,7 @@ impl ResultRing {
         if need == 0 {
             return (self.head, 0);
         }
+        self.peak = need.max(self.peak - self.peak / 16);
         let (start, room) = match self.taken.front() {
             None => {
                 self.head = 0;
@@ -165,6 +188,27 @@ mod tests {
         disjoint(&ring);
         ring.give(a.0, a.1);
         disjoint(&ring);
+    }
+
+    #[test]
+    fn free_dwords_split_between_the_end_and_the_start_call_for_a_landing() {
+        let mut ring = ResultRing::new(100, true);
+        let a = ring.take(40);
+        ring.take(40);
+        ring.give(a.0, a.1);
+        // Free: [80, 100) and [0, 40); the longest, 40, is what plans asked for.
+        assert_eq!(ring.largest_free(), 40);
+        assert!(!ring.short_for_next());
+        // A smaller plan takes the start: 10 dwords free at its end, 20 at the area's end
+        // behind the older plan, 30 in all, none of it 40 long.
+        assert_eq!(ring.take(30), (0, 30));
+        assert_eq!(ring.largest_free(), 10);
+        assert!(ring.short_for_next());
+        // Nothing in the air: never short.
+        let mut empty = ResultRing::new(100, true);
+        empty.take(90);
+        empty.give(0, 90);
+        assert!(!empty.short_for_next());
     }
 
     #[test]

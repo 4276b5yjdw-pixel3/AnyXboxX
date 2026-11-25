@@ -4880,12 +4880,15 @@ impl Host {
     /// plans in the air for the next one, so the caller lets the flights
     /// land first. Without [`result_ring`] the area starts from the beginning
     /// only when no plan is out, and this is half of it; with it the plans
-    /// that landed give their stretches back as they land, and only an area
-    /// three quarters taken by plans still in the air is let drain.
+    /// that landed give their stretches back as they land, and the area is
+    /// let drain only when three quarters of it are taken by plans still in
+    /// the air, or when its free dwords lie in no stretch as long as plans
+    /// asked for lately (split between its end and its start): a plan that
+    /// is compared in part has its whole landing fetched the slow way.
     fn card_results_low(&self) -> bool {
         CARD_WORK.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|work| {
             let (used, size) = (u64::from(work.taken.used()), u64::from(work.taken.size()));
-            if result_ring() { used * 4 > size * 3 } else { used * 2 > size }
+            if result_ring() { used * 4 > size * 3 || work.taken.short_for_next() } else { used * 2 > size }
         })
     }
 
