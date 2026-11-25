@@ -113,7 +113,12 @@ fn check_vgpr(first: usize, count: usize) -> Result<(), Error> {
 }
 
 /// The `size` bytes held by the VGPRs from `register` in `lane`, little-endian.
-fn store_bytes(wave: &Wave, register: usize, lane: usize, size: usize) -> Result<Vec<u8>, Error> {
+pub(crate) fn store_bytes(
+    wave: &Wave,
+    register: usize,
+    lane: usize,
+    size: usize,
+) -> Result<Vec<u8>, Error> {
     let count = size.div_ceil(DWORD);
     check_vgpr(register, count)?;
     let mut bytes = Vec::with_capacity(count * DWORD);
@@ -126,7 +131,7 @@ fn store_bytes(wave: &Wave, register: usize, lane: usize, size: usize) -> Result
 
 /// Writes loaded bytes into the VGPRs from `target` in `lane`. A sub-dword load fills one VGPR, the
 /// value zero-extended, or sign-extended for the signed kinds.
-fn load_into(
+pub(crate) fn load_into(
     wave: &mut Wave,
     target: usize,
     lane: usize,

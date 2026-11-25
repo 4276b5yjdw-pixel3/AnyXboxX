@@ -128,7 +128,12 @@ fn check_vgpr(first: usize, count: usize) -> Result<(), Error> {
 }
 
 /// The `words` VGPRs from `register` in `lane`, as one little-endian value.
-fn lane_value(wave: &Wave, register: usize, lane: usize, words: usize) -> Result<u64, Error> {
+pub(crate) fn lane_value(
+    wave: &Wave,
+    register: usize,
+    lane: usize,
+    words: usize,
+) -> Result<u64, Error> {
     check_vgpr(register, words)?;
     Ok((0..words).fold(0u64, |acc, index| {
         acc | u64::from(wave.v[register + index][lane]) << (32 * index)
@@ -136,7 +141,7 @@ fn lane_value(wave: &Wave, register: usize, lane: usize, words: usize) -> Result
 }
 
 /// Writes `value` over `words` VGPRs from `register` in `lane`.
-fn set_lane_value(
+pub(crate) fn set_lane_value(
     wave: &mut Wave,
     register: usize,
     lane: usize,

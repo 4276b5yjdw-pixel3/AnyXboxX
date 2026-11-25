@@ -622,3 +622,40 @@ def test_lds_half_and_lane_exchange_programs_match_the_python_model():
         python = run_python(lanes, False, [], program_words)
         assert python.startswith("steps"), "le cas doit s'executer"
         assert_same(exe, lanes, False, [], program_words)
+
+
+def vmem(family, name, vdst=0, addr=0, data=0, saddr=125, offset=0, glc=0):
+    """Les deux mots d'une instruction FLAT, GLOBAL ou SCRATCH (décalage sur 12 bits, GLC, ADDR, DATA,
+    SADDR, VDST)."""
+    segment = {"FLAT": 0, "SCRATCH": 1, "GLOBAL": 2}[family]     # bits 14-15 du premier mot
+    first = 0x37 << 26 | segment << 14 | OPCODES[family, name] << 18 | glc << 16 | offset & 0xFFF
+    return first, addr | data << 8 | saddr << 16 | vdst << 24
+
+
+def test_flat_global_scratch_programs_match_the_python_model():
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4 ; v5 reste nul (adresse haute)
+    cases = [
+        # FLAT : chargements (dword, signé, court, paire), écriture, atomiques avec retour
+        (32, [], [(0, list(range(64))), (0x200, [0x80FF7F80] * 64)], words(
+            lane4,
+            vmem("FLAT", "flat_load_dword", vdst=6, addr=4),
+            vmem("FLAT", "flat_store_dword", addr=4, data=6, offset=256),
+            vmem("FLAT", "flat_load_sbyte", vdst=8, addr=4, offset=0x200),
+            vmem("FLAT", "flat_load_ushort", vdst=9, addr=4, offset=0x200),
+            vmem("FLAT", "flat_load_dwordx2", vdst=10, addr=4, offset=0x200),
+            vmem("FLAT", "flat_atomic_add", vdst=12, addr=4, data=6, offset=0x300, glc=1),
+            vmem("FLAT", "flat_atomic_cmpswap", vdst=14, addr=4, data=6, offset=0x300, glc=1))),
+        # GLOBAL avec SADDR (paire SGPR + VGPR 32 bits, décalage négatif), SCRATCH en adresse VGPR
+        (64, [(2, 0x1000), (3, 0)], [(0x1000, list(range(64)))], words(
+            lane4,
+            vmem("GLOBAL", "global_load_dword", vdst=6, addr=4, saddr=2),
+            vmem("GLOBAL", "global_store_dword", addr=4, data=6, saddr=2, offset=-4),
+            vmem("GLOBAL", "global_load_ubyte", vdst=8, addr=4, saddr=2),
+            vmem("SCRATCH", "scratch_store_dword", addr=4, data=6, offset=0x400),
+            vmem("SCRATCH", "scratch_load_dword", vdst=9, addr=4, offset=0x400))),
+    ]
+    for lanes, scalars, memory, program_words in cases:
+        python = run_python(lanes, False, scalars, program_words, memory)
+        assert python.startswith("steps"), "le cas doit s'exécuter"
+        assert_same(exe, lanes, False, scalars, program_words, memory)
