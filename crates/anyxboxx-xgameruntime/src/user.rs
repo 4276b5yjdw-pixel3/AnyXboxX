@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use victory_hle::modules::xasync::AsyncBlock;
 
+use crate::gamer_picture;
 use crate::object::{
     E_GAMEUSER_DEFERRAL_NOT_AVAILABLE, E_GAMEUSER_USER_NOT_FOUND, E_INVALIDARG,
     E_NOT_SUFFICIENT_BUFFER, E_NOTIMPL, E_OUTOFMEMORY, HResult, S_OK,
@@ -441,6 +442,59 @@ unsafe extern "system" fn add_by_id_result(
     unsafe { result_user(block, ADD_BY_ID_IDENTITY.as_ptr().cast(), out) }
 }
 
+/// Identity of the gamer picture calls: XAsync compares their addresses.
+static PICTURE_IDENTITY: [u8; 1] = [0];
+
+/// XUserGetGamerPictureAsync (slot 16): the PNG of the size code, completed at once.
+unsafe extern "system" fn gamer_picture_async(
+    _this: *mut c_void,
+    user: *mut c_void,
+    size_code: u32,
+    block: *mut AsyncBlock,
+) -> HResult {
+    // SAFETY: the handle is the title's, checked by `valid`.
+    if !unsafe { valid(user) } || block.is_null() {
+        return E_INVALIDARG;
+    }
+    let Some(side) = gamer_picture::side(size_code) else {
+        return E_INVALIDARG;
+    };
+    victory_hle::modules::xasync::finished_with(
+        block,
+        PICTURE_IDENTITY.as_ptr().cast(),
+        Ok(gamer_picture::png(side)),
+    )
+}
+
+/// XUserGetGamerPictureResultSize (slot 17).
+unsafe extern "system" fn gamer_picture_size(
+    _this: *mut c_void,
+    block: *mut AsyncBlock,
+    size: *mut usize,
+) -> HResult {
+    if size.is_null() {
+        return E_INVALIDARG;
+    }
+    victory_hle::modules::xasync::XAsyncGetResultSize(block, size)
+}
+
+/// XUserGetGamerPictureResult (slot 18): copies the PNG into the title's buffer.
+unsafe extern "system" fn gamer_picture_result(
+    _this: *mut c_void,
+    block: *mut AsyncBlock,
+    size: usize,
+    buffer: *mut c_void,
+    used: *mut usize,
+) -> HResult {
+    victory_hle::modules::xasync::XAsyncGetResult(
+        block,
+        PICTURE_IDENTITY.as_ptr().cast(),
+        size,
+        buffer,
+        used,
+    )
+}
+
 /// Not reachable offline: Xbox Live tokens (slots 23 to 28) and the UI-resolved issues (31).
 unsafe extern "system" fn not_available(_this: *mut c_void) -> HResult {
     E_NOTIMPL
@@ -509,6 +563,9 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (12, find_by_id as *const c_void),
         (13, get_is_guest as *const c_void),
         (14, get_state as *const c_void),
+        (16, gamer_picture_async as *const c_void),
+        (17, gamer_picture_size as *const c_void),
+        (18, gamer_picture_result as *const c_void),
         (19, get_age_group as *const c_void),
         (20, check_privilege as *const c_void),
         (21, resolve_privilege_async as *const c_void),

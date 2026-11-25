@@ -17,6 +17,7 @@ mod entry;
 mod events;
 mod frame_counter;
 mod game_config;
+mod gamer_picture;
 mod guid;
 mod hdr;
 mod hdr_display;
