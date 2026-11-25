@@ -11,6 +11,7 @@ use crate::ds;
 use crate::error::Error;
 use crate::ext;
 use crate::flat;
+use crate::format_exec;
 use crate::mubuf;
 use crate::scalar;
 use crate::smem;
@@ -126,6 +127,8 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let ds_family = family == "DS";
     let flat_family = flat::is_family(family);
     let mubuf_family = family == "MUBUF";
+    // Typed accesses (MUBUF buffer_*_format, MTBUF): the other MTBUF forms (_d16) are refused.
+    let format_family = (mubuf_family || family == "MTBUF") && format_exec::supports(&name);
     if !SCALAR_FAMILIES.contains(&family)
         && !vector_family
         && !compare_family
@@ -135,6 +138,7 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         && !ds_family
         && !flat_family
         && !mubuf_family
+        && !format_family
     {
         return Err(refused());
     }
@@ -160,6 +164,13 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         // Two words: the offset, the registers and the GLC bit are in the first, the registers in the second.
         let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
         flat::execute(wave, family, &name, wide)?;
+        wave.pc = next_pc;
+        return Ok(true);
+    }
+    if format_family {
+        // Two words, as MUBUF; MTBUF adds the format (bits 19-25) to the first.
+        let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
+        format_exec::execute(wave, &name, wide)?;
         wave.pc = next_pc;
         return Ok(true);
     }
