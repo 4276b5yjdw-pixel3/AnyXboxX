@@ -71,7 +71,7 @@ Frozen by `tests/test_d3d12_device_slots.py`.
 | 86 | not established | not assigned | none |
 | 127 | CreateCommittedResource3 (shape) | out of range: TomBox's device table has 90 slots | none |
 
-AnyXboxX serves no device slot: `runtime/d3d12_xs/d3d12_xs.def` exports `D3D12ConfigureVirtualMemoryX` and the
+AnyXboxX serves no device slot: `crates/anyxboxx-d3d12-xs` exports `D3D12ConfigureVirtualMemoryX` and the
 root-signature forwarders, not `D3D12XboxCreateDevice`. The gap is the whole device proxy, not a few slots, so no
 simple correction exists. The list slots 9, 131 and 132 belong to the command-list table, which TomBox sizes at
 110 (its `vt` array has 128 entries); 131 and 132 are outside it.

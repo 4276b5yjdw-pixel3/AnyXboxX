@@ -51,14 +51,13 @@ anyxboxx_dll(xgameruntime xgameruntime/xgameruntime.cpp xgameruntime/served_inte
 target_link_libraries(xgameruntime PRIVATE anyxboxx_task dxgi ole32 iphlpapi)
 anyxboxx_dll(xmem xmem/xmem.cpp xmem/era_heap.cpp xmem/era_query.cpp xmem/aligned_pages.cpp
              xmem/virtual_alloc.cpp xmem/physical_pages.cpp xmem/xmem.def)
-anyxboxx_dll(d3d12_xs d3d12_xs/d3d12_xs.cpp d3d12_xs/virtual_memory.cpp d3d12_xs/d3d12_xs.def)
 anyxboxx_dll(anyxboxx_tls tls/anyxboxx_tls.cpp)
 
 # DLL du runtime portées en Rust (crates/anyxboxx-*, docs/rust-full-status.md) : compilées par
 # cargo, copiées ici à côté des DLL C++. « source=nom dans bin », séparées par des virgules.
 set(ANYXBOXX_RUST_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/../target/release" CACHE PATH
     "Dossier de cargo build --release (les DLL Rust du runtime)")
-set(ANYXBOXX_RUST_DLLS "xcrdapi.dll=XCRDAPI.dll,kernelx.dll=kernelx.dll")
+set(ANYXBOXX_RUST_DLLS "xcrdapi.dll=XCRDAPI.dll,kernelx.dll=kernelx.dll,d3d12_xs.dll=d3d12_xs.dll")
 add_custom_target(rust_dlls ALL
   COMMAND ${CMAKE_COMMAND} -DRUST_RELEASE=${ANYXBOXX_RUST_RELEASE} -DBIN=${CMAKE_BINARY_DIR}/bin
           -DDLLS=${ANYXBOXX_RUST_DLLS} -P ${CMAKE_CURRENT_SOURCE_DIR}/rust_dlls.cmake

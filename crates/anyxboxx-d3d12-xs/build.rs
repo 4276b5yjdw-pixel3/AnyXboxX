@@ -1,7 +1,7 @@
 //! First step of D3D12.X: the functions whose contract is the same on PC are forwarded to
 //! Windows' d3d12.dll by the linker, no code (the four root-signature serialisation functions,
-//! which only exchange public structures and ID3DBlob blobs). Same list as
-//! `runtime/d3d12_xs/d3d12_xs.cpp`.
+//! which only exchange public structures and ID3DBlob blobs). Same list as the
+//! former C++ `runtime/d3d12_xs/d3d12_xs.cpp`.
 
 const FORWARDED: [&str; 4] = [
     "D3D12SerializeRootSignature",

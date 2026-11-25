@@ -1,6 +1,6 @@
 //! d3d12_xs.dll in Rust: translation of D3D12.X (the console's DirectX 12). Port of
-//! `runtime/d3d12_xs` (C++), same exports; checked by running `tests/test_d3d12_virtual_memory.py`
-//! and the d3d12_xs tests of `tests/test_runtime_cpp.py` against this DLL (`tests/test_rust_dlls.py`).
+//! the former C++ `runtime/d3d12_xs`, whose tests (`tests/test_d3d12_virtual_memory.py`, the d3d12_xs
+//! tests of `tests/test_runtime_cpp.py`) and export table it reproduced before the C++ DLL was deleted.
 //!
 //! The root-signature functions are forwarded to the PC's d3d12.dll (`build.rs`). Not translated
 //! yet: device creation (D3D12XboxCreateDevice) and the console ID3D12* interfaces, whose method
