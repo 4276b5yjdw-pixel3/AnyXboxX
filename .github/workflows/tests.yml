@@ -33,6 +33,22 @@ jobs:
       - name: README dans les 9 langues
         run: python -m pytest tests/test_readme_sync.py -q
 
+  victory-policy:
+    # Politique anti-assets de VIctory (third_party/victory/docs/asset-policy.md) sur sa copie dans ce dépôt :
+    # ses propres hook et workflow (.githooks, .github) ne tournent pas ici.
+    name: politique VIctory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: cargo xtask policy
+        working-directory: third_party/victory
+        run: |
+          rustup toolchain install
+          cargo xtask policy
+
   pytest:
     # Garder « pytest » : c'est le nom du check exigé par la protection de main.
     name: pytest
