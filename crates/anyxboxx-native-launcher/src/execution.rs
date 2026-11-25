@@ -1,8 +1,8 @@
 //! Assemble the native image loader and call the mapped entry point.
 
 use crate::{
-    exceptions, hooks, image::Image, imports::Symbol, libraries::Module, memory::Allocation,
-    registration, resolver,
+    command_line, exceptions, hooks, image::Image, imports::Symbol, libraries::Module,
+    memory::Allocation, registration, resolver,
 };
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
@@ -32,7 +32,8 @@ fn resolution_error(error: resolver::ResolveError) -> String {
 ///
 /// # Safety
 /// `bytes` must contain trusted executable code. Calling it and its TLS callbacks executes it
-/// unsandboxed in this process. This function initializes process-wide hooks once.
+/// unsandboxed in this process. This function initializes process-wide hooks once. The caller
+/// must also ensure no other thread reads the Windows command-line buffers while they are changed.
 pub unsafe fn launch(
     bytes: &[u8],
     path: &Path,
@@ -65,6 +66,8 @@ pub unsafe fn launch(
     // SAFETY: caller accepts execution of TLS callbacks and the leaked mapping stays alive.
     unsafe { registration::register(&image, allocation, runtime[4]) }
         .map_err(|error| error.to_string())?;
+    // SAFETY: caller ensures no other thread reads the process command-line buffers.
+    unsafe { command_line::adopt(path) };
     // SAFETY: caller accepts execution of the trusted, initialized image.
     unsafe { allocation.call_entry(&image) }.map_err(|error| error.to_string())
 }
