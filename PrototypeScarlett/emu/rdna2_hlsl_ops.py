@@ -48,6 +48,14 @@ uint SatF32ToU32(uint a) {
   if ((a & 0x7FFFFFFFu) > 0x7F800000u || x <= 0.0f) return 0u;
   return x >= 4294967296.0f ? 0xFFFFFFFFu : (uint)x;
 }
+uint FloorToI32(uint a, bool nearest) {
+  // v_cvt_flr/rpi_i32_f32 (mesures RDNA 2, VIctory #605) : NaN selon le signe ; rpi = floor(x + 0.5)
+  // exact, obtenu en comparant la fraction x - floor(x) (exacte en simple précision) à 0.5.
+  if ((a & 0x7FFFFFFFu) > 0x7F800000u) return (a >> 31) != 0u ? 0x80000000u : 0x7FFFFFFFu;
+  float x = asfloat(a), f = floor(x);
+  if (nearest && x - f >= 0.5f) f += 1.0f;
+  return SatF32ToI32(asuint(f));
+}
 uint SBfeU32(uint v, uint c) {
   uint w = (c >> 16) & 0x7Fu;
   if (w == 0u) return 0u;
@@ -75,6 +83,46 @@ uint QuadMaskB32(uint v) {
 uint LeadingSignsI32(uint v) {
   uint x = (v & 0x80000000u) != 0u ? ~v : v;
   return x == 0u ? 0xFFFFFFFFu : 31u - firstbithigh(x);
+}
+uint FrexpExpF32(uint a) {
+  uint e = (a >> 23) & 0xFFu, m = a & 0x7FFFFFu;
+  if (e == 0xFFu || (e == 0u && m == 0u)) return 0u;
+  return e != 0u ? e - 126u : asuint((int)firstbithigh(m) - 148);
+}
+uint FrexpMantF32(uint a) {
+  uint e = (a >> 23) & 0xFFu, m = a & 0x7FFFFFu;
+  if (e == 0xFFu || (e == 0u && m == 0u)) return a;
+  if (e == 0u) m = (m << (23u - firstbithigh(m))) & 0x7FFFFFu;
+  return (a & 0x80000000u) | (126u << 23) | m;
+}
+bool IsNanF32(uint a) {
+  return (a & 0x7FFFFFFFu) > 0x7F800000u;
+}
+uint ClassF32(uint a) {
+  uint e = (a >> 23) & 0xFFu, m = a & 0x7FFFFFu, n = a >> 31;
+  if (e == 0xFFu) return m != 0u ? ((m >> 22) & 1u) : (n != 0u ? 2u : 9u);
+  if (e == 0u) return m == 0u ? (n != 0u ? 5u : 6u) : (n != 0u ? 4u : 7u);
+  return n != 0u ? 3u : 8u;
+}
+uint SadU8(uint a, uint b) {
+  uint r = 0u;
+  [unroll] for (uint i = 0u; i < 32u; i += 8u) {
+    uint x = (a >> i) & 0xFFu, y = (b >> i) & 0xFFu;
+    r += x > y ? x - y : y - x;
+  }
+  return r;
+}
+uint LerpU8(uint a, uint b, uint c) {
+  uint r = 0u;
+  [unroll] for (uint i = 0u; i < 32u; i += 8u)
+    r |= ((((a >> i) & 0xFFu) + ((b >> i) & 0xFFu) + ((c >> i) & 1u)) >> 1) << i;
+  return r;
+}
+float4 Cube(uint a, uint b, uint c) {
+  float x = asfloat(a), y = asfloat(b), z = asfloat(c);
+  if (abs(z) >= abs(x) && abs(z) >= abs(y)) return float4(z < 0.0f ? 5.0f : 4.0f, z < 0.0f ? -x : x, -y, 2.0f * z);
+  if (abs(y) >= abs(x)) return float4(y < 0.0f ? 3.0f : 2.0f, x, y < 0.0f ? -z : z, 2.0f * y);
+  return float4(x < 0.0f ? 1.0f : 0.0f, x < 0.0f ? z : -z, -y, 2.0f * x);
 }
 uint AlignBit(uint hi, uint lo, uint s) {
   s &= 31u;
@@ -127,6 +175,19 @@ def source(code, literal=None):
     if code == 255 and literal is not None:
         return hexa(literal)
     raise Untranslatable(f"opérande {code} non traduit")
+
+
+def source_high(code):
+    """Mot haut (uint) d'une source 64 bits : registre suivant, ou extension d'une constante entière."""
+    if code >= 256:
+        return f"v[{code - 255}]"
+    if code < 128 and code != NULL:
+        return f"s[{code + 1}]"
+    if code == NULL or 128 <= code <= 192:
+        return "0u"
+    if 193 <= code <= 208:
+        return "0xFFFFFFFFu"
+    raise Untranslatable(f"opérande 64 bits {code} non traduit")
 
 
 def scalar_target(code):
@@ -331,9 +392,39 @@ VECTOR = {
     "v_mbcnt_lo_u32_b32": "(countbits({a} & ((1u << lane) - 1u)) + {b})",
     "v_mbcnt_hi_u32_b32": "{b}",
     "v_cndmask_b32": "((({c} >> lane) & 1u) != 0 ? {b} : {a})",
+    "v_mul_hi_i32_i24": "MulHiI32(asuint((asint({a}) << 8) >> 8), asuint((asint({b}) << 8) >> 8))",
+    "v_cvt_flr_i32_f32": "FloorToI32({a}, false)",
+    "v_cvt_rpi_i32_f32": "FloorToI32({a}, true)",
+    "v_cvt_off_f32_i4": "asuint((float)((asint({a}) << 28) >> 28) * 0.0625f)",
+    "v_rcp_iflag_f32": "asuint(rcp(asfloat({a})))",
+    "v_ffbh_i32": "LeadingSignsI32({a})",
+    "v_frexp_exp_i32_f32": "FrexpExpF32({a})",
+    "v_frexp_mant_f32": "FrexpMantF32({a})",
+    "v_fmac_legacy_f32": "FmaLegacyF32({a}, {b}, {d})",
+    "v_madmk_f32": "asuint(mad(asfloat({a}), asfloat({k}), asfloat({b})))",
+    "v_madak_f32": "asuint(mad(asfloat({a}), asfloat({b}), asfloat({k})))",
+    "v_mul_lo_i32": "({a} * {b})",
+    "v_sad_u8": "(SadU8({a}, {b}) + {c})",
+    "v_sad_hi_u8": "((SadU8({a}, {b}) << 16) + {c})",
+    "v_lerp_u8": "LerpU8({a}, {b}, {c})",
+    "v_cubeid_f32": "asuint(Cube({a}, {b}, {c}).x)",
+    "v_cubesc_f32": "asuint(Cube({a}, {b}, {c}).y)",
+    "v_cubetc_f32": "asuint(Cube({a}, {b}, {c}).z)",
+    "v_cubema_f32": "asuint(Cube({a}, {b}, {c}).w)",
 }
-COMPARE = re.compile(r"^v_cmp(x?)_(f|lt|eq|le|gt|lg|ge|ne|neq|t|tru)_(f32|u32|i32)$")
+COMPARE = re.compile(r"^v_cmp(x?)_(f|lt|eq|le|gt|lg|ge|ne|neq|t|tru|o|u|nge|nlg|ngt|nle|nlt|class)"
+                     r"_(f32|u32|i32)$")
 CONSTANT_TESTS = {"f": "false", "t": "true", "tru": "true"}
+# Tests flottants non ordonnés (vrais si une source est NaN) : négation du test ordonné.
+# NaN testé à part : sans cela, le pilote AMD RDNA 2 confond comparaisons ordonnées et non ordonnées (#134).
+UNORDERED_F32 = {
+    "o": "(!IsNanF32({a}) && !IsNanF32({b}))", "u": "(IsNanF32({a}) || IsNanF32({b}))",
+    "nge": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) >= asfloat({b})))",
+    "nlg": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) < asfloat({b}) || asfloat({a}) > asfloat({b})))",
+    "ngt": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) > asfloat({b})))",
+    "nle": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) <= asfloat({b})))",
+    "nlt": "(IsNanF32({a}) || IsNanF32({b}) || !(asfloat({a}) < asfloat({b})))", "class": "((({b}) >> ClassF32({a})) & 1u) != 0u",
+}
 
 
 def compare_condition(name, a, b):
@@ -341,10 +432,16 @@ def compare_condition(name, a, b):
     operation, kind = found.group(2), found.group(3)
     if operation in CONSTANT_TESTS:
         return CONSTANT_TESTS[operation]
+    if operation in UNORDERED_F32:
+        if kind != "f32":
+            raise Untranslatable(f"non traduite en HLSL : {name}")
+        return UNORDERED_F32[operation].format(a=a, b=b)
     cast = {"f32": "asfloat", "u32": "", "i32": "asint"}[kind]
     symbol = COMPARE_OPERATORS[operation]
     if operation == "lg" and kind == "f32":            # ordonné et différent
-        return f"({cast}({a}) < {cast}({b}) || {cast}({a}) > {cast}({b}))"
+        return f"(!IsNanF32({a}) && !IsNanF32({b}) && ({cast}({a}) < {cast}({b}) || {cast}({a}) > {cast}({b})))"
+    if kind == "f32" and operation in ("lt", "le", "gt", "ge"):
+        return f"(!IsNanF32({a}) && !IsNanF32({b}) && {cast}({a}) {symbol} {cast}({b}))"
     return f"{cast}({a}) {symbol} {cast}({b})"
 
 
