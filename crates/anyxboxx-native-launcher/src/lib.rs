@@ -3,6 +3,8 @@
 #[cfg(windows)]
 pub mod exceptions;
 #[cfg(windows)]
+pub mod execution;
+#[cfg(windows)]
 pub mod hooks;
 pub mod image;
 pub mod imports;

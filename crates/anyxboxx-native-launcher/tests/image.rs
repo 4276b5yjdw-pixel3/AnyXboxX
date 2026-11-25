@@ -127,6 +127,32 @@ fn calls_a_synthetic_image_entry_point() {
     assert_eq!(unsafe { allocation.call_entry(&image) }.unwrap(), 42);
 }
 
+#[cfg(all(windows, target_arch = "x86_64"))]
+#[test]
+fn assembled_loader_runs_a_synthetic_image() {
+    use anyxboxx_native_launcher::{
+        execution,
+        libraries::{LOAD_LIBRARY_SEARCH_SYSTEM32, Module},
+    };
+    use std::path::Path;
+    let mut file = fixture();
+    file[0x200..0x206].copy_from_slice(&[0xb8, 42, 0, 0, 0, 0xc3]);
+    let system = Module::load(Path::new("kernel32.dll"), LOAD_LIBRARY_SEARCH_SYSTEM32).unwrap();
+    let missing = Path::new(r"Z:\AnyXboxXMissingFolder");
+    // SAFETY: the image contains only the synthetic function above; it has no imports or TLS.
+    let code = unsafe {
+        execution::launch(
+            &file,
+            Path::new(r"C:\synthetic.exe"),
+            missing,
+            missing,
+            [system; 6],
+            false,
+        )
+    };
+    assert_eq!(code.unwrap(), 42);
+}
+
 #[cfg(windows)]
 #[test]
 fn tls_registration_rejects_missing_carrier_and_invalid_directory() {
