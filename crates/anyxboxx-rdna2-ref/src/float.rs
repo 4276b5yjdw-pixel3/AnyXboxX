@@ -4,6 +4,14 @@
 
 /// The bits of Python's `float('nan')` as `float_bits` returns them: a positive quiet NaN.
 pub const CANONICAL_NAN: u32 = 0x7FC0_0000;
+/// The bits of Python's `math.nan` as a double: a positive quiet NaN. `f64::NAN` is not used for the
+/// model's NaN results, because its sign bit is not fixed by the language (x86 gives the negative one).
+pub const CANONICAL_NAN64: u64 = 0x7FF8_0000_0000_0000;
+
+/// `math.nan` as a double (see `CANONICAL_NAN64`).
+pub fn canonical_nan64() -> f64 {
+    f64::from_bits(CANONICAL_NAN64)
+}
 /// The largest single-precision value below 1.0 (`ALMOST_ONE_F32`).
 pub const ALMOST_ONE: u32 = 0x3F7F_FFFF;
 
@@ -96,7 +104,11 @@ fn first_nan(a: f64, b: f64, c: f64, total: f64) -> f64 {
             return operand;
         }
     }
-    if total.is_nan() { f64::NAN } else { total }
+    if total.is_nan() {
+        canonical_nan64()
+    } else {
+        total
+    }
 }
 
 /// `legacy` fused multiply-add: `z` when either product factor is zero (DX9 rules), else `fma`.
