@@ -3656,14 +3656,16 @@ mod tests {
     /// texture shows, and a texture's slots.
     #[test]
     fn spans_say_the_next_start_and_the_lowest_level_viewed() {
+        // One view description for every slot: none is stale against another.
+        const DESC: [u32; 14] = [0; 14];
         let mut spans = Spans::default();
         // A 512x512 texture of 0x56000 bytes viewed from levels 3 and 1,
         // and the next one 0x6000 after it (run 188).
-        spans.note(1, 0x1_0000, 0x1_0000 + 0x5_6000, true);
+        spans.note(1, 0x1_0000, 0x1_0000 + 0x5_6000, &DESC, true);
         spans.shows(1, 3);
-        spans.note(2, 0x1_0000, 0x1_0000 + 0x5_6000, true);
+        spans.note(2, 0x1_0000, 0x1_0000 + 0x5_6000, &DESC, true);
         spans.shows(2, 1);
-        spans.note(3, 0x1_6000, 0x1_6000 + 0x5_6000, true);
+        spans.note(3, 0x1_6000, 0x1_6000 + 0x5_6000, &DESC, true);
         assert_eq!(spans.next_start(0x1_0000, 0x1_0000 + 0x5_6000), Some(0x1_6000));
         assert_eq!(spans.next_start(0x1_6000, 0x1_6000 + 0x5_6000), None);
         assert_eq!(spans.first_viewed(0x1_0000), Some(1));
