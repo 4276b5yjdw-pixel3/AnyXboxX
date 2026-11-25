@@ -3,6 +3,8 @@
 pub mod image;
 pub mod imports;
 #[cfg(windows)]
+pub mod libraries;
+#[cfg(windows)]
 pub mod memory;
 pub mod redirect;
 
