@@ -172,7 +172,7 @@ Done when: no `Cargo.toml` outside the root, `crates/` and `third_party/`.
 ### Phase 2: loader, modules and reports
 
 - [ ] `anyxboxx-modules` (port of `modules.py`), parity on the multi-DLL cases of `test_modules.py`.
-- [ ] `anyxboxx-report` and the `anyxboxx` CLI: `rapport`, `banc`, `jour-j`, `carte`, `traduction`
+- [x] `anyxboxx-report` and the `anyxboxx` CLI (on `rust/full`; RDNA 2 numbers from a data table until phase 4): `rapport`, `banc`, `jour-j`, `carte`, `traduction`
       (the README SVG generators), parity on `test_review.py`, `test_status_map.py`,
       `test_jour_j.py`, `test_translation.py`.
 - [ ] `scarlett.py --rapport` and `tools/jour_j.py` become thin wrappers that call the Rust binary,

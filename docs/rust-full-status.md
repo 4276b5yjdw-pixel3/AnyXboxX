@@ -10,7 +10,7 @@ git checkout rust/full
 git submodule update --init
 cargo build --release --workspace
 
-# Command line, replaces tools\lancer_victory.ps1 (same options, same environment):
+# Command line (replaced tools\lancer_victory.ps1: same options, same environment):
 .\target\release\anyxboxx.exe run --game-dir "C:\Users\ANAKIN\Downloads\GTA6.Xbox.v1.0.2.1-CYBERLEEK" --xg-dll "C:\Users\ANAKIN\Downloads\GTA6.Xbox.v1.0.2.1-CYBERLEEK\dll\xg_xs.dll" --precompile
 
 # Graphical launcher (double-click target\release\anyxboxx-launcher.exe, or):
@@ -44,48 +44,57 @@ Profiles (`crates/anyxboxx-launcher/profiles.toml`, one test each):
 
 ## Component by component
 
-| Component (before) | Language before | Now on `rust/full` | Parity check | Old code |
-| --- | --- | --- | --- | --- |
-| the former `tools/lancer_victory.ps1` | PowerShell | `crates/anyxboxx` (`anyxboxx run`) | `tests/test_anyxboxx_run.py`: both launchers run with a fake cargo and victory.exe and must make the same calls, with the same `VICTORY_*` environment and the same exit code (9 cases) | kept as oracle |
-| `emu/loader.py` (PE loader) | Python | `crates/anyxboxx-pe` (tables parsed by `victory-pe`) | `tests/test_rust_pe_parity.py`: 13 images built from source give the same JSON, page protections included | kept as oracle |
-| `emu/report.py`, `emu/config.py` (`--rapport`) | Python | `crates/anyxboxx-report` + `anyxboxx rapport` | `tests/test_rust_rapport_parity.py`: given the Python HLE registry, the same text on 7 targets and the same refusals on 5 | kept as oracle |
-| `rust/` (texture, audio, RDNA 2 bridge) | Rust | moved into `crates/` (phase 1); one Cargo workspace | existing `test_textures.py`, `test_audio.py`, `test_tombox_bridge.py` unchanged | `rust/Cargo.toml` deleted |
-| `runtime/xcrdapi` (`XCRDAPI.dll`) | C++ | `crates/anyxboxx-xcrdapi` (cdylib) | `tests/test_rust_dlls.py` runs `test_xcrdapi.py` against the Rust DLL, and its export table equals the C++ DLL's | C++ still built |
-| `runtime/kernelx` (`kernelx.dll`) | C++ | `crates/anyxboxx-kernelx` (2,661 forwarders) | `test_kernelx.py` against the Rust DLL; identical export table | C++ still built |
-| `runtime/d3d12_xs` (`d3d12_xs.dll`) | C++ | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py` and `test_runtime_cpp.py` against the Rust DLL; identical export table | C++ still built |
-| Graphical launcher | (new) | `crates/anyxboxx-launcher` | 80 Rust tests (profiles, file checks, progress lines, environment, one-game guard, cache path) | |
+| Component (before) | Now on `rust/full` | Parity check | Old code |
+| --- | --- | --- | --- |
+| `tools/lancer_victory.ps1` (PowerShell) | `anyxboxx run` (`crates/anyxboxx`) | same calls, `VICTORY_*` environment and exit codes as the script, with a fake cargo and victory.exe | **deleted**; `tests/test_anyxboxx_run.py` keeps the expectations |
+| `emu/loader.py` (PE loader) | `crates/anyxboxx-pe` (on `victory-pe`) | `tests/test_rust_pe_parity.py`: 13 images, same JSON and page protections | kept (the Python sandbox still uses it) |
+| `--rapport` (`emu/report.py`, `config.py`) | `anyxboxx rapport` (`crates/anyxboxx-report`) | `tests/test_rust_rapport_parity.py`: same text on 7 targets, same refusals on 5 | kept (used by the Python CLI and tools) |
+| `--traduction` | `anyxboxx traduction` | `tests/test_rust_traduction_parity.py`: same table, byte-identical SVG on 6 setups | kept |
+| `--carte` | `anyxboxx carte` | `tests/test_rust_carte_parity.py`: byte-identical SVG and badges on 5 cases plus 3 synthetic GDK tables | kept |
+| `tools/jour_j.py` | `anyxboxx jour-j` | `tests/test_rust_jour_j_parity.py`: static part of `rapport.md` byte-identical on 5 cases | kept: the Unicorn and native launch sections are stated as not available in Rust (D2, D4), so the port is partial |
+| `--banc` | `anyxboxx banc` | `tests/test_rust_banc_parity.py`: Module, Imports and Resolved columns and the footer | kept: the load/init columns need the Unicorn sandbox (D2) and show `n/d` |
+| `rust/` (texture, audio, RDNA 2 bridge) | `crates/` (one workspace) | existing tests unchanged | `rust/Cargo.toml` deleted |
+| `runtime/xcrdapi` | `crates/anyxboxx-xcrdapi` | `test_xcrdapi.py`, identical export table | **deleted** |
+| `runtime/kernelx` | `crates/anyxboxx-kernelx` (2,661 forwarders) | `test_kernelx.py`, identical export table | **deleted** (the forwarder table moved into the crate) |
+| `runtime/d3d12_xs` | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
+| `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, a `no_std` cdylib | `test_native_tls.py`, `test_native_tls_callbacks.py`, identical export table | **deleted** |
+| `runtime/xmem` | `crates/anyxboxx-xmem` (ERA attributes shared with VIctory's xmem module) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
+| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (task queue = VIctory's `xasync`) | 66 of the 90 GDK tests pass against it | kept: saves, store, platform (HDR, networking), gamer picture and the DXGI frame counter are not ported yet |
+| Graphical launcher | `crates/anyxboxx-launcher` (new) | 80 Rust tests | |
+
+How the Rust runtime DLLs reach the runtime folder: `cargo build --release` builds them, and `runtime/CMakeLists.txt` copies them from `target/release` into `runtime/build/bin` (`rust_dlls.cmake`; a missing one stops the build with the command to run). So `cargo build --release` now comes before `cmake` (CI, AGENTS.md, READMEs).
+
+TLS carrier finding: as a `no_std` cdylib, its TLS block holds exactly the carrier (262,208 bytes, no Rust std thread-locals). The game's template therefore shares it as with the C++ DLL. `no_std` needs `panic = "abort"`, which Cargo only accepts for the whole release profile, so the root workspace's release profile now aborts on panic.
 
 **Still C++:**
 
-- `runtime/xgameruntime` (3,500 lines) and `runtime/xmem` (800 lines): phase 3. Decision D3 says their logic goes into `victory-hle` modules.
-- `runtime/tls` (`anyxboxx_tls.dll`) has a real blocker. The DLL lends its own TLS block to the game from offset 0. A Rust cdylib's TLS block also holds Rust std's thread-locals, which the game would overwrite. It needs a `no_std` cdylib or a dedicated layout.
-- `runtime/launcher` (`anyxboxx.exe`): to be deleted in phase 3 (decision D4).
+- `runtime/xgameruntime` (24 of its 90 tests still fail with the Rust DLL).
+- `runtime/launcher` (`anyxboxx.exe`): decision D4 deletes it, but its native-mode tests have no Rust counterpart yet.
 - `runtime/gpu_runner`: phase 4.
 - `runtime/third_party/libhttpclient-task`: goes with xgameruntime.
 
 **Still Python:**
 
-- `--banc`, `jour_j.py`, `--carte`, `--traduction`: phase 2, not done.
-- `emu/modules.py`.
-- The Unicorn sandbox and its HLE handlers: dropped in the end state (decision D2).
-- RDNA 2 (`emu/rdna2*.py`, 10,900 lines): phase 4.
-- `tools/*.py`, and the pytest suite, which is the oracle of every port above.
-
-**Nothing has been deleted yet.** The rule is parity first, deletion in a later step. To try the Rust DLLs in the native runtime, copy `target\release\{xcrdapi,kernelx,d3d12_xs}.dll` over `runtime\build\bin` (`XCRDAPI.dll` is the same file as `xcrdapi.dll`). The game itself runs through VIctory, which does not use these DLLs.
+- The Unicorn sandbox and its HLE handlers (dropped in the end state, D2).
+- `emu/modules.py`, `emu/loader.py`, `report.py`, `status_map.py`, `translation.py`, `bench.py`, `tools/jour_j.py`: they have Rust ports with parity, but other Python code (the CLI, the GUI window, the sandbox) still imports them. They go together with the sandbox.
+- RDNA 2 (`emu/rdna2*.py`, phase 4). Until then, `anyxboxx traduction` reads the RDNA 2 coverage from `crates/anyxboxx-report/data/rdna2-coverage.txt`; a test fails when that table drifts from the Python measure, and `python tests/test_rust_traduction_parity.py` regenerates it.
+- `tools/*.py` and the pytest suite (the oracle).
 
 ## Checks on this branch (2026-11-25, Windows 11, Rust 1.98.1, Python 3.12)
 
 ```
-python -m pytest                       → 1217 passed, 9 skipped
+python -m pytest                       → 1251 passed, 11 skipped
 python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools → All checks passed!
-cargo test --release --workspace       → 121 passed, 0 failed
+cargo test --release --workspace       → 198 passed, 0 failed
 cargo clippy --release --workspace --all-targets → 0 warnings
 cargo fmt --check                      → clean
 ```
 
-The C++ runtime was rebuilt from this branch for these runs. An older `runtime/build`, compiled before commit `def7a65`, fails `test_first_exception_names_the_module_and_rva`.
+The runtime was built from this branch (cargo, then CMake). With `ANYXBOXX_REQUIRE_RUNTIME=1`, the TomBox DLL tests also need `python tools/build_tombox.py`.
 
 ## Findings along the way
 
 - VIctory does not compile without its `diagnostics` feature at this commit (`victory_gpu::queue::presented` is gated by it but used outside it). The root workspace depends on `victory-hle` with that feature, the way VIctory is always built.
 - VIctory writes fps only to its window title. A stdout fps line in VIctory would let both launchers show it.
+- VIctory's test `a_read_in_place_never_meets_the_gap_of_a_remapping` (victory-hle, xmem) is flaky: it fails about 3 times in 8 on the unmodified file.
+- The Windows+NVIDIA profile was corrected after the maintainer's test: PR #199's switches at `0` made no difference (2-3 fps on `main`, 5-7 fps on the fork at `80d58f8`).

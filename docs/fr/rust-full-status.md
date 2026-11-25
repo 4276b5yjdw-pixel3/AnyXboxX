@@ -10,7 +10,7 @@ git checkout rust/full
 git submodule update --init
 cargo build --release --workspace
 
-# Ligne de commande, remplace tools\lancer_victory.ps1 (mêmes options, même environnement) :
+# Ligne de commande (a remplacé tools\lancer_victory.ps1 : mêmes options, même environnement) :
 .\target\release\anyxboxx.exe run --game-dir "C:\Users\ANAKIN\Downloads\GTA6.Xbox.v1.0.2.1-CYBERLEEK" --xg-dll "C:\Users\ANAKIN\Downloads\GTA6.Xbox.v1.0.2.1-CYBERLEEK\dll\xg_xs.dll" --precompile
 
 # Lanceur graphique (double-clic sur target\release\anyxboxx-launcher.exe, ou) :
@@ -44,48 +44,57 @@ Profils (`crates/anyxboxx-launcher/profiles.toml`, un test chacun) :
 
 ## Composant par composant
 
-| Composant (avant) | Langage avant | Maintenant sur `rust/full` | Vérification de parité | Ancien code |
-| --- | --- | --- | --- | --- |
-| l'ancien `tools/lancer_victory.ps1` | PowerShell | `crates/anyxboxx` (`anyxboxx run`) | `tests/test_anyxboxx_run.py` : les deux lanceurs tournent avec un faux cargo et un faux victory.exe et doivent faire les mêmes appels, avec le même environnement `VICTORY_*` et le même code de sortie (9 cas) | gardé comme oracle |
-| `emu/loader.py` (chargeur PE) | Python | `crates/anyxboxx-pe` (tables lues par `victory-pe`) | `tests/test_rust_pe_parity.py` : 13 images fabriquées à partir de sources donnent le même JSON, protections des pages comprises | gardé comme oracle |
-| `emu/report.py`, `emu/config.py` (`--rapport`) | Python | `crates/anyxboxx-report` + `anyxboxx rapport` | `tests/test_rust_rapport_parity.py` : avec le registre HLE Python, le même texte sur 7 cibles et les mêmes refus sur 5 | gardé comme oracle |
-| `rust/` (textures, son, passerelle RDNA 2) | Rust | déplacé dans `crates/` (phase 1) ; un seul espace Cargo | `test_textures.py`, `test_audio.py`, `test_tombox_bridge.py` existants, inchangés | `rust/Cargo.toml` supprimé |
-| `runtime/xcrdapi` (`XCRDAPI.dll`) | C++ | `crates/anyxboxx-xcrdapi` (cdylib) | `tests/test_rust_dlls.py` lance `test_xcrdapi.py` contre la DLL Rust, et sa table d'exports égale celle de la DLL C++ | C++ toujours compilé |
-| `runtime/kernelx` (`kernelx.dll`) | C++ | `crates/anyxboxx-kernelx` (2 661 redirections) | `test_kernelx.py` contre la DLL Rust ; table d'exports identique | C++ toujours compilé |
-| `runtime/d3d12_xs` (`d3d12_xs.dll`) | C++ | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py` et `test_runtime_cpp.py` contre la DLL Rust ; table d'exports identique | C++ toujours compilé |
-| Lanceur graphique | (nouveau) | `crates/anyxboxx-launcher` | 80 tests Rust (profils, vérification des fichiers, lignes de progression, environnement, un seul jeu à la fois, chemin du cache) | |
+| Composant (avant) | Maintenant sur `rust/full` | Vérification de parité | Ancien code |
+| --- | --- | --- | --- |
+| `tools/lancer_victory.ps1` (PowerShell) | `anyxboxx run` (`crates/anyxboxx`) | mêmes appels, même environnement `VICTORY_*` et mêmes codes de sortie que le script, avec un faux cargo et un faux victory.exe | **supprimé** ; `tests/test_anyxboxx_run.py` garde les attentes |
+| `emu/loader.py` (chargeur PE) | `crates/anyxboxx-pe` (sur `victory-pe`) | `tests/test_rust_pe_parity.py` : 13 images, même JSON et mêmes protections de pages | gardé (le bac à sable Python s'en sert encore) |
+| `--rapport` (`emu/report.py`, `config.py`) | `anyxboxx rapport` (`crates/anyxboxx-report`) | `tests/test_rust_rapport_parity.py` : même texte sur 7 cibles, mêmes refus sur 5 | gardé (utilisé par la CLI Python et les outils) |
+| `--traduction` | `anyxboxx traduction` | `tests/test_rust_traduction_parity.py` : même tableau, SVG identique à l'octet sur 6 configurations | gardé |
+| `--carte` | `anyxboxx carte` | `tests/test_rust_carte_parity.py` : SVG et badges identiques à l'octet sur 5 cas, plus 3 tables GDK synthétiques | gardé |
+| `tools/jour_j.py` | `anyxboxx jour-j` | `tests/test_rust_jour_j_parity.py` : partie statique de `rapport.md` identique à l'octet sur 5 cas | gardé : les sections de lancement Unicorn et natif sont déclarées indisponibles en Rust (D2, D4), le portage est partiel |
+| `--banc` | `anyxboxx banc` | `tests/test_rust_banc_parity.py` : colonnes Module, Imports, Résolus et pied de tableau | gardé : les colonnes chargement/initialisation demandent le bac à sable Unicorn (D2) et affichent `n/d` |
+| `rust/` (textures, son, passerelle RDNA 2) | `crates/` (un seul espace) | tests existants inchangés | `rust/Cargo.toml` supprimé |
+| `runtime/xcrdapi` | `crates/anyxboxx-xcrdapi` | `test_xcrdapi.py`, table d'exports identique | **supprimé** |
+| `runtime/kernelx` | `crates/anyxboxx-kernelx` (2 661 redirections) | `test_kernelx.py`, table d'exports identique | **supprimé** (la table de redirections est passée dans la crate) |
+| `runtime/d3d12_xs` | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
+| `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, cdylib `no_std` | `test_native_tls.py`, `test_native_tls_callbacks.py`, table d'exports identique | **supprimé** |
+| `runtime/xmem` | `crates/anyxboxx-xmem` (attributs ERA partagés avec le module xmem de VIctory) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
+| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (file de tâches = `xasync` de VIctory) | 66 des 90 tests GDK passent contre elle | gardé : sauvegardes, boutique, plateforme (HDR, réseau), image du joueur et compteur d'images DXGI pas encore portés |
+| Lanceur graphique | `crates/anyxboxx-launcher` (nouveau) | 80 tests Rust | |
+
+Comment les DLL Rust du runtime arrivent dans le dossier du runtime : `cargo build --release` les compile, puis `runtime/CMakeLists.txt` les copie de `target/release` vers `runtime/build/bin` (`rust_dlls.cmake` ; s'il en manque une, la compilation s'arrête en donnant la commande à lancer). `cargo build --release` passe donc avant `cmake` (CI, AGENTS.md, README).
+
+Constat sur la porteuse TLS : en cdylib `no_std`, son bloc TLS contient exactement la zone porteuse (262 208 octets, sans variables de thread de la std Rust). Le modèle du jeu la partage donc comme avec la DLL C++. `no_std` exige `panic = "abort"`, que Cargo n'accepte que pour tout le profil release : le profil release de l'espace racine interrompt donc le programme sur panique.
 
 **Encore en C++ :**
 
-- `runtime/xgameruntime` (3 500 lignes) et `runtime/xmem` (800 lignes) : phase 3. Selon la décision D3, leur logique va dans des modules de `victory-hle`.
-- `runtime/tls` (`anyxboxx_tls.dll`) a un vrai obstacle. La DLL prête son propre bloc TLS au jeu dès l'octet 0. Le bloc TLS d'une cdylib Rust contient aussi les variables de thread de la std Rust, que le jeu écraserait. Il faut une cdylib `no_std` ou une disposition dédiée.
-- `runtime/launcher` (`anyxboxx.exe`) : à supprimer en phase 3 (décision D4).
+- `runtime/xgameruntime` (24 de ses 90 tests échouent encore avec la DLL Rust).
+- `runtime/launcher` (`anyxboxx.exe`) : la décision D4 le supprime, mais ses tests du mode natif n'ont pas encore d'équivalent Rust.
 - `runtime/gpu_runner` : phase 4.
 - `runtime/third_party/libhttpclient-task` : part avec xgameruntime.
 
 **Encore en Python :**
 
-- `--banc`, `jour_j.py`, `--carte`, `--traduction` : phase 2, pas faits.
-- `emu/modules.py`.
-- Le bac à sable Unicorn et ses fonctions HLE : abandonnés dans l'état final (décision D2).
-- RDNA 2 (`emu/rdna2*.py`, 10 900 lignes) : phase 4.
-- `tools/*.py`, et la suite pytest, oracle de chaque portage ci-dessus.
-
-**Rien n'est encore supprimé.** La règle : d'abord la parité, la suppression à une étape suivante. Pour essayer les DLL Rust dans le runtime natif, copier `target\release\{xcrdapi,kernelx,d3d12_xs}.dll` par-dessus `runtime\build\bin` (`XCRDAPI.dll` est le même fichier que `xcrdapi.dll`). Le jeu lui-même tourne par VIctory, qui n'utilise pas ces DLL.
+- Le bac à sable Unicorn et ses fonctions HLE (abandonnés dans l'état final, D2).
+- `emu/modules.py`, `emu/loader.py`, `report.py`, `status_map.py`, `translation.py`, `bench.py`, `tools/jour_j.py` : ils ont un portage Rust avec parité, mais d'autres parties Python (la CLI, la fenêtre, le bac à sable) les importent encore. Ils partiront avec le bac à sable.
+- RDNA 2 (`emu/rdna2*.py`, phase 4). D'ici là, `anyxboxx traduction` lit la couverture RDNA 2 dans `crates/anyxboxx-report/data/rdna2-coverage.txt` ; un test échoue quand cette table s'écarte de la mesure Python, et `python tests/test_rust_traduction_parity.py` la régénère.
+- `tools/*.py` et la suite pytest (l'oracle).
 
 ## Vérifications sur cette branche (25/11/2026, Windows 11, Rust 1.98.1, Python 3.12)
 
 ```
-python -m pytest                       → 1217 passed, 9 skipped
+python -m pytest                       → 1251 passed, 11 skipped
 python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools → All checks passed!
-cargo test --release --workspace       → 121 passed, 0 failed
+cargo test --release --workspace       → 198 passed, 0 failed
 cargo clippy --release --workspace --all-targets → 0 warnings
 cargo fmt --check                      → propre
 ```
 
-Le runtime C++ a été recompilé depuis cette branche pour ces passages. Un `runtime/build` plus ancien, compilé avant le commit `def7a65`, échoue sur `test_first_exception_names_the_module_and_rva`.
+Le runtime a été compilé depuis cette branche (cargo, puis CMake). Avec `ANYXBOXX_REQUIRE_RUNTIME=1`, les tests des DLL de TomBox demandent aussi `python tools/build_tombox.py`.
 
 ## Constats en chemin
 
 - À ce commit, VIctory ne compile pas sans sa fonctionnalité `diagnostics` (`victory_gpu::queue::presented` en dépend mais sert hors d'elle). L'espace racine dépend de `victory-hle` avec cette fonctionnalité, comme VIctory est toujours compilé.
 - VIctory n'écrit les i/s que dans le titre de sa fenêtre. Une ligne d'i/s sur stdout dans VIctory permettrait aux deux lanceurs de l'afficher.
+- Le test `a_read_in_place_never_meets_the_gap_of_a_remapping` de VIctory (victory-hle, xmem) est instable : il échoue environ 3 fois sur 8 sur le fichier non modifié.
+- Le profil Windows+NVIDIA a été corrigé après ton essai : les interrupteurs de la PR #199 à `0` n'ont rien changé (2-3 i/s sur `main`, 5-7 i/s sur le fork à `80d58f8`).

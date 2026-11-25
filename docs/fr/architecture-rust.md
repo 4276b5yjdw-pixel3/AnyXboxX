@@ -181,7 +181,7 @@ Finie quand : aucun `Cargo.toml` hors de la racine, de `crates/` et de `third_pa
 
 - [ ] `anyxboxx-modules` (portage de `modules.py`), parité sur les cas à plusieurs DLL de
       `test_modules.py`.
-- [ ] `anyxboxx-report` et la CLI `anyxboxx` : `rapport`, `banc`, `jour-j`, `carte`, `traduction`
+- [x] `anyxboxx-report` et la CLI `anyxboxx` (sur `rust/full` ; chiffres RDNA 2 lus dans une table jusqu'à la phase 4) : `rapport`, `banc`, `jour-j`, `carte`, `traduction`
       (les générateurs des SVG du README), parité sur `test_review.py`, `test_status_map.py`,
       `test_jour_j.py`, `test_translation.py`.
 - [ ] `scarlett.py --rapport` et `tools/jour_j.py` deviennent de fines enveloppes qui appellent le
