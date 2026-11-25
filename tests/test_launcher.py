@@ -61,6 +61,37 @@ def test_package_without_its_executable_says_so(tmp_path, runtime_dir):
     assert result.returncode == 1 and "game_scarlett_master.exe" in stderr
 
 
+# W13 (first-boot-1021.md) : le titre importe GameInput.dll!#1, le GameInputCreate v0 du GameInput.lib
+# du GDK. AnyXboxX ne le sert pas : la DLL de l'hôte le fournit, sinon le lanceur nomme l'import manquant.
+GAME_INPUT_OUT = 0x300
+
+
+def _host_game_input_create():
+    from test_native_services import windows_export
+
+    return windows_export("GameInput.dll", "GameInputCreate")
+
+
+@pytest.mark.skipif(sys.platform != "win32" or not _host_game_input_create(), reason="GameInput absent de cet hôte")
+def test_game_input_ordinal_1_is_the_host_game_input_create(tmp_path, runtime_dir):
+    def code(iat):
+        return (Asm().frame().lea_rcx(GAME_INPUT_OUT).call_iat(iat[("GameInput.dll", 1)])
+                .raw(b"\x89\xc2").mov_rax_from(GAME_INPUT_OUT).nonzero_rax_to_eax()     # edx = HRESULT
+                .raw(b"\x09\xd0").unframe().ret()                                       # 1 : S_OK et objet
+                .at(GAME_INPUT_OUT).raw(bytes(8)).build())
+
+    exe = build_pe(tmp_path / "input.exe", code, imports=[("GameInput.dll", 1)], dll=False)
+    result = launch(runtime_dir, exe)
+    assert result.returncode == 1, (hex(result.returncode & 0xFFFF_FFFF), result.stderr)
+
+
+def test_host_library_missing_an_ordinal_import_is_named(tmp_path, runtime_dir):
+    exe = build_pe(tmp_path / "noinput.exe", lambda iat: Asm().mov_eax(7).ret().build(),
+                   imports=[("AnyXboxXHostAbsent.dll", 1)], dll=False)
+    result = launch(runtime_dir, exe)
+    assert result.returncode == 1 and "AnyXboxXHostAbsent.dll!#1" in result.stderr
+
+
 TOMBOX_D3D12 = tombox_paths.TOMBOX_INSTALL / "d3d12_xs.dll"
 
 

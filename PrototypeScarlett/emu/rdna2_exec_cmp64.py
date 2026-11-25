@@ -11,7 +11,7 @@ documentation publique d'AMD (« RDNA 2 Instruction Set Architecture », VOPC).
 """
 import struct
 
-from emu.rdna2_exec_ops import FLOAT_TESTS, INTEGER_TESTS, MASK32, MASK64, signed
+from emu.rdna2_exec_ops import FLOAT_TESTS, INTEGER_TESTS, MASK64, signed
 
 VGPR_FIRST, LITERAL, EXEC_LO, VCC_LO = 256, 255, 126, 106
 INLINE_INTEGERS = range(128, 209)
@@ -71,7 +71,8 @@ def _untranslated(message):
     return Untranslated(message)
 
 
-def _read64(wave, code, lane, is_float):
+def read64(wave, code, lane, is_float):
+    """Source 64 bits d'une ligne (paire de registres ou constante en ligne)."""
     if code >= VGPR_FIRST:
         register = code - VGPR_FIRST
         return wave.v[register][lane] | wave.v[register + 1][lane] << 32
@@ -89,9 +90,9 @@ def _sources(wave, kind, codes, lane, literal):
     if kind == "class32":
         return wave.read_lane(codes[0], lane, literal), wave.read_lane(codes[1], lane, literal)
     if kind == "class64":
-        return _read64(wave, codes[0], lane, True), wave.read_lane(codes[1], lane, literal)
+        return read64(wave, codes[0], lane, True), wave.read_lane(codes[1], lane, literal)
     is_float = kind == "f64"
-    return _read64(wave, codes[0], lane, is_float), _read64(wave, codes[1], lane, is_float)
+    return read64(wave, codes[0], lane, is_float), read64(wave, codes[1], lane, is_float)
 
 
 def _modify(value, index, kind, abs_bits, neg_bits):
@@ -117,7 +118,4 @@ def execute(wave, name, codes, literal, destination=VCC_LO, abs_bits=0, neg_bits
         a, b = _sources(wave, kind, codes, lane, literal)
         a, b = _modify(a, 0, kind, abs_bits, neg_bits), _modify(b, 1, kind, abs_bits, neg_bits)
         mask |= bool(test(a, b)) << lane
-    if writes_exec:
-        wave.s[EXEC_LO] = mask & MASK32
-    else:
-        wave.write_scalar(destination, mask)
+    wave.write_mask(EXEC_LO if writes_exec else destination, mask)
