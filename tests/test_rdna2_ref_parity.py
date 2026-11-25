@@ -89,11 +89,15 @@ def render(wave):
         words = struct.unpack("<1024I", bytes(data))
         entries = "".join(f" {i * 4:X}:{value:08X}" for i, value in enumerate(words) if value)
         lines.append(f"page {page * PAGE:016X}{entries}")
+    for target, exported in sorted(getattr(wave, "exports", {}).items()):
+        for lane, values in sorted(exported.items()):
+            lines.append(f"exp {target} {lane} " + " ".join(f"{value:08X}" for value in values))
     return "\n".join(lines) + "\n"
 
 
 def run_python(lanes, scc, scalars, words, memory=()):
     wave = Wave(lanes=lanes)
+    wave.exports = {}                   # EXP : comme run_vertex et run_pixel_wave (emu/rdna2_exec_graphics.py)
     wave.scc = scc
     for index, value in scalars:
         wave.s[index] = value
@@ -1288,3 +1292,64 @@ def test_vopc_sdwa_and_dpp_programs_match_the_python_model():
         outcomes[run_python(lanes, False, scalars, program_words).split()[0]] += 1
         assert_same(exe, lanes, False, scalars, program_words)
     assert outcomes["steps"] >= COMPARE_PROGRAMS // 4, outcomes
+
+
+def exp(target, enable, sources, compr=0, done=0, vm=0):
+    """Instruction EXP (deux mots) : cible, bits EN, drapeaux, puis les quatre VGPR sources."""
+    low = 0x3E << 26 | vm << 12 | done << 11 | compr << 10 | target << 4 | enable
+    return [low, sources[0] | sources[1] << 8 | sources[2] << 16 | sources[3] << 24]
+
+
+def export_operands():
+    """v1-v4 : valeurs différentes par ligne (entier, flottant, motif)."""
+    return [vop2("v_mul_u32_u24", 1, LITERAL, 0), 0x01030507,
+            vop1("v_cvt_f32_u32", 2, V0),
+            vop2("v_xor_b32", 3, LITERAL, 1), 0x80FF7F00,
+            vop2("v_sub_f32", 4, LITERAL, 2), 0x41000000]
+
+
+EXPORT_TARGETS = (0, 7, 8, 9, 12, 16, 17, 20, 21, 32, 39, 40, 63)   # mrt, mrtz, null, pos, prim, param, invalides
+EXPORT_PROGRAMS = 120
+
+
+def export_cases():
+    """(lanes, scalaires, programme) : cibles, canaux, drapeaux done/vm, EXEC partiel ou vide, export
+    répété sur une cible, et compr refusé (même EXEC vide)."""
+    cases = []
+    for lanes in (32, 64):
+        exec_pairs = [[], [(126, 0x8000_0005), (127, 0x0000_0003)], [(126, 0), (127, 0)]]
+        for scalars in exec_pairs:
+            cases += [
+                (lanes, scalars, program(*export_operands(), *exp(12, 0xF, (1, 2, 3, 4), done=1),
+                                         *exp(32, 0b0101, (0, 9, 3, 200), vm=1), *exp(0, 0b1010, (4, 3, 2, 1)))),
+                (lanes, scalars, program(*export_operands(), *exp(37, 0xF, (1, 1, 1, 1)),
+                                         vop1("v_not_b32", 1, V0 + 1), *exp(37, 0b0011, (1, 2, 0, 0)))),
+                (lanes, scalars, program(*exp(9, 0xF, (0, 0, 0, 0)), *exp(17, 0x0, (0, 0, 0, 0)),
+                                         *exp(63, 0xF, (255, 0, 0, 0)))),
+                (lanes, scalars, program(*export_operands(), *exp(1, 0xF, (1, 2, 3, 4), compr=1))),
+            ]
+    return cases
+
+
+def test_export_programs_match_the_python_model():
+    """EXP : enregistrements par cible et par ligne (canaux coupés à 0, dernier export gardé), toutes les
+    cibles (null et invalides comprises), et le refus de compr ; plus des programmes tirés au hasard."""
+    exe = binary()
+    for lanes, scalars, words in export_cases():
+        assert_same(exe, lanes, False, scalars, words)
+    rng = random.Random(SEED)
+    outcomes = {"steps": 0, "error": 0}
+    for _ in range(EXPORT_PROGRAMS):
+        lanes = rng.choice((32, 64))
+        scalars = [(126, rng.getrandbits(32)), (127, rng.getrandbits(32))] if rng.random() < 0.5 else []
+        body = []
+        for _ in range(rng.randrange(1, 6)):
+            sources = tuple(rng.randrange(8) if rng.random() < 0.9 else rng.randrange(256) for _ in range(4))
+            body += exp(rng.choice(EXPORT_TARGETS), rng.getrandbits(4), sources, compr=int(rng.random() < 0.05),
+                        done=rng.getrandbits(1), vm=rng.getrandbits(1))
+            if rng.random() < 0.3:
+                body.append(vop2("v_add_nc_u32", rng.randrange(1, 5), rng.choice((V0 + 1, V0 + 2, 129)), 3))
+        program_words = program(*export_operands(), *body)
+        outcomes[run_python(lanes, False, scalars, program_words).split()[0]] += 1
+        assert_same(exe, lanes, False, scalars, program_words)
+    assert outcomes["steps"] >= EXPORT_PROGRAMS // 2, outcomes

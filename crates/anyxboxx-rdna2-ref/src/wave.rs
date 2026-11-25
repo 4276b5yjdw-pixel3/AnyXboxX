@@ -4,6 +4,8 @@
 //! `v[n][lane]` are the vector registers; `s[n]` the 32-bit scalar registers. In wave64, EXEC and
 //! VCC take two SGPR each (a lane mask is a register pair), as in AMD's documentation.
 
+use std::collections::BTreeMap;
+
 use crate::error::Error;
 use crate::float;
 use crate::memory::Memory;
@@ -33,6 +35,8 @@ pub struct Wave {
     pub memory: Memory,
     /// The local data share of the wave (`ds::LDS_SIZE` bytes).
     pub lds: Vec<u8>,
+    /// The EXP exports: target, then lane, then the four values (`wave.exports` in the Python).
+    pub exports: BTreeMap<u32, BTreeMap<usize, [u32; 4]>>,
 }
 
 impl Wave {
@@ -53,6 +57,7 @@ impl Wave {
             steps: 0,
             memory: Memory::default(),
             lds: vec![0; crate::ds::LDS_SIZE],
+            exports: BTreeMap::new(),
         };
         let all = if lanes == 64 {
             u64::MAX

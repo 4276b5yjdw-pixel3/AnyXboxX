@@ -9,7 +9,8 @@
 //!   `program W ...`    the program, as 32-bit words in hexadecimal
 //! Output (stdout): `steps N`, `pc N`, `scc 0|1`, then `s I HEX` for each non-zero scalar register
 //! and `v I HEX ...` (one value per lane) for each vector register with a non-zero lane, then
-//! `page ADDR OFF:HEX ...` for each created 4 KiB page (its non-zero dwords, by offset). A run that
+//! `page ADDR OFF:HEX ...` for each created 4 KiB page (its non-zero dwords, by offset), then
+//! `exp TARGET LANE X Y Z W` for each lane an EXP instruction exported (by target, then lane). A run that
 //! refuses prints `error KIND` instead (`untranslated`, `operand` or `loop`) and nothing else.
 
 use std::io::{self, Read, Write};
@@ -106,6 +107,12 @@ fn report(wave: &Wave) -> String {
             }
         }
         out.push('\n');
+    }
+    for (target, lanes) in &wave.exports {
+        for (lane, values) in lanes {
+            let values: Vec<String> = values.iter().map(|value| format!("{value:08X}")).collect();
+            out.push_str(&format!("exp {target} {lane} {}\n", values.join(" ")));
+        }
     }
     out
 }

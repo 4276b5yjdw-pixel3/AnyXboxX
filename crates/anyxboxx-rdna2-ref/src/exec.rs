@@ -1,14 +1,16 @@
 //! Running a program: one instruction at a time, until s_endpgm or the end of the binary (port of
 //! `step` and `run` of `emu/rdna2_exec.py`).
 //!
-//! Families: scalar (SOP1, SOP2, SOPC, SOPK, SOPP) and branches, then VOP1 and VOP2 (`vector`). The other
-//! families refuse with `Untranslated`, which names the instruction, as the Python does for the
-//! instructions it has not written.
+//! Families: scalar (SOP1, SOP2, SOPC, SOPK, SOPP) and branches, the vector encodings, the memory
+//! families, MIMG and EXP, each in its own module. What a module does not execute refuses with
+//! `Untranslated`, which names the instruction, as the Python does for the instructions it has not
+//! written.
 
 use crate::compare;
 use crate::decode::{Classified, DWORD, classify, mnemonic};
 use crate::ds;
 use crate::error::Error;
+use crate::export;
 use crate::ext;
 use crate::ext_compare;
 use crate::flat;
@@ -154,6 +156,8 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let format_family = (mubuf_family || family == "MTBUF") && format_exec::supports(&name);
     // MIMG: the 2D loads, stores and samples of `image_exec`; the other image instructions are refused.
     let image_family = family == "MIMG" && image_exec::supports(&name);
+    // EXP: its one opcode, `exp` (the Python `rdna2_exec_graphics`).
+    let export_family = family == "EXP" && name == "exp";
     if !SCALAR_FAMILIES.contains(&family)
         && !vector_family
         && !compare_family
@@ -165,6 +169,7 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         && !mubuf_family
         && !format_family
         && !image_family
+        && !export_family
     {
         return Err(refused());
     }
@@ -199,6 +204,13 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
             .map(|k| word_at(data, wave.pc + k * DWORD))
             .collect();
         image_exec::execute(wave, &name, &words)?;
+        wave.pc = next_pc;
+        return Ok(true);
+    }
+    if export_family {
+        // Two words: the enable bits, the target and the flags in the first, the sources in the second.
+        let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
+        export::execute(wave, wide)?;
         wave.pc = next_pc;
         return Ok(true);
     }
