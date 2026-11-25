@@ -65,6 +65,7 @@ mod ramline;
 mod shadow;
 #[cfg(windows)]
 mod windowup;
+mod resultring;
 #[cfg(windows)]
 mod tiles;
 pub mod signature;
