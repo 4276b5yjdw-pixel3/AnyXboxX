@@ -148,6 +148,18 @@ CARRY = {
     "v_sub_co_ci_u32": lambda a, b, k: (a - b - k, a < b + k),
     "v_subrev_co_ci_u32": lambda a, b, k: (b - a - k, b < a + k),
 }
+# VOP3 clamp on the unsigned 32-bit add/subtract: D saturates to [0, 0xFFFFFFFF] instead of wrapping. AMD "RDNA 2"
+# ISA, section 6.5 "ALU Clamp Bit Usage" (printed p. 48): "For integer operations, it clamps the result to the
+# largest and smallest representable value." Cross-check, LLVM 20.1.8 test/CodeGen/AMDGPU/uaddsat.ll and usubsat.ll:
+# uaddsat/usubsat i32 select `v_add_nc_u32_e64 ... clamp` / `v_sub_nc_u32_e64 ... clamp` on GFX10, and on GFX8 the
+# carry-out form (`v_add_u32_e64 v0, s[4:5], v0, v1 clamp`, `v_sub_u32_e64 ...`). The carry-out forms still write the
+# real carry/borrow to SDST: the pseudo-code of sections 12.7 (p. 134) and 12.12 (p. 179) computes VCC from the
+# unbounded sum and section 6.5 clamps "the result" (our reading, not measured; no LLVM test for the _co_ci_ forms).
+# Clamp on any other integer result (24-bit multiplies, 64-bit mad, float-to-int conversions...) is refused rather
+# than ignored: not implemented here, and no LLVM test or measurement pins it (asked in akimfomin/PortBridge#84).
+INTEGER_CLAMP = "with clamp on an integer result: not implemented"
+SATURATED_U32 = frozenset({"v_add_nc_u32", "v_sub_nc_u32", "v_subrev_nc_u32"})
+CARRY_SATURATION = {name: MASK32 if "_add" in name else 0 for name in CARRY}
 LANE_OPERATIONS = frozenset({"v_readlane_b32", "v_writelane_b32", "v_mbcnt_lo_u32_b32", "v_mbcnt_hi_u32_b32",
                              "v_readfirstlane_b32"})
 EXECUTABLE = frozenset(set(VECTOR) - {"v_readfirstlane_b32"} | set(VECTOR_COMPARE) | set(VECTOR3) | set(CARRY)
@@ -229,6 +241,9 @@ def execute(wave, name, opcode, word, literal):
     is_vop1 = VOP1_START <= opcode < VOP1_END
     is_vop2 = VOP2_START <= opcode < VOP2_END
     is_float = float_result(name)
+    if fields.clamp and not is_float and name not in SATURATED_U32:
+        from emu.rdna2_exec import Untranslated
+        raise Untranslated(f"{name} {INTEGER_CLAMP}")
     destination = wave.v[fields.vdst]
     for lane in wave.active():
         a, b, c = _inputs(wave, fields, lane, literal, float_inputs(name))
@@ -237,6 +252,8 @@ def execute(wave, name, opcode, word, literal):
             result = VECTOR[name](a, b if is_vop2 else 0, destination[lane], literal, condition)
         else:
             result = VECTOR3[name](a, b, c)
+        if fields.clamp and name in SATURATED_U32:
+            result = min(max(result, 0), MASK32)
         destination[lane] = _output(fields, result, is_float)
     return None
 
@@ -260,12 +277,15 @@ def _carry(wave, name, fields, literal):
     arbitrary SGPR-pair » ; la règle « fully written, no partial mask updates » (section 3.9) est
     énoncée pour VCC. Mesuré sur RDNA 2 (gfx1036, Wave32) : v_add_co_ci_u32 en VOP3 met aussi à 0
     les bits des lignes inactives de son SGPR (mesure et portée citées dans rdna2_exec._carry).
+    With clamp, D saturates on a carry or borrow (CARRY_SATURATION) while SDST keeps the real bit.
     """
     carries = 0
     carry_in = wave.read_mask(fields.sources[2], literal) if name.endswith("_ci_u32") else 0
     for lane in wave.active():
         a, b, _ = _inputs(wave, fields, lane, literal, False)
         result, carry = CARRY[name](a, b, carry_in >> lane & 1)
+        if fields.clamp and carry:
+            result = CARRY_SATURATION[name]
         wave.v[fields.vdst][lane] = result & MASK32
         carries |= bool(carry) << lane
     wave.write_mask(fields.sdst, carries)
@@ -273,6 +293,9 @@ def _carry(wave, name, fields, literal):
 
 def _mad64(wave, name, fields, literal):
     is_signed = name == "v_mad_i64_i32"
+    if fields.clamp:
+        from emu.rdna2_exec import Untranslated
+        raise Untranslated(f"{name} {INTEGER_CLAMP}")
     if is_signed and fields.sdst != NULL_SGPR:
         from emu.rdna2_exec import Untranslated
         raise Untranslated("v_mad_i64_i32 : retenue signée dans SDST non vérifiée")
