@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from emu import rdna2_exec
+from emu import rdna2_exec, rdna2_image
 from emu.rdna2_exec import VOP2_CARRY, Wave
 from emu.rdna2_exec_cmp64 import COMPARE64
 from emu.rdna2_exec_dot import OPERATIONS as DOT_OPERATIONS
@@ -691,3 +691,600 @@ def test_buffer_programs_match_the_python_model():
         python = run_python(lanes, False, scalars, program_words, memory)
         assert python.startswith("steps"), "le cas doit s'exécuter"
         assert_same(exe, lanes, False, scalars, program_words, memory)
+
+
+FORMAT_TABLE = REPO / "crates" / "anyxboxx-rdna2-ref" / "src" / "format_table.rs"
+# Opcodes MTBUF « xyz » que les tests de LLVM n'essaient pas (rdna2.ISA_ONLY_MNEMONICS).
+MTBUF_OPCODES = {**{name: opcode for (family, name), opcode in OPCODES.items() if family == "MTBUF"},
+                 "tbuffer_load_format_xyz": 2, "tbuffer_store_format_xyz": 6}
+IDENTITY = 4 | 5 << 3 | 6 << 6 | 7 << 9         # DST_SEL X, Y, Z, W
+FORMAT_DATA = [0x807F01FF, 0x3C007E01, 0x0001FC00, 0x7FFF8000, 0xFFFFFFFF, 0x00000000, 0x81828384, 0x12345678,
+               0x7C00FBFF, 0x00FF7F80, 0xC0000001, 0x40490FDB]
+
+
+def test_the_generated_format_table_matches_the_python_one():
+    from emu.rdna2_buffer_format import FORMATS
+    from emu.rdna2_image import FORMAT_NAMES
+
+    text = FORMAT_TABLE.read_text(encoding="utf-8")
+    names = {int(code): name for code, name in re.findall(r'\((\d+), "(GFX10_FORMAT_[^"]*)"\)', text)}
+    assert names == FORMAT_NAMES
+    kinds = {"Unorm": 1, "Snorm": 2, "Uscaled": 3, "Sscaled": 4, "Uint": 5, "Sint": 6, "Float": 7}
+    found = {
+        int(code): (kinds[kind], tuple(int(width) for width in widths.split(", ")), int(size), int(align))
+        for code, kind, widths, size, align in re.findall(
+            r"code: (\d+),\s*kind: Kind::(\w+),\s*widths: &\[([\d, ]+)\],\s*size: (\d+),\s*align: (\d+)\b", text)
+    }
+    assert found == {code: (f.kind, f.widths, f.size, f.align) for code, f in FORMATS.items()}
+
+
+def mtbuf(name, fmt, vdata=0, vaddr=0, srsrc=0, soffset=125, offset=0, offen=0, idxen=0, tfe=0):
+    """Les deux mots d'une instruction MTBUF (MTBUFe_gfx10 de LLVM) : opcode bits 16-18 du premier mot et
+    bit 21 du second (Inst{53} = op{3}), FORMAT bits 19-25, TFE bit 23 du second mot."""
+    opcode = MTBUF_OPCODES[name]
+    first = 0x3A << 26 | fmt << 19 | (opcode & 7) << 16 | idxen << 13 | offen << 12 | offset & 0xFFF
+    return first, vaddr | vdata << 8 | srsrc << 16 | (opcode >> 3 & 1) << 21 | tfe << 23 | soffset << 24
+
+
+def buffer_descriptor(srsrc, word3, base=0x2000, records=0x100, stride=0, word1_high=0):
+    """Les quatre SGPR d'un V# (base 48 bits, pas, NUM_RECORDS, mot 3) au quadruplet `srsrc`."""
+    first = srsrc * 4
+    return [(first, base & 0xFFFFFFFF), (first + 1, (base >> 32) & 0xFFFF | stride << 16 | word1_high),
+            (first + 2, records), (first + 3, word3)]
+
+
+def format_loads(loads, offset=0):
+    """Descripteurs et instructions pour une liste de (nom, mot 3 du V#, format MTBUF ou None)."""
+    scalars, program_words = [], []
+    for k, (name, word3, fmt) in enumerate(loads):
+        srsrc, vdata = 2 + k, 8 + 4 * k
+        scalars += buffer_descriptor(srsrc, word3)
+        fields = dict(vdata=vdata, vaddr=4, srsrc=srsrc, offen=1, offset=offset)
+        program_words += mubuf(name, **fields) if fmt is None else mtbuf(name, fmt, **fields)
+    return scalars, program_words
+
+
+def format_memory():
+    rng = random.Random(SEED)
+    return [(0x2000, FORMAT_DATA + [rng.getrandbits(32) for _ in range(64 - len(FORMAT_DATA))])]
+
+
+MUBUF_LOADS = [
+    ("buffer_load_format_xyzw", IDENTITY | 56 << 12, None),                      # 8_8_8_8_UNORM
+    ("buffer_load_format_xyzw", 7 | 6 << 3 | 1 << 6 | 57 << 12, None),           # 8_8_8_8_SNORM, W Z 1 0
+    ("buffer_load_format_xyzw", 4 | 5 << 3 | 1 << 6 | 23 << 12, None),           # 16_16_UNORM, X Y 1 0
+    ("buffer_load_format_xy", IDENTITY | 24 << 12, None),                        # 16_16_SNORM
+    ("buffer_load_format_xyzw", 1 | 4 << 3 | 1 << 6 | 7 << 9 | 60 << 12, None),  # 8_8_8_8_UINT, 1 X 1 W
+    ("buffer_load_format_xyzw", IDENTITY | 61 << 12, None),                      # 8_8_8_8_SINT
+    ("buffer_load_format_xyzw", IDENTITY | 58 << 12, None),                      # 8_8_8_8_USCALED
+    ("buffer_load_format_xyzw", IDENTITY | 59 << 12, None),                      # 8_8_8_8_SSCALED
+    ("buffer_load_format_xyzw", 4 | 5 << 3 | 1 << 6 | 29 << 12, None),           # 16_16_FLOAT, X Y 1 0
+    ("buffer_load_format_xy", 4 | 1 << 3 | 22 << 12, None),                      # 32_FLOAT, X 1
+    ("buffer_load_format_xyzw", IDENTITY | 50 << 12, None),                      # 2_10_10_10_UNORM
+    ("buffer_load_format_xyzw", IDENTITY | 51 << 12, None),                      # 2_10_10_10_SNORM
+    ("buffer_load_format_x", IDENTITY | 7 << 12, None),                          # 16_UNORM
+    ("buffer_load_format_x", IDENTITY | 8 << 12, None),                          # 16_SNORM
+    ("buffer_load_format_xy", 4 | 1 << 3 | 2 << 12, None),                       # 8_SNORM, X 1
+    ("buffer_load_format_x", IDENTITY | 13 << 12, None),                         # 16_FLOAT
+]
+MTBUF_LOADS = [
+    ("tbuffer_load_format_x", 0xFFF | 1 << 12, 1),      # 8_UNORM (DST_SEL du V# ignorés)
+    ("tbuffer_load_format_xy", 1 << 12, 15),            # 8_8_SNORM
+    ("tbuffer_load_format_xyz", 1 << 12, 74),           # 32_32_32_FLOAT
+    ("tbuffer_load_format_xyzw", 1 << 12, 71),          # 16_16_16_16_FLOAT
+    ("tbuffer_load_format_xyzw", 1 << 12, 75),          # 32_32_32_32_UINT
+    ("tbuffer_load_format_x", 1 << 12, 12),             # 16_SINT
+    ("tbuffer_load_format_xyzw", 0, 56),                # V# FORMAT INVALID : composantes nulles
+    ("tbuffer_load_format_xyz", 1 << 12, 54),           # 2_10_10_10_UINT
+    ("tbuffer_load_format_xy", 1 << 12, 26),            # 16_16_SSCALED
+]
+
+
+def test_typed_buffer_loads_match_the_python_model():
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4
+    cases = []
+    for lanes in (32, 64):
+        # décalage 0xF0 ou 0xE8 : les lignes hautes sortent des 256 octets (DST_SEL = 1 reste 1)
+        for loads, offset in ((MUBUF_LOADS, 0), (MUBUF_LOADS, 0xF0), (MTBUF_LOADS, 0), (MTBUF_LOADS, 0xE8)):
+            scalars, program_words = format_loads(loads, offset=offset)
+            cases.append((lanes, scalars, words(lane4, *program_words)))
+    # pas de 8 octets avec indice : seuls les indices inférieurs à 20 existent
+    strided = buffer_descriptor(2, IDENTITY | 65 << 12, stride=8, records=20)
+    cases.append((64, strided, words(mubuf("buffer_load_format_xyzw", vdata=8, vaddr=0, srsrc=2, idxen=1))))
+    for lanes, scalars, program_words in cases:
+        python = run_python(lanes, False, scalars, program_words, format_memory())
+        assert python.startswith("steps"), f"le cas doit s'exécuter : {python}"
+        assert_same(exe, lanes, False, scalars, program_words, format_memory())
+
+
+STORES = [
+    (mubuf, "buffer_store_format_xyzw", 3, IDENTITY | 61 << 12, None, 0x000),          # 8_8_8_8_SINT
+    (mubuf, "buffer_store_format_xy", 4, 4 | 5 << 3 | 1 << 6 | 27 << 12, None, 0x080),  # 16_16_UINT
+    (mubuf, "buffer_store_format_xyzw", 5, IDENTITY | 54 << 12, None, 0x100),          # 2_10_10_10_UINT
+    (mubuf, "buffer_store_format_x", 6, IDENTITY | 22 << 12, None, 0x180),             # 32_FLOAT
+    (mubuf, "buffer_store_format_xyz", 7, IDENTITY | 35 << 12, None, 0x200),           # 10_11_11_SINT
+    (mtbuf, "tbuffer_store_format_xyzw", 8, 1 << 12, 70, 0x280),                       # 16_16_16_16_SINT
+    (mtbuf, "tbuffer_store_format_xy", 9, 1 << 12, 62, 0x300),                         # 32_32_UINT
+    (mtbuf, "tbuffer_store_format_x", 10, 0, 5, 0x380),                                # V# INVALID : rien
+    (mtbuf, "tbuffer_store_format_xyz", 11, 1 << 12, 41, 0x3C0),                       # 11_11_10_UINT
+]
+
+
+def test_typed_buffer_stores_match_the_python_model():
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)
+    for lanes in (32, 64):
+        scalars = buffer_descriptor(2, IDENTITY | 20 << 12)
+        program_words = [lane4, *mubuf("buffer_load_dwordx4", vdata=20, vaddr=4, srsrc=2, offen=1)]
+        for encode, name, srsrc, word3, fmt, offset in STORES:
+            scalars += buffer_descriptor(srsrc, word3, base=0x3000, records=0x400)
+            fields = dict(vdata=20, vaddr=4, srsrc=srsrc, offen=1, offset=offset)
+            program_words += encode(name, **fields) if fmt is None else encode(name, fmt, **fields)
+        program_words = words(*program_words)
+        python = run_python(lanes, False, scalars, program_words, format_memory())
+        assert python.startswith("steps"), f"le cas doit s'exécuter : {python}"
+        assert_same(exe, lanes, False, scalars, program_words, format_memory())
+
+
+def refused_format_accesses():
+    """(mot 3 du V#, bits hauts du mot 1, instruction) refusés par les deux modèles."""
+    lds = mubuf("buffer_load_format_x", vdata=8, srsrc=2)
+    return [
+        (IDENTITY, 0, mubuf("buffer_load_format_x", vdata=8, srsrc=2)),                       # FORMAT INVALID
+        (IDENTITY | 36 << 12, 0, mubuf("buffer_load_format_x", vdata=8, srsrc=2)),            # 10_11_11_FLOAT
+        (IDENTITY | 1 << 12, 0, mubuf("buffer_store_format_x", vdata=8, srsrc=2)),            # 8_UNORM écrit
+        (IDENTITY | 13 << 12, 0, mubuf("buffer_store_format_x", vdata=8, srsrc=2)),           # 16_FLOAT écrit
+        (7 | 14 << 12, 0, mubuf("buffer_load_format_x", vdata=8, srsrc=2)),                   # DST_SEL W, 8_8
+        (2 | 22 << 12, 0, mubuf("buffer_load_format_x", vdata=8, srsrc=2)),                   # DST_SEL 2
+        (IDENTITY | 18 << 12, 0, mubuf("buffer_store_format_x", vdata=8, srsrc=2)),           # 1 composante sur 2
+        (IDENTITY | 18 << 12, 0, mubuf("buffer_store_format_xy", vdata=8, srsrc=2)),          # DST_SEL_Z = Z
+        (5 | 4 << 3 | 20 << 12, 0, mubuf("buffer_store_format_x", vdata=8, srsrc=2)),         # DST_SEL Y X
+        (1 << 12, 0, mtbuf("tbuffer_load_format_xyz", 23, vdata=8, srsrc=2)),                 # 3 sur 16_16
+        (1 << 12, 0, mtbuf("tbuffer_load_format_x", 22, vdata=8, srsrc=2, tfe=1)),            # tfe
+        (1 << 12, 0, mtbuf("tbuffer_load_format_d16_x", 22, vdata=8, srsrc=2)),               # _d16
+        (IDENTITY | 27 << 12, 0, mubuf("buffer_load_format_x", vdata=8, srsrc=2, offset=1)),  # non aligné
+        (IDENTITY | 22 << 12, 0, (lds[0] | 1 << 16, lds[1])),                                 # lds
+        (IDENTITY | 22 << 12, 1 << 31, lds),                                                  # SWIZZLE_ENABLE
+        (IDENTITY | 22 << 12 | 1 << 23, 0, lds),                                              # ADD_TID_ENABLE
+    ]
+
+
+def test_refused_typed_buffer_accesses_match_the_python_model():
+    exe = binary()
+    for word3, word1_high, instruction in refused_format_accesses():
+        scalars = buffer_descriptor(2, word3, word1_high=word1_high)
+        program_words = words(instruction)
+        assert run_python(32, False, scalars, program_words) == "error untranslated\n", hex(word3)
+        assert_same(exe, 32, False, scalars, program_words)
+
+
+IMAGE_ADDRESS = 0x4000
+COORDINATES = 0x2000                            # tableaux par ligne : décalages, z, s, t, lod, x, y, mip
+SPECIAL_COORDINATES = (0.5, 0.0, 1.0, -0.25, float("nan"), float("inf"), float("-inf"), 1e30, -1e30,
+                       0.999999, 3.75, -2.5, 0.125, 0.875)
+
+
+def f32_bits(value):
+    return struct.unpack("<I", struct.pack("<f", value))[0]
+
+
+def mimg(name, vdata=0, vaddr=0, srsrc=4, ssamp=6, dmask=0xF, dim=1, unorm=0, nsa=(), first_flags=0,
+         second_flags=0):
+    """Mots d'une instruction MIMG gfx10 (MIMGe_gfx10 de LLVM) : opcode bits 18-24 et bit 0 (OPM) ; NSA bits
+    1-2 suivis des mots d'adresses supplémentaires (un octet par VGPR)."""
+    opcode = OPCODES["MIMG", name]
+    extra = list(nsa) + [0] * (-len(nsa) % 4)
+    first = (0x3C << 26 | (opcode & 0x7F) << 18 | opcode >> 7 | (len(extra) // 4) << 1 | dim << 3 | dmask << 8
+             | unorm << 12 | first_flags)
+    second = vaddr | vdata << 8 | srsrc << 16 | ssamp << 21 | second_flags
+    packed = [int.from_bytes(bytes(extra[i:i + 4]), "little") for i in range(0, len(extra), 4)]
+    return (first, second, *packed)
+
+
+def lane_values(rng, lanes):
+    """Les tableaux de coordonnées (un mot par ligne) lus par les programmes d'image."""
+    def floats(special, low, high):
+        values = [*special, *(rng.uniform(low, high) for _ in range(lanes))][:lanes]
+        return [f32_bits(value) for value in values]
+
+    # décalages _o petits (-3 à 3, pour rester près de l'image 4 x 4), un quart au hasard sur 16 bits
+    offsets = [rng.getrandbits(16) if rng.random() < 0.25 else
+               (rng.randrange(-3, 4) & 0x3F) | (rng.randrange(-3, 4) & 0x3F) << 8 for _ in range(lanes)]
+    depth = floats((0.5, float("nan"), 0.0, 1.0), -0.2, 1.2)
+    s = floats(SPECIAL_COORDINATES, -0.6, 1.6)
+    t = floats(SPECIAL_COORDINATES[::-1], -0.6, 1.6)
+    lod = floats((0.0, 1.0, -1.0, float("nan"), -0.0), -1.0, 1.0)
+    x = [rng.randrange(6) for _ in range(lanes)]
+    y = [rng.randrange(6) for _ in range(lanes)]
+    mip = [int(rng.random() < 0.2) for _ in range(lanes)]
+    return [offsets, depth, s, t, lod, x, y, mip]
+
+
+def image_memory(rng, lanes, fmt):
+    words_per_image = 16 * rdna2_image.TEXEL_BYTES[fmt] // 4 + 1
+    if fmt in (rdna2_image.FORMAT_32_FLOAT, rdna2_image.FORMAT_32_32_FLOAT, rdna2_image.FORMAT_32_32_32_32_FLOAT):
+        texels = [f32_bits(rng.uniform(-4.0, 4.0)) for _ in range(words_per_image)]
+    else:
+        texels = [rng.getrandbits(32) for _ in range(words_per_image)]
+    coordinates = [value for array in lane_values(rng, lanes) for value in array + [0] * (64 - lanes)]
+    return [(COORDINATES, coordinates), (IMAGE_ADDRESS, texels)]
+
+
+SAMPLERS = [
+    rdna2_image.encode_sampler(),                                                     # 6 : point, bord
+    rdna2_image.encode_sampler(1, 1, min_filter=1),                                   # 7 : mirror, min linéaire
+    rdna2_image.encode_sampler(0, 0, mag_filter=1, min_filter=1),                     # 8 : wrap, bilinéaire
+    rdna2_image.encode_sampler(6, 6, mag_filter=1, min_filter=1, depth_compare=1),    # 9 : bordure, LESS
+    rdna2_image.encode_sampler(7, 7, depth_compare=6, border_color=2),                # 10 : GEQUAL, blanc
+    rdna2_image.encode_sampler(6, 7, border_color=1),                                 # 11 : noir opaque
+    rdna2_image.encode_sampler(3, 3, unnormalized=1, mag_filter=1),                   # 12 : non normalisé
+    rdna2_image.encode_sampler(2, 1, mag_filter=1, depth_compare=5),                  # 13 : NOTEQUAL
+]
+
+
+def image_program(fmt):
+    """Charge les coordonnées par ligne, puis lit, échantillonne et écrit l'image 4 x 4 de format `fmt`."""
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)
+    loads = [mubuf("buffer_load_dword", vdata=10 + k, vaddr=4, srsrc=2, offen=1, offset=k * 0x100) for k in range(8)]
+    # v10 décalages, v11 z, v12 s, v13 t, v14 lod, v15 x, v16 y, v17 mip
+    body = [
+        mimg("image_load", vdata=20, vaddr=15),
+        mimg("image_load_mip", vdata=24, vaddr=15, dmask=0b1010),
+        mimg("image_get_resinfo", vdata=26, vaddr=17),
+        mimg("image_sample", vdata=30, vaddr=12, ssamp=6),
+        mimg("image_sample_l", vdata=34, vaddr=12, ssamp=7),
+        mimg("image_sample_lz_o", vdata=38, vaddr=10, ssamp=8, dmask=0b0111, nsa=(12, 13)),
+        mimg("image_sample_c_l_o", vdata=42, vaddr=10, ssamp=9),
+        mimg("image_sample_c", vdata=46, vaddr=11, ssamp=10, dmask=0b1001),
+        mimg("image_gather4_o", vdata=50, vaddr=10, ssamp=11, dmask=0b0100, nsa=(12, 13)),
+        mimg("image_gather4_l", vdata=54, vaddr=12, ssamp=8, dmask=0b0001),
+        mimg("image_sample", vdata=58, vaddr=12, ssamp=8, unorm=1),
+        mimg("image_sample_o", vdata=62, vaddr=10, ssamp=12, nsa=(12, 13)),
+        mimg("image_sample_c_lz", vdata=66, vaddr=11, ssamp=13),
+        mimg("image_gather4", vdata=70, vaddr=12, ssamp=7, dmask=0b1000),
+        mimg("image_store", vdata=30, vaddr=15, dmask=0xF),
+        mimg("image_store_mip", vdata=34, vaddr=15, dmask=0b0101),
+        mimg("image_store", vdata=58, vaddr=15, dmask=0b1110),
+        mimg("image_load", vdata=74, vaddr=15),
+    ]
+    return words(lane4, *loads, *body)
+
+
+def image_scalars(fmt, swizzle):
+    scalars = buffer_descriptor(2, IDENTITY | 20 << 12, base=COORDINATES, records=0x800)
+    scalars += list(enumerate(rdna2_image.encode_image(IMAGE_ADDRESS, fmt, 4, 4, swizzle), start=16))
+    for k, sampler_words in enumerate(SAMPLERS):
+        scalars += list(enumerate(sampler_words, start=(6 + k) * 4))
+    return [(index, value) for index, value in scalars if value]
+
+
+IMAGE_FORMATS = (
+    (rdna2_image.FORMAT_8_UNORM, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_8_8_UNORM, (5, 4, 1, 0)),
+    (rdna2_image.FORMAT_8_8_8_8_UNORM, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_8_8_8_8_UNORM, (7, 6, 5, 4)),
+    (rdna2_image.FORMAT_32_FLOAT, (4, 4, 1, 0)),
+    (rdna2_image.FORMAT_32_32_FLOAT, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_32_32_32_32_FLOAT, (4, 5, 6, 7)),
+    (rdna2_image.FORMAT_32_32_32_32_FLOAT, (6, 7, 2, 4)),
+)
+
+
+def test_image_programs_match_the_python_model():
+    exe = binary()
+    rng = random.Random(SEED)
+    for fmt, swizzle in IMAGE_FORMATS:
+        for lanes in (32, 64):
+            memory = image_memory(rng, lanes, fmt)
+            scalars, program_words = image_scalars(fmt, swizzle), image_program(fmt)
+            python = run_python(lanes, False, scalars, program_words, memory)
+            assert python.startswith("steps"), f"le cas doit s'exécuter : {python}"
+            assert_same(exe, lanes, False, scalars, program_words, memory)
+
+
+def refused_image_cases():
+    """(T#, S#, instruction) que les deux modèles refusent."""
+    good = rdna2_image.encode_image(IMAGE_ADDRESS, rdna2_image.FORMAT_32_FLOAT, 4, 4)
+    sampler = rdna2_image.encode_sampler()
+    sample = mimg("image_sample", vdata=8, vaddr=0)
+    return [
+        (good, sampler, mimg("image_sample_d", vdata=8)),                        # non pris en charge
+        (good, sampler, mimg("image_atomic_add", vdata=8)),
+        (good, sampler, mimg("image_sample", vdata=8, dim=2)),                   # 3D
+        (good, sampler, mimg("image_sample", vdata=8, first_flags=1 << 16)),     # tfe
+        (good, sampler, mimg("image_sample", vdata=8, first_flags=1 << 15)),     # r128
+        (good, sampler, mimg("image_sample", vdata=8, first_flags=1 << 17)),     # lwe
+        (good, sampler, mimg("image_sample", vdata=8, second_flags=1 << 30)),    # a16
+        (good, sampler, mimg("image_load", vdata=8, second_flags=1 << 31)),      # d16
+        (good, sampler, mimg("image_gather4", vdata=8, dmask=0b0011)),           # deux canaux
+        (rdna2_image.encode_image(IMAGE_ADDRESS, 2, 4, 4), sampler, sample),     # 8_SNORM
+        (rdna2_image.encode_image(IMAGE_ADDRESS, 22, 4, 4, last_level=1), sampler, sample),
+        (good[:3] + [good[3] & ~(0xF << 28) | 8 << 28] + good[4:], sampler, sample),  # type 1D
+        (good, rdna2_image.encode_sampler(4, 2), sample),                        # adressage 4
+        (good, rdna2_image.encode_sampler(mag_filter=2), sample),                # anisotrope
+        (good, rdna2_image.encode_sampler(border_color=3), sample),              # bordure du registre
+    ]
+
+
+def test_refused_image_instructions_match_the_python_model():
+    exe = binary()
+    for image_words, sampler_words, instruction in refused_image_cases():
+        scalars = [(16 + i, value) for i, value in enumerate(image_words) if value]
+        scalars += [(24 + i, value) for i, value in enumerate(sampler_words) if value]
+        program_words = words(instruction)
+        assert run_python(32, False, scalars, program_words) == "error untranslated\n", instruction
+        assert_same(exe, 32, False, scalars, program_words)
+
+
+D16_BIT = 1 << 31                               # mot 2 d'une instruction MIMG : d16
+
+
+def refused_d16_accesses():
+    """(scalaires, instruction) : les formes _d16 typées (MUBUF, MTBUF) et les images d16, refusées par
+    les deux modèles (rdna2_exec_format et rdna2_image ne les prennent pas en charge)."""
+    buffer = buffer_descriptor(2, IDENTITY | 22 << 12)
+    image = [(16 + i, value) for i, value in
+             enumerate(rdna2_image.encode_image(IMAGE_ADDRESS, rdna2_image.FORMAT_32_FLOAT, 4, 4)) if value]
+    image += [(24 + i, value) for i, value in enumerate(rdna2_image.encode_sampler()) if value]
+    cases = []
+    for (family, name), _ in sorted(OPCODES.items()):
+        if "_format_d16" not in name:
+            continue
+        if family == "MUBUF":
+            cases.append((buffer, mubuf(name, vdata=8, srsrc=2)))
+        elif family == "MTBUF":
+            cases.append((buffer, mtbuf(name, 22, vdata=8, srsrc=2)))
+    for name in ("image_load", "image_load_mip", "image_store", "image_store_mip", "image_get_resinfo",
+                 "image_sample", "image_sample_l", "image_sample_lz_o", "image_sample_c", "image_gather4"):
+        cases.append((image, mimg(name, vdata=8, vaddr=0, dmask=1, second_flags=D16_BIT)))
+    return cases
+
+
+def test_refused_d16_typed_and_image_accesses_match_the_python_model():
+    exe = binary()
+    cases = refused_d16_accesses()
+    assert len(cases) >= 28, len(cases)
+    for scalars, instruction in cases:
+        program_words = words(instruction)
+        for lanes in (32, 64):
+            assert run_python(lanes, False, scalars, program_words) == "error untranslated\n", instruction
+            assert_same(exe, lanes, False, scalars, program_words)
+
+
+FLOAT32_SPECIALS = (0x00000000, 0x80000000, 0x3F800000, 0xBF800000, 0x40000000, 0x3F000000, 0x7FC00001,
+                    0x7F800001, 0xFFC00003, 0x7F800000, 0xFF800000, 0x7F7FFFFF, 0xFF7FFFFF, 0x00000001,
+                    0x80000001, 0x007FFFFF, 0x3FC00000, 0x33800000)
+FLOAT64_SPECIALS = (0x0000000000000000, 0x8000000000000000, 0x3FF0000000000000, 0xBFF0000000000000,
+                    0x4000000000000000, 0x7FF8000000000001, 0x7FF0000000000001, 0xFFF8000000000003,
+                    0x7FF0000000000000, 0xFFF0000000000000, 0x7FEFFFFFFFFFFFFF, 0x0000000000000001,
+                    0x8000000000000001, 0x3CA0000000000000, 0x3FF8000000000000)
+FLOAT_DATA32, FLOAT_DATA64, FLOAT_COMPARE32, FLOAT_COMPARE64 = 0x8000, 0x8400, 0x8800, 0x8C00
+FLOAT_OLD, FLOAT_OLD_STEP = 0x10000, 0x400
+FLOAT_VECTOR_ATOMICS = ("fcmpswap", "fmin", "fmax", "fcmpswap_x2", "fmin_x2", "fmax_x2")
+
+
+def float_bits_values(rng, specials, width, lanes):
+    return [rng.choice(specials) if rng.random() < 0.7 else rng.getrandbits(width) for _ in range(lanes)]
+
+
+def compare_values(rng, old, width):
+    """Valeurs comparées de fcmpswap/cmpst : souvent égales à l'ancienne (ou le zéro de signe opposé)."""
+    sign = 1 << (width - 1)
+    chosen = []
+    for value in old:
+        roll = rng.random()
+        if roll < 0.4:
+            chosen.append(value)
+        elif roll < 0.6 and value & ~sign == 0:
+            chosen.append(value ^ sign)
+        else:
+            chosen.append(rng.choice(FLOAT32_SPECIALS if width == 32 else FLOAT64_SPECIALS))
+    return chosen
+
+
+def split64(values):
+    return [half for value in values for half in (value & 0xFFFFFFFF, value >> 32)]
+
+
+def float_atomic_memory(rng, lanes, regions):
+    """Données, valeurs comparées et anciennes valeurs (une copie par région) des atomiques flottants."""
+    old32 = float_bits_values(rng, FLOAT32_SPECIALS, 32, lanes)
+    old64 = float_bits_values(rng, FLOAT64_SPECIALS, 64, lanes)
+    memory = [(FLOAT_DATA32, float_bits_values(rng, FLOAT32_SPECIALS, 32, lanes)),
+              (FLOAT_DATA64, split64(float_bits_values(rng, FLOAT64_SPECIALS, 64, lanes))),
+              (FLOAT_COMPARE32, compare_values(rng, old32, 32)),
+              (FLOAT_COMPARE64, split64(compare_values(rng, old64, 64)))]
+    for k, width in enumerate(regions):
+        memory.append((FLOAT_OLD + k * FLOAT_OLD_STEP, old32 if width == 32 else split64(old64)))
+    return memory
+
+
+def float_operand_loads():
+    """v4 = ligne × 4, v5 = ligne × 8 ; v10 données 32 bits, v11 comparées, v12-v13 et v14-v15 en 64 bits."""
+    return [vop2("v_lshlrev_b32", 4, 130, 0), vop2("v_lshlrev_b32", 5, 131, 0),
+            vmem("GLOBAL", "global_load_dword", vdst=10, addr=4, saddr=2),
+            vmem("GLOBAL", "global_load_dword", vdst=11, addr=4, saddr=8),
+            vmem("GLOBAL", "global_load_dwordx2", vdst=12, addr=5, saddr=6),
+            vmem("GLOBAL", "global_load_dwordx2", vdst=14, addr=5, saddr=10)]
+
+
+def float_atomic_scalars(regions):
+    scalars = [(2, FLOAT_DATA32), (6, FLOAT_DATA64), (8, FLOAT_COMPARE32), (10, FLOAT_COMPARE64)]
+    return scalars + [(12 + 2 * k, FLOAT_OLD + k * FLOAT_OLD_STEP) for k in range(regions)]
+
+
+def float_vector_atomic_program():
+    """GLOBAL (adresse SADDR + VGPR) puis FLAT (adresse VGPR 64 bits), chaque atomique sur sa région."""
+    body, regions = [], []
+    for family in ("GLOBAL", "FLAT"):
+        for kind in FLOAT_VECTOR_ATOMICS:
+            k, wide = len(regions), kind.endswith("_x2")
+            regions.append(64 if wide else 32)
+            data = (12 if wide else 10)
+            name = f"{family.lower()}_atomic_{kind}"
+            glc = int(k % 3 != 2)
+            if family == "GLOBAL":
+                body.append(vmem(family, name, vdst=20 + 2 * k, addr=5 if wide else 4, data=data, saddr=12 + 2 * k,
+                                 glc=glc))
+            else:
+                # v6-v7 : adresse 64 bits de la région (v7 reste nul)
+                body += [vop2("v_add_nc_u32", 6, LITERAL, 5 if wide else 4), FLOAT_OLD + k * FLOAT_OLD_STEP]
+                body.append(vmem(family, name, vdst=20 + 2 * k, addr=6, data=data, glc=glc))
+    return words(*float_operand_loads(), *body), regions
+
+
+FLOAT_LDS_ATOMICS = ("ds_add_f32", "ds_add_rtn_f32", "ds_min_f32", "ds_min_rtn_f32", "ds_max_f32",
+                     "ds_max_rtn_f32", "ds_cmpst_f32", "ds_cmpst_rtn_f32", "ds_min_f64", "ds_min_rtn_f64",
+                     "ds_max_f64", "ds_max_rtn_f64", "ds_cmpst_f64", "ds_cmpst_rtn_f64")
+
+
+def float_lds_atomic_program():
+    """Anciennes valeurs écrites dans la LDS (une zone par atomique), l'atomique, puis la zone relue."""
+    body = [vmem("GLOBAL", "global_load_dword", vdst=16, addr=4, saddr=12),
+            vmem("GLOBAL", "global_load_dwordx2", vdst=18, addr=5, saddr=14)]
+    for j, name in enumerate(FLOAT_LDS_ATOMICS):
+        wide = name.endswith("f64")
+        addr, old = (5, 18) if wide else (4, 16)
+        offset = j * 0x200
+        place = dict(offset0=offset & 0xFF, offset1=offset >> 8)
+        data0, data1 = ((14 if wide else 11), (12 if wide else 10)) if "cmpst" in name else ((12 if wide else 10), 0)
+        body.append(ds("ds_write_b64" if wide else "ds_write_b32", addr=addr, data0=old, **place))
+        body.append(ds(name, vdst=30 + 2 * j, addr=addr, data0=data0, data1=data1, **place))
+        body.append(ds("ds_read_b64" if wide else "ds_read_b32", vdst=60 + 2 * j, addr=addr, **place))
+    return words(*float_operand_loads(), *body), [32, 64]
+
+
+def test_float_atomic_programs_match_the_python_model():
+    """Atomiques flottants GLOBAL, FLAT et LDS (fcmpswap, fmin, fmax, fadd, fcmpst, 32 et 64 bits) sur des
+    valeurs spéciales (zéros signés, NaN calmes et signalants, infinis, dénormaux)."""
+    exe = binary()
+    rng = random.Random(SEED)
+    for build in (float_vector_atomic_program, float_lds_atomic_program):
+        program_words, regions = build()
+        for lanes in (32, 64, 32, 64):
+            memory = float_atomic_memory(rng, lanes, regions)
+            scalars = float_atomic_scalars(len(regions))
+            python = run_python(lanes, False, scalars, program_words, memory)
+            assert python.startswith("steps"), f"le cas doit s'exécuter : {python}"
+            assert_same(exe, lanes, False, scalars, program_words, memory)
+
+
+def vop3p(name, vdst, sources, op_sel=0, op_sel_hi=0b111, neg_lo=0, neg_hi=0, clamp=0):
+    low = (0x33 << 26 | OPCODES["VOP3P", name] << 16 | vdst | neg_hi << 8 | op_sel << 11
+           | (op_sel_hi >> 2 & 1) << 14 | clamp << 15)
+    high = sources[0] | sources[1] << 9 | sources[2] << 18 | (op_sel_hi & 3) << 27 | neg_lo << 29
+    return low, high
+
+
+def vop3p_cases():
+    """(programme, exécuté) : les VOP3P hors produits scalaires et les produits scalaires avec op_sel,
+    neg ou clamp, que le modèle Python refuse, et un produit scalaire sans modificateur."""
+    sources = (V0 + 1, V0 + 2, V0 + 1)
+    cases = [(vop3p(name, 9, sources), False)
+             for (family, name) in sorted(OPCODES) if family == "VOP3P" and name not in DOT_OPERATIONS]
+    cases += [(vop3p("v_dot4_u32_u8", 9, sources, **flags), False)
+              for flags in ({"op_sel": 1}, {"op_sel_hi": 0b011}, {"neg_lo": 2}, {"neg_hi": 4}, {"clamp": 1})]
+    return cases + [(vop3p("v_dot2_i32_i16", 9, sources), True)]
+
+
+def assert_select_cases(cases):
+    exe = binary()
+    setup = [vop2("v_mul_u32_u24", 1, LITERAL, 0), 0x00810F7F, vop1("v_cvt_f32_u32", 2, V0)]
+    for instruction, runs in cases:
+        program_words = program(*words(*setup, instruction))
+        for lanes in (32, 64):
+            python = run_python(lanes, False, [], program_words)
+            assert python.startswith("steps") == runs, (instruction, python)
+            assert_same(exe, lanes, False, [], program_words)
+
+
+def test_vop3p_forms_match_the_python_model():
+    assert_select_cases(vop3p_cases())
+
+
+def vop3(name, vdst, sources, op_sel=0, clamp=0, abs_bits=0, neg=0, omod=0):
+    low = 0x35 << 26 | OPCODES["VOP3", name] << 16 | vdst | abs_bits << 8 | op_sel << 11 | clamp << 15
+    return low, sources[0] | sources[1] << 9 | sources[2] << 18 | omod << 27 | neg << 29
+
+
+def operand_select_cases():
+    """(instruction, exécutée) : v_sat_pk_u8_i16 (seul résultat 16 bits du modèle) avec op_sel ou clamp,
+    refusé par le modèle Python, et les formes qu'il exécute en ignorant op_sel (résultat 32 bits)."""
+    sources = (V0 + 1, V0 + 2, V0 + 1)
+    cases = [(vop3("v_sat_pk_u8_i16", 9, sources, op_sel=op_sel, clamp=clamp), False)
+             for op_sel, clamp in ((1, 0), (2, 0), (4, 0), (8, 0), (0, 1), (15, 1))]
+    return cases + [(vop3("v_sat_pk_u8_i16", 9, sources), True),
+                    (vop3("v_add_nc_u32", 9, sources, op_sel=15), True),
+                    (vop3("v_fma_f32", 9, sources, op_sel=9), True),
+                    (vop3("v_med3_i32", 9, sources, op_sel=6), True)]
+
+
+def test_vop3_operand_select_forms_match_the_python_model():
+    assert_select_cases(operand_select_cases())
+
+
+COMPARE32_NAMES = sorted(name for (family, name) in OPCODES if family == "VOPC" and name in VECTOR_COMPARE)
+COMPARE64_NAMES = sorted(name for (family, name) in OPCODES if family == "VOPC" and name in COMPARE64)
+READABLE_SCALARS = (*range(0, 106), *range(128, 209), *range(240, 249))
+COMPARE_PROGRAMS = 200
+
+
+def vopc(name, src0, vsrc1):
+    return 0x3E << 25 | OPCODES["VOPC", name] << 17 | vsrc1 << 9 | src0
+
+
+def compare_operands():
+    """v1-v6 : entiers et flottants différents par ligne (octets et demi-mots variés)."""
+    return [vop2("v_mul_u32_u24", 1, LITERAL, 0), 0x01030507,
+            vop2("v_xor_b32", 2, LITERAL, 1), 0x80FF7F00,
+            vop1("v_cvt_f32_u32", 3, V0),
+            vop2("v_sub_f32", 4, LITERAL, 3), 0x41000000,
+            vop2("v_lshlrev_b32", 5, 144, 4),
+            vop2("v_mul_f32", 6, LITERAL, 4), 0x7F7FFFFF]
+
+
+def sdwa_compare_word(rng, lanes, vsrc1):
+    """Mot SDWA d'une comparaison : sources lisibles (VGPR v0-v7 ou SGPR lisible), SDST hors de s127
+    en wave64 (le modèle Python écrirait s128)."""
+    ext = rng.getrandbits(32) & ~0xFF
+    if ext >> 23 & 1:
+        ext |= rng.choice(READABLE_SCALARS)
+    else:
+        ext |= rng.randrange(8)
+    if ext >> 31 & 1 and vsrc1 not in READABLE_SCALARS:
+        ext &= ~(1 << 31)
+    if lanes == 64 and (ext >> 8 & 0x7F) == 127:
+        ext &= ~(1 << 8)
+    return ext
+
+
+def compare_instruction(rng, lanes):
+    """Une comparaison VOPC en SDWA (le plus souvent), DPP16 ou DPP8, ou une comparaison 64 bits ou class
+    dont la source 0 est un code d'extension."""
+    roll = rng.random()
+    vsrc1 = rng.randrange(8) if rng.random() < 0.8 else rng.randrange(256)
+    if roll < 0.75:
+        return [vopc(rng.choice(COMPARE32_NAMES), 0xF9, vsrc1), sdwa_compare_word(rng, lanes, vsrc1)]
+    if roll < 0.9:
+        return [vopc(rng.choice(COMPARE32_NAMES), rng.choice((0xFA, 0xE9, 0xEA)), vsrc1), rng.getrandbits(32)]
+    return [vopc(rng.choice(COMPARE64_NAMES), rng.choice(EXT_CODES), rng.randrange(7)), rng.getrandbits(32)]
+
+
+def test_vopc_sdwa_and_dpp_programs_match_the_python_model():
+    """VOPC en SDWA (sélections, signe, abs/neg, destination VCC, SDST ou EXEC), DPP refusé, et les
+    comparaisons 64 bits dont la source 0 est un code d'extension (refus sur la première ligne active,
+    masque nul quand EXEC est vide)."""
+    exe = binary()
+    rng = random.Random(SEED)
+    outcomes = {"steps": 0, "error": 0}
+    for _ in range(COMPARE_PROGRAMS):
+        lanes = rng.choice((32, 64))
+        scalars = [(index, rng.getrandbits(32)) for index in rng.sample(range(106), 12)]
+        if rng.random() < 0.1:
+            scalars += [(126, 0), (127, 0)]                 # EXEC vide : aucune ligne ne lit
+        body = [word for _ in range(rng.randrange(1, 5)) for word in compare_instruction(rng, lanes)]
+        program_words = program(*compare_operands(), *body)
+        outcomes[run_python(lanes, False, scalars, program_words).split()[0]] += 1
+        assert_same(exe, lanes, False, scalars, program_words)
+    assert outcomes["steps"] >= COMPARE_PROGRAMS // 4, outcomes

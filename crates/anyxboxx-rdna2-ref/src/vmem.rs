@@ -5,7 +5,7 @@
 //!
 //! A load of fewer than 4 bytes fills one VGPR, zero-extended or, for `sbyte` and `sshort`,
 //! sign-extended. An access that is not inside its buffer (MUBUF) reads zeros and writes nothing.
-//! Float atomics (fcmpswap, fmin, fmax) are refused: the Python model has them, the port does not yet.
+//! The float atomics (fcmpswap, fmin, fmax, 32-bit and `_x2`) follow `atomic_float`.
 
 use crate::atomic;
 use crate::ds::{load_into, store_bytes};
@@ -25,7 +25,7 @@ pub enum Kind {
     Store {
         size: usize,
     },
-    /// `kind` is the `atomic::integer` kind and `width` 32 or 64. `pair`: the compared value follows
+    /// `kind` is the `atomic::apply` kind and `width` 32 or 64. `pair`: the compared value follows
     /// the written one in the VGPRs (cmpswap).
     Atomic {
         kind: &'static str,
@@ -52,11 +52,16 @@ const SIMPLE: [(&str, &str); 10] = [
 ];
 
 /// The atomics with a 32-bit form only, or the `_x2` 64-bit form (`global_atomic_inc_x2`).
-const EXTENDED_32: [&str; 4] = ["cmpswap", "inc", "dec", "csub"];
-const EXTENDED_X2: [&str; 13] = [
+const EXTENDED_32: [&str; 7] = ["cmpswap", "inc", "dec", "fcmpswap", "fmin", "fmax", "csub"];
+const EXTENDED_X2: [&str; 16] = [
     "swap", "cmpswap", "add", "sub", "smin", "umin", "smax", "umax", "and", "or", "xor", "inc",
-    "dec",
+    "dec", "fcmpswap", "fmin", "fmax",
 ];
+
+/// The atomics whose DATA is a pair: the written value, then the compared one.
+fn is_pair(kind: &str) -> bool {
+    matches!(kind, "cmpswap" | "fcmpswap")
+}
 
 /// The size in bytes and the signedness of a data type suffix (`dwordx4`, `sbyte`, `b64`…).
 fn access_type(suffix: &str) -> Option<(usize, bool)> {
@@ -92,14 +97,14 @@ fn atomic_kind(space: &str, op: &str) -> Option<Kind> {
         return Some(Kind::Atomic {
             kind,
             width: 64,
-            pair: kind == "cmpswap",
+            pair: is_pair(kind),
         });
     }
     let kind: &'static str = EXTENDED_32.iter().find(|known| **known == op)?;
     Some(Kind::Atomic {
         kind,
         width: 32,
-        pair: kind == "cmpswap",
+        pair: is_pair(kind),
     })
 }
 
@@ -146,7 +151,7 @@ fn atomic_lane(
     } else {
         0
     };
-    let new = atomic::integer(kind, width, old, a, b).ok_or_else(|| {
+    let new = atomic::apply(kind, width, old, a, b).ok_or_else(|| {
         Error::Untranslated(format!("instruction non traduite : atomique {kind}"))
     })?;
     wave.memory.write(address, &new.to_le_bytes()[..size]);
@@ -260,9 +265,29 @@ mod tests {
     }
 
     #[test]
-    fn scratch_has_no_atomics_and_floats_are_refused() {
+    fn scratch_has_no_atomics() {
         assert_eq!(shape("scratch_atomic_add"), None);
-        assert_eq!(shape("global_atomic_fmin"), None);
-        assert_eq!(shape("flat_atomic_fcmpswap_x2"), None);
+        assert_eq!(shape("scratch_atomic_fmin"), None);
+    }
+
+    #[test]
+    fn float_atomics_and_their_pairs() {
+        assert_eq!(
+            shape("global_atomic_fmin"),
+            Some(Kind::Atomic {
+                kind: "fmin",
+                width: 32,
+                pair: false
+            })
+        );
+        assert_eq!(
+            shape("flat_atomic_fcmpswap_x2"),
+            Some(Kind::Atomic {
+                kind: "fcmpswap",
+                width: 64,
+                pair: true
+            })
+        );
+        assert_eq!(shape("global_atomic_fadd"), None);
     }
 }

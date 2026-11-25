@@ -23,7 +23,7 @@ pub const CODES: [u32; 4] = [SDWA, DPP16, DPP8, DPP8_FI];
 const SELECTIONS: [(u32, u32); 7] = [(0, 8), (8, 8), (16, 8), (24, 8), (0, 16), (16, 16), (0, 32)];
 
 /// `_operand_float_flags`: whether the source and destination operands are single-precision floats.
-fn float_flags(name: &str) -> (bool, bool) {
+pub(crate) fn float_flags(name: &str) -> (bool, bool) {
     if let Some(rest) = name.strip_prefix("v_cvt_") {
         let parts: Vec<&str> = rest.split('_').collect();
         let last = parts.last().copied() == Some("f32");
@@ -47,7 +47,7 @@ fn width_mask(width: u32) -> u32 {
 }
 
 /// `_extract_sel`: the selected bits of a value, sign-extended when `sext` and narrower than 32 bits.
-fn extract_selection(value: u32, selection: u32, sext: bool) -> u32 {
+pub(crate) fn extract_selection(value: u32, selection: u32, sext: bool) -> u32 {
     let Some(&(shift, width)) = SELECTIONS.get(selection as usize) else {
         return value;
     };
@@ -60,7 +60,7 @@ fn extract_selection(value: u32, selection: u32, sext: bool) -> u32 {
 }
 
 /// `_apply_float_mods`: absolute value, then negation, on the sign bit.
-fn float_modifiers(value: u32, absolute: bool, negated: bool) -> u32 {
+pub(crate) fn float_modifiers(value: u32, absolute: bool, negated: bool) -> u32 {
     let mut out = value;
     if absolute {
         out &= 0x7FFF_FFFF;

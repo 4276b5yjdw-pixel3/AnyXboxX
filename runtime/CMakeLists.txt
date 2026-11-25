@@ -54,18 +54,18 @@ target_link_libraries(xgameruntime PRIVATE anyxboxx_task dxgi ole32 iphlpapi)
 # cargo, copiÃ©es ici Ã  cÃ´tÃ© des DLL C++. Â« source=nom dans bin Â», sÃ©parÃ©es par des virgules.
 set(ANYXBOXX_RUST_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/../target/release" CACHE PATH
     "Dossier de cargo build --release (les DLL Rust du runtime)")
-set(ANYXBOXX_RUST_DLLS "xcrdapi.dll=XCRDAPI.dll,kernelx.dll=kernelx.dll,d3d12_xs.dll=d3d12_xs.dll,anyxboxx_tls.dll=anyxboxx_tls.dll,xmem.dll=xmem.dll,anyxboxx_gpu_run.exe=anyxboxx_gpu_run.exe")
+set(ANYXBOXX_RUST_DLLS "xcrdapi.dll=XCRDAPI.dll,kernelx.dll=kernelx.dll,d3d12_xs.dll=d3d12_xs.dll,anyxboxx_tls.dll=anyxboxx_tls.dll,xmem.dll=xmem.dll,anyxboxx-native-launcher.exe=anyxboxx.exe,anyxboxx_gpu_run.exe=anyxboxx_gpu_run.exe")
 add_custom_target(rust_dlls ALL
   COMMAND ${CMAKE_COMMAND} -DRUST_RELEASE=${ANYXBOXX_RUST_RELEASE} -DBIN=${CMAKE_BINARY_DIR}/bin
           -DDLLS=${ANYXBOXX_RUST_DLLS} -P ${CMAKE_CURRENT_SOURCE_DIR}/rust_dlls.cmake
   VERBATIM)
 
-# Lanceur natif sans Python : anyxboxx.exe <jeu.exe | dossier du paquet> [--fps]
-add_executable(anyxboxx launcher/launcher.cpp)
-target_compile_definitions(anyxboxx PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-target_compile_options(anyxboxx PRIVATE /W4 /WX /permissive- /utf-8)
-# Base haute : la base prÃ©fÃ©rÃ©e des jeux (0x140000000) reste libre pour eux.
-target_link_options(anyxboxx PRIVATE /BASE:0x7FF700000000 /DYNAMICBASE)
+# Keep the C++ native launcher as an oracle for parity tests; anyxboxx.exe is copied by rust_dlls.
+add_executable(anyxboxx_cpp launcher/launcher.cpp)
+target_compile_definitions(anyxboxx_cpp PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
+target_compile_options(anyxboxx_cpp PRIVATE /W4 /WX /permissive- /utf-8)
+# Base haute : la base préférée des jeux (0x140000000) reste libre pour eux.
+target_link_options(anyxboxx_cpp PRIVATE /BASE:0x7FF700000000 /DYNAMICBASE)
 
 # ExÃ©cution sur le GPU du PC d'un shader traduit RDNA 2 â†’ HLSL â†’ DXIL (emu/rdna2_hlsl.py).
 add_executable(anyxboxx_gpu_run_cpp gpu_runner/gpu_run.cpp gpu_runner/adapter.cpp)

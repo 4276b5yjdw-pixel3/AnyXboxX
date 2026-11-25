@@ -7,7 +7,7 @@
 
 use crate::compare::read64;
 use crate::error::Error;
-use crate::float::{bits_float, float_bits, ldexp, py_max, py_min};
+use crate::float::{CANONICAL_NAN64, bits_float, float_bits, ldexp, py_max, py_min};
 use crate::scalar::sign_extend;
 use crate::wave::Wave;
 
@@ -154,19 +154,27 @@ fn compute(name: &str, values: &[u64], clamp: bool, omod: u32) -> Option<u64> {
                 1.0 / x
             })
         }
+        // A NaN result is the bit pattern itself: LLVM may fold a NaN value through a select and
+        // change its sign, so the canonical bits are not passed through f64.
         "v_rsq_f64" => {
             let x = f(0);
-            float_result(if x == 0.0 {
-                f64::INFINITY.copysign(x)
-            } else if x < 0.0 {
-                f64::NAN
+            if x < 0.0 {
+                CANONICAL_NAN64
             } else {
-                1.0 / x.sqrt()
-            })
+                float_result(if x == 0.0 {
+                    f64::INFINITY.copysign(x)
+                } else {
+                    1.0 / x.sqrt()
+                })
+            }
         }
         "v_sqrt_f64" => {
             let x = f(0);
-            float_result(if x < 0.0 { f64::NAN } else { x.sqrt() })
+            if x < 0.0 {
+                CANONICAL_NAN64
+            } else {
+                float_result(x.sqrt())
+            }
         }
         "v_frexp_exp_i32_f64" => {
             let x = f(0);
@@ -245,6 +253,17 @@ pub fn execute(
     }
 
     Ok(true)
+}
+
+#[cfg(test)]
+mod canonical_nan {
+    use super::*;
+
+    #[test]
+    fn sqrt_of_minus_one_is_positive_canonical_nan() {
+        let bits = compute("v_sqrt_f64", &[(-1.0f64).to_bits()], false, 0);
+        assert_eq!(bits, Some(0x7FF8_0000_0000_0000));
+    }
 }
 
 #[cfg(test)]

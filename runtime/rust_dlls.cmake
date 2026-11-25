@@ -1,4 +1,4 @@
-# Copies the runtime DLLs ported to Rust (crates/anyxboxx-*, built by `cargo build --release`) into
+# Copies the runtime DLLs and native launcher ported to Rust (built by `cargo build --release`) into
 # runtime/build/bin, next to the C++ ones, where the native mode and anyxboxx.exe load them.
 #
 #   cmake -DRUST_RELEASE=<target/release> -DBIN=<runtime/build/bin> -DDLLS="src=dst,..." -P rust_dlls.cmake
