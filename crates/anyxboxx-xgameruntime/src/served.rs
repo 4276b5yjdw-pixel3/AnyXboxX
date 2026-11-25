@@ -76,7 +76,12 @@ fn object_for(name: &str, pairs: &[(Guid, Guid)], gdk: &[tables::GdkApi]) -> *co
         .map(|api| api.slot + 1)
         .max()
         .unwrap_or(0);
-    let object: &'static Object = object::build(slots, query_interface as *const c_void, &[]);
+    let methods = match name {
+        "UserInterface" => crate::user::methods(),
+        "GamertagInterface" => crate::user::gamertag_methods(),
+        _ => Vec::new(),
+    };
+    let object: &'static Object = object::build(slots, query_interface as *const c_void, &methods);
     std::ptr::from_ref(object).cast()
 }
 

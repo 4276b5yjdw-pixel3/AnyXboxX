@@ -13,6 +13,14 @@ pub const S_OK: HResult = 0;
 pub const E_NOTIMPL: HResult = 0x8000_4001_u32 as i32;
 pub const E_NOINTERFACE: HResult = 0x8000_4002_u32 as i32;
 pub const E_POINTER: HResult = 0x8000_4003_u32 as i32;
+pub const E_INVALIDARG: HResult = 0x8007_0057_u32 as i32;
+pub const E_OUTOFMEMORY: HResult = 0x8007_000E_u32 as i32;
+/// HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER): the title's buffer is too small.
+pub const E_NOT_SUFFICIENT_BUFFER: HResult = 0x8007_007A_u32 as i32;
+/// The documented "no such user" error (XUser).
+pub const E_GAMEUSER_USER_NOT_FOUND: HResult = 0x8924_5104_u32 as i32;
+/// XUser sign-out deferral not available offline.
+pub const E_GAMEUSER_DEFERRAL_NOT_AVAILABLE: HResult = 0x8924_5103_u32 as i32;
 
 /// Slots every object has (IUnknown).
 pub const IUNKNOWN_SLOTS: usize = 3;

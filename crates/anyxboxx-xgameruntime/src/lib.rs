@@ -21,6 +21,8 @@ mod registry;
 mod served;
 mod system;
 mod tables;
+mod user;
+mod user_async;
 
 use std::ffi::{c_char, c_void};
 
