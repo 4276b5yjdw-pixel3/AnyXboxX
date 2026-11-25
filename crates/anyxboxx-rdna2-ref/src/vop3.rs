@@ -368,6 +368,9 @@ pub fn execute(
     word: u64,
     literal: Option<u32>,
 ) -> Result<bool, Error> {
+    if crate::sad::operation(name).is_some() {
+        return crate::sad::execute(wave, name, &Fields::new(word), literal);
+    }
     if !is_native(name) {
         return Ok(false);
     }

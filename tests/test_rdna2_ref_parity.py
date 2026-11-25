@@ -186,6 +186,7 @@ SPECIAL_LITERALS = (
     0x8000_0001, 0x7F7F_FFFF, 0x3F80_0000, 0xC080_0000, 0x3F00_0000, 0x4000_0000,
 )
 VECTOR_FAMILIES = ("VOP1", "VOP2")
+SAD_NAMES = ("v_msad_u8", "v_qsad_pk_u16_u8", "v_mqsad_pk_u16_u8", "v_mqsad_u32_u8")
 # SDWA (0xF9), DPP16 (0xFA), DPP8 (0xE9) and DPP8_FI (0xEA): the source codes that announce a second word.
 EXT_CODES = (0xF9, 0xFA, 0xE9, 0xEA)
 EXT_PROBABILITY = 0.3
@@ -221,7 +222,7 @@ def random_program(rng):
         ):
             names[family].append((opcode, name))
         # Native VOP3 names at opcodes 0x200 and up: the Python routes lower opcodes through the VOP1/VOP2 tables.
-        if family == "VOP3" and name in VECTOR3 and opcode >= 0x200:
+        if family == "VOP3" and ((name in VECTOR3 and opcode >= 0x200) or name in SAD_NAMES):
             names[family].append((opcode, name))
         if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
             names[family].append((opcode, name))
@@ -270,7 +271,7 @@ def instruction(rng, names):
         vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(256)
         word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
     elif family == "VOP3":
-        return vop3_words(rng, opcode)
+        return vop3_words(rng, opcode, name)
     elif family == "VOPC":
         # A VGPR pair as source 0 (64-bit compares read v[n], v[n+1]): n + 1 stays below v256.
         ssrc0 = rng.choice(OPERANDS + list(range(256, 511)))
@@ -292,11 +293,15 @@ def instruction(rng, names):
 
 
 
-def vop3_words(rng, opcode):
+def vop3_words(rng, opcode, name):
     """A VOP3 instruction: two words (the low half first), a third word when a source is the literal."""
     sources = [rng.choice(OPERANDS + list(range(256, 512))) for _ in range(3)]
-    low = 0x35 << 26 | opcode << 16 | rng.randrange(256) | rng.randrange(8) << 8 | rng.randrange(16) << 11 | rng.randrange(2) << 15
-    high = sources[0] | sources[1] << 9 | sources[2] << 18 | rng.randrange(4) << 27 | rng.randrange(8) << 29
+    # The SAD forms refuse any modifier: most of them get none, so that the executed path is covered too.
+    plain = name in SAD_NAMES and rng.random() < 0.7
+    abs_bits = 0 if plain else rng.randrange(8)
+    clamp = 0 if plain else rng.randrange(2)
+    low = 0x35 << 26 | opcode << 16 | rng.randrange(256) | abs_bits << 8 | rng.randrange(16) << 11 | clamp << 15
+    high = sources[0] | sources[1] << 9 | sources[2] << 18 | (0 if plain else rng.randrange(4)) << 27 | (0 if plain else rng.randrange(8)) << 29
     words = [low, high]
     if LITERAL in sources:
         words.append(literal_bits(rng))

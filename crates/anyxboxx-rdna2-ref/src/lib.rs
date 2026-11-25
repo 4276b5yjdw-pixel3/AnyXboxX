@@ -14,6 +14,7 @@ pub mod exec;
 pub mod ext;
 pub mod float;
 pub mod mnemonics;
+pub mod sad;
 pub mod scalar;
 pub mod vector;
 pub mod vop3;

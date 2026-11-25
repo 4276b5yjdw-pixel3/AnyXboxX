@@ -161,7 +161,7 @@ fn float_class(bits: u64, width: u32) -> u32 {
 }
 
 /// A 64-bit source of one lane: a register pair (code 256 and up), an SGPR pair, or an inline constant.
-fn read64(wave: &Wave, code: u32, lane: usize, is_float: bool) -> Result<u64, Error> {
+pub fn read64(wave: &Wave, code: u32, lane: usize, is_float: bool) -> Result<u64, Error> {
     if code >= VGPR_FIRST {
         let register = (code - VGPR_FIRST) as usize;
         if register + 1 >= wave.v.len() {
