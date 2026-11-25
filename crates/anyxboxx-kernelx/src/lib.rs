@@ -3,9 +3,8 @@
 //! Console binaries import kernelx.dll instead of kernel32.dll. Every function the two share is
 //! forwarded to Windows' kernel32/kernelbase by the linker (`build.rs` turns the table of
 //! `tools/kernelx_exports.py` into an export file). Console-only functions will be added here as
-//! the reports reveal them. Port of `runtime/kernelx` (C++); checked by running
-//! `tests/test_kernelx.py` against this DLL (`tests/test_rust_dlls.py`), and its export table is
-//! compared with the C++ DLL's there.
+//! the reports reveal them. Port of the former C++ `runtime/kernelx`, whose tests
+//! (`tests/test_kernelx.py`) and export table it reproduced before the C++ DLL was deleted.
 
 /// Number of forwarders exported, from the generated table.
 pub const FORWARDERS: usize = {
