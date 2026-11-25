@@ -35,6 +35,9 @@ pub fn carry(name: &str, a: u64, b: u64, carry_in: u64) -> Option<(u64, bool)> {
         "v_add_co_ci_u32" => (a + b + carry_in, (a + b + carry_in) >> 32 != 0),
         "v_sub_co_ci_u32" => (a.wrapping_sub(b).wrapping_sub(carry_in), a < b + carry_in),
         "v_subrev_co_ci_u32" => (b.wrapping_sub(a).wrapping_sub(carry_in), b < a + carry_in),
+        "v_add_co_u32" => (a + b, (a + b) >> 32 != 0),
+        "v_sub_co_u32" => (a.wrapping_sub(b), a < b),
+        "v_subrev_co_u32" => (b.wrapping_sub(a), b < a),
         _ => return None,
     })
 }
@@ -370,6 +373,16 @@ pub fn fields(family: &str, word: u32) -> Fields {
     let src0 = word & 0x1FF;
     let vsrc1 = (family == "VOP2").then_some((word >> 9) & 0xFF);
     Fields { vdst, src0, vsrc1 }
+}
+
+/// Whether `name` is a carry form of VOP3b: the VOP2 carry chain plus the carry-out adds and subtracts.
+pub fn is_vop3_carry(name: &str) -> bool {
+    is_carry(name) || matches!(name, "v_add_co_u32" | "v_sub_co_u32" | "v_subrev_co_u32")
+}
+
+/// Whether `name` is a VOP1 or VOP2 operation of the table (its value is computed by `compute`).
+pub fn is_known(name: &str) -> bool {
+    compute(name, 0, 0, 0, 0, false).is_some()
 }
 
 #[cfg(test)]

@@ -267,6 +267,24 @@ pub fn execute(
     Ok(true)
 }
 
+/// A compare on raw bits.
+pub type Compare32 = Box<dyn Fn(u32, u32) -> bool>;
+
+/// The 32-bit compare `name` (`v_cmp`/`v_cmpx` of f32, u32 or i32, the `VECTOR_COMPARE` forms) as a test
+/// on raw bits, and whether it writes EXEC. `None` for the other compares.
+pub fn compare32(name: &str) -> Option<(bool, Compare32)> {
+    let (writes_exec, test, kind) = split(name)?;
+    let compare: Box<dyn Fn(u32, u32) -> bool> = match kind {
+        "f32" => Box::new(move |a, b| float_test(test, bits_float(a), bits_float(b))),
+        "u32" => Box::new(move |a, b| integer_test(test, i128::from(a), i128::from(b))),
+        "i32" => {
+            Box::new(move |a, b| integer_test(test, i128::from(a as i32), i128::from(b as i32)))
+        }
+        _ => return None,
+    };
+    Some((writes_exec, compare))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

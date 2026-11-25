@@ -222,7 +222,13 @@ def random_program(rng):
         ):
             names[family].append((opcode, name))
         # Native VOP3 names at opcodes 0x200 and up: the Python routes lower opcodes through the VOP1/VOP2 tables.
-        if family == "VOP3" and ((name in VECTOR3 and opcode >= 0x200) or name in SAD_NAMES):
+        if family == "VOP3" and (
+            (name in VECTOR3 and opcode >= 0x200)
+            or name in SAD_NAMES
+            or (name in VECTOR and name not in LITERAL_OPERATION_NAMES and (0x100 <= opcode < 0x140 or 0x180 <= opcode < 0x200))
+            or (name in VECTOR_COMPARE and opcode < 0x100)
+            or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE
+        ):
             names[family].append((opcode, name))
         if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
             names[family].append((opcode, name))
@@ -293,19 +299,44 @@ def instruction(rng, names):
 
 
 
+# VOP3 names of the older encodings: the VOP1 and VOP2 operations written with VOP3 operands, the VOP3b
+# carry forms, the 64-bit multiply-add and the lane operations. Their destinations are kept in range
+# for the Python model (which indexes SGPRs and register pairs directly).
+# Operations whose constant is a literal: the VOP3 form has no literal word unless a source is the literal code.
+LITERAL_OPERATION_NAMES = ("v_madmk_f32", "v_madak_f32", "v_fmamk_f32", "v_fmaak_f32")
+VOP3_CARRY = ("v_add_co_u32", "v_sub_co_u32", "v_subrev_co_u32", "v_add_co_ci_u32", "v_sub_co_ci_u32",
+              "v_subrev_co_ci_u32")
+VOP3_MAD64 = ("v_mad_u64_u32", "v_mad_i64_i32")
+VOP3_LANE = ("v_readfirstlane_b32", "v_readlane_b32", "v_writelane_b32", "v_mbcnt_lo_u32_b32", "v_mbcnt_hi_u32_b32")
+
+
 def vop3_words(rng, opcode, name):
     """A VOP3 instruction: two words (the low half first), a third word when a source is the literal."""
-    sources = [rng.choice(OPERANDS + list(range(256, 512))) for _ in range(3)]
+    wide_sources = name in SAD_NAMES or name in VOP3_MAD64            # 64-bit reads of a VGPR pair
+    pool = list(range(256, 511)) if wide_sources else list(range(256, 512))
+    sources = [rng.choice(OPERANDS + pool) for _ in range(3)]
     # The SAD forms refuse any modifier: most of them get none, so that the executed path is covered too.
     plain = name in SAD_NAMES and rng.random() < 0.7
     abs_bits = 0 if plain else rng.randrange(8)
     clamp = 0 if plain else rng.randrange(2)
-    low = 0x35 << 26 | opcode << 16 | rng.randrange(256) | abs_bits << 8 | rng.randrange(16) << 11 | clamp << 15
-    high = sources[0] | sources[1] << 9 | sources[2] << 18 | (0 if plain else rng.randrange(4)) << 27 | (0 if plain else rng.randrange(8)) << 29
+    vdst = rng.randrange(256)
+    if name in ("v_readfirstlane_b32", "v_readlane_b32"):
+        vdst = rng.randrange(128)                                    # an SGPR destination
+    if name in VECTOR_COMPARE and not name.startswith("v_cmpx"):
+        vdst = rng.randrange(126)                                    # the compare writes the SGPR pair vdst
+    field_8_14 = abs_bits
+    if name in VOP3_CARRY or name in VOP3_MAD64:
+        vdst = rng.randrange(255)
+        field_8_14 = rng.randrange(126)                              # the carry SGPR pair sdst
+    low = 0x35 << 26 | opcode << 16 | vdst | field_8_14 << 8 | rng.randrange(16) << 11 | clamp << 15
+    high = sources[0] | sources[1] << 9 | sources[2] << 18 | (0 if plain else rng.randrange(4)) << 27 | (
+        0 if plain else rng.randrange(8)) << 29
     words = [low, high]
     if LITERAL in sources:
         words.append(literal_bits(rng))
     return words, None
+
+
 def sop2_word(opcode, sdst, ssrc0, ssrc1):
     return 0b10 << 30 | opcode << 23 | sdst << 16 | ssrc1 << 8 | ssrc0
 

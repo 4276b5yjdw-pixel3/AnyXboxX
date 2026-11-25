@@ -18,6 +18,7 @@ pub mod sad;
 pub mod scalar;
 pub mod vector;
 pub mod vop3;
+pub mod vop3_forms;
 pub mod wave;
 
 pub use error::Error;

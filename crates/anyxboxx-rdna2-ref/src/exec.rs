@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn an_unknown_instruction_is_named_as_untranslated() {
-        let data = program(&[0x35 << 26, 0]); // a VOP3 the model does not execute yet
+        let data = program(&[0x35 << 26 | 0x3FF << 16, 0]); // a VOP3 opcode no table names
         let mut wave = Wave::new(32).unwrap();
         match run(&data, &mut wave) {
             Err(Error::Untranslated(message)) => assert!(message.contains("VOP3"), "{message}"),

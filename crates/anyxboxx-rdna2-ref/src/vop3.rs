@@ -18,6 +18,8 @@ const SIGN: u32 = 0x8000_0000;
 pub struct Fields {
     pub vdst: u32,
     pub abs: u32,
+    /// VOP3b destination SGPR (carry and compare forms), bits 8 to 14 of the first word.
+    pub sdst: u32,
     pub clamp: bool,
     pub sources: [u32; 3],
     pub omod: u32,
@@ -29,6 +31,7 @@ impl Fields {
         Fields {
             vdst: (word & 0xFF) as u32,
             abs: ((word >> 8) & 0x7) as u32,
+            sdst: ((word >> 8) & 0x7F) as u32,
             clamp: (word >> 15) & 1 == 1,
             sources: [
                 ((word >> 32) & 0x1FF) as u32,
@@ -370,6 +373,30 @@ pub fn execute(
 ) -> Result<bool, Error> {
     if crate::sad::operation(name).is_some() {
         return crate::sad::execute(wave, name, &Fields::new(word), literal);
+    }
+    let fields = Fields::new(word);
+    let opcode = ((word >> 16) & 0x3FF) as u32;
+    if crate::vector::is_no_operation(name) {
+        return Ok(true);
+    }
+    if crate::vop3_forms::lane(wave, name, &fields, literal)?
+        || crate::vop3_forms::mad64(wave, name, &fields, literal)?
+    {
+        return Ok(true);
+    }
+    if opcode < 0x100 && crate::vop3_forms::compare(wave, name, &fields, literal)? {
+        return Ok(true);
+    }
+    if crate::vop3_forms::carry(wave, name, &fields, literal)? {
+        return Ok(true);
+    }
+    if name == "v_sat_pk_u8_i16" && ((word >> 11) & 0xF != 0 || fields.clamp) {
+        return Err(Error::Untranslated(format!(
+            "{name} avec op_sel/clamp (VOP3, résultat 16 bits)"
+        )));
+    }
+    if crate::vop3_forms::operation(wave, name, opcode, &fields, literal)? {
+        return Ok(true);
     }
     if !is_native(name) {
         return Ok(false);
