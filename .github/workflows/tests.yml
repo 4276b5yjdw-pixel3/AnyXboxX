@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, rust/full]
   workflow_dispatch:
 
 # Lecture seule : la CI ne pousse rien et n'écrit pas dans le dépôt.
