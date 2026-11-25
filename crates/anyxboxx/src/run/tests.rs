@@ -122,5 +122,54 @@ fn the_xg_library_is_passed_with_an_absolute_path_and_its_mode() {
 fn a_repository_without_victory_is_refused_before_building() {
     let empty = std::env::temp_dir().join("anyxboxx-run-no-victory");
     let args = parse(&["--game-dir", "G"]);
-    assert!(matches!(run(&args, &empty), Err(RunError::NoVictory)));
+    assert!(matches!(run(&args, Some(&empty)), Err(RunError::NoVictory)));
+}
+
+#[test]
+fn a_prebuilt_victory_has_nothing_to_build() {
+    let exe = std::env::current_exe().unwrap();
+    let victory = Victory::prebuilt(&exe).unwrap();
+    assert_eq!(victory.exe, exe);
+    assert!(victory.build_command().is_none());
+}
+
+#[test]
+fn a_located_victory_is_built_with_cargo() {
+    let repo = std::env::temp_dir().join(format!("anyxboxx-run-located-{}", std::process::id()));
+    let victory = repo.join("third_party").join("victory");
+    std::fs::create_dir_all(&victory).unwrap();
+    std::fs::write(victory.join("Cargo.toml"), b"").unwrap();
+    let build = Victory::locate(&repo).unwrap().build_command().unwrap();
+    std::fs::remove_dir_all(&repo).unwrap();
+    assert_eq!(build.get_program(), "cargo");
+}
+
+#[test]
+fn a_missing_prebuilt_victory_is_refused_before_anything_runs() {
+    let args = parse(&[
+        "--game-dir",
+        "G",
+        "--victory-exe",
+        "does-not-exist/victory.exe",
+    ]);
+    assert!(matches!(run(&args, None), Err(RunError::NoVictoryExe(_))));
+}
+
+#[test]
+fn a_prebuilt_victory_does_not_need_the_repository() {
+    // The game folder is checked after the exe: reaching NoGame means no repository was asked for.
+    let exe = std::env::current_exe().unwrap();
+    let args = parse(&[
+        "--game-dir",
+        "does-not-exist",
+        "--VictoryExe",
+        exe.to_str().unwrap(),
+    ]);
+    assert!(matches!(run(&args, None), Err(RunError::NoGame(_))));
+}
+
+#[test]
+fn without_a_prebuilt_victory_the_repository_is_required() {
+    let args = parse(&["--game-dir", "G"]);
+    assert!(matches!(run(&args, None), Err(RunError::NoRepo)));
 }

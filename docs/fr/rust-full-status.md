@@ -21,6 +21,28 @@ cargo build --release --workspace
 - Les noms d'options PowerShell sont acceptés aussi (`--GameDir`, `--XgDll`, `--XgMode`, `--Precompile`, `--Dred`, `--NoTunedSettings`, `--SkipPipelines`, `--BatchCardRehash`). `anyxboxx run --help` les liste.
 - Un seul jeu à la fois : fermer d'abord un jeu déjà lancé. Le lanceur graphique le vérifie lui-même.
 
+### Linux (Proton)
+
+La compilation native sous Linux n'est pas prise en charge : VIctory, que l'espace racine utilise via `victory-hle`, ne compile que pour Windows (`victory-gpu` utilise sans condition ses modules `#[cfg(windows)]`). Compiler les deux espaces pour Windows depuis Linux, avec un CRT et un SDK MSVC sous Linux (par exemple [xwin](https://github.com/Jake-Shadle/xwin)) et `lld-link` :
+
+```bash
+cargo build --release --workspace --target x86_64-pc-windows-msvc \
+    --exclude anyxboxx-kernelx --exclude anyxboxx-d3d12-xs
+(cd third_party/victory && cargo build --profile diag -p victory --features diagnostics --target x86_64-pc-windows-msvc)
+```
+
+- `kernelx` et `d3d12_xs` ont besoin du `lib.exe` de MSVC pour produire le `.exp` de leur table de redirections (`anyxboxx-forwarders::link`) ; `llvm-lib /DEF` n'écrit que le `.lib`. Pas bloquant : le jeu passe par VIctory, qui ne charge pas ces DLL.
+- Il n'y a pas de cargo dans Proton : `anyxboxx.exe run` prend le VIctory compilé depuis Linux avec `--victory-exe` et saute la compilation (le dépôt n'est alors pas nécessaire). Le lancer avec le `wine` de Proton et le préfixe Wine de son choix, chemins écrits en `Z:\…` :
+
+```bash
+VKD3D_CONFIG=descriptor_heap "$PROTON/files/bin/wine" target/x86_64-pc-windows-msvc/release/anyxboxx.exe run \
+    --victory-exe 'Z:\…\third_party\victory\target\x86_64-pc-windows-msvc\diag\victory.exe' \
+    --game-dir 'Z:\…\votre dossier du jeu'
+```
+
+- `anyxboxx run` applique le jeu de réglages Windows (`TUNED`), pas le profil `linux-amd`, que seul le lanceur graphique lit. Wine transmet l'environnement Linux : exporter `VKD3D_CONFIG=descriptor_heap` (le tas de vues du titre dépasse le plafond par défaut de vkd3d-proton) et, pour les valeurs de `linux-amd`, ajouter `--no-tuned-settings` et les exporter soi-même.
+- Le lanceur graphique n'a pas encore de `--victory-exe` : ses pages Jouer et Shaders commencent par la compilation cargo, qui échoue sous Proton.
+
 ### Lanceur graphique (`crates/anyxboxx-launcher`)
 
 Il est fait avec egui via eframe 0.34 : du Rust pur, sans liaison C++ ni installeur. La fenêtre compte quatre pages avec des barres de progression, un journal et quelques boîtes de dialogue, qu'egui (mode immédiat) dessine en quelques centaines de lignes. Le Win32 brut aurait demandé des boucles de messages et une mise en page écrites à la main pour les mêmes pages. La logique vit dans des modules simples que la fenêtre ne fait qu'appeler : les 80 tests n'ouvrent jamais de fenêtre.
@@ -59,7 +81,7 @@ Profils (`crates/anyxboxx-launcher/profiles.toml`, un test chacun) :
 | `runtime/d3d12_xs` | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
 | `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, cdylib `no_std` | `test_native_tls.py`, `test_native_tls_callbacks.py`, table d'exports identique | **supprimé** |
 | `runtime/xmem` | `crates/anyxboxx-xmem` (attributs ERA partagés avec le module xmem de VIctory) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, table d'exports identique | **supprimé** |
-| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (file de tâches = `xasync` de VIctory) | 66 des 90 tests GDK passent contre elle | gardé : sauvegardes, boutique, plateforme (HDR, réseau), image du joueur et compteur d'images DXGI pas encore portés |
+| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (file de tâches = `xasync` de VIctory, qui sert déjà les méthodes XThread) | 66 des 90 tests GDK passaient à la dernière mesure complète ; pas re-mesuré depuis | portés depuis : magasin de sauvegardes et GameSave (`save_store.rs`, `save_interface.rs`), stockage local, XStore hors ligne (`store.rs`), HDR, réseau, image du joueur, compteur d'images DXGI. Encore en C++ : `package_interface.cpp` |
 | `runtime/launcher` | `crates/anyxboxx-native-launcher` | `tests/test_rust_native_launcher_parity.py` lance la suite native synthétique contre les deux implémentations | gardé sous `anyxboxx_cpp.exe` comme oracle ; les cas TomBox demandent ses DLL |
 | Lanceur graphique | `crates/anyxboxx-launcher` (nouveau) | 80 tests Rust | |
 
@@ -69,7 +91,7 @@ Constat sur la porteuse TLS : en cdylib `no_std`, son bloc TLS contient exacteme
 
 **Encore en C++ :**
 
-- `runtime/xgameruntime` (24 de ses 90 tests échouent encore avec la DLL Rust).
+- `runtime/xgameruntime` : `package_interface.cpp` (paquets et appels de paquets du Store). La DLL C++ se compile et se teste encore.
 - `runtime/launcher` : gardé sous `anyxboxx_cpp.exe` comme oracle de parité.
 - `runtime/gpu_runner` : phase 4.
 - `runtime/third_party/libhttpclient-task` : part avec xgameruntime.
@@ -78,7 +100,7 @@ Constat sur la porteuse TLS : en cdylib `no_std`, son bloc TLS contient exacteme
 
 - Le bac à sable Unicorn et ses fonctions HLE (abandonnés dans l'état final, D2).
 - `emu/modules.py`, `emu/loader.py`, `report.py`, `status_map.py`, `translation.py`, `bench.py`, `tools/jour_j.py` : ils ont un portage Rust avec parité, mais d'autres parties Python (la CLI, la fenêtre, le bac à sable) les importent encore. Ils partiront avec le bac à sable.
-- RDNA 2 (`emu/rdna2*.py`, phase 4). D'ici là, `anyxboxx traduction` lit la couverture RDNA 2 dans `crates/anyxboxx-report/data/rdna2-coverage.txt` ; un test échoue quand cette table s'écarte de la mesure Python, et `python tests/test_rust_traduction_parity.py` la régénère.
+- RDNA 2 (`emu/rdna2*.py`, phase 4). L'interpréteur de référence est en Rust, crate `anyxboxx-rdna2-ref` (décodeur, table de mnémoniques générée par `tools/rdna2_ref_tables.py`, état du wave, instructions scalaires, branchements, VOP1, VOP2, VOPC, et VOP3 avec sa table native, les encodages plus anciens, retenues, lignes, multiplication 64 bits, SAD, division, comparaisons 64 bits, opérations f64, movrel ; mémoire scalaire (SMEM : chargements, écritures, atomiques) sur une mémoire globale éparse, avec la directive `mem` et la sortie des pages ; SDWA et DPP sur VOP1 et VOP2 ; produits scalaires VOP3P). Encore en Python : les opérations VOP3P autres que les produits scalaires, les formes VOP3 à sélection 16 bits des opérandes, SDWA et DPP sur VOPC, la mémoire (DS, tampons, FLAT, GLOBAL, SCRATCH), les images, la géométrie et les autres familles. La division utilise `num-bigint` (Rust pur, crates.io) pour l'arrondi exact. Parité avec le modèle Python : `tests/test_rdna2_ref_parity.py` (programmes fixes et 300 programmes aléatoires à graine fixe, comparés ligne à ligne). D'ici là, `anyxboxx traduction` lit la couverture RDNA 2 dans `crates/anyxboxx-report/data/rdna2-coverage.txt` ; un test échoue quand cette table s'écarte de la mesure Python, et `python tests/test_rust_traduction_parity.py` la régénère.
 - `tools/*.py` et la suite pytest (l'oracle).
 
 ## Vérifications sur cette branche (25/11/2026, Windows 11, Rust 1.98.1, Python 3.12)
@@ -89,7 +111,12 @@ python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools → All ch
 cargo test --release --workspace       → 198 passed, 0 failed
 cargo clippy --release --workspace --all-targets → 0 warnings
 cargo fmt --check                      → propre
+cargo test -p anyxboxx-xgameruntime   → 64 passed (magasin de sauvegardes, stockage local, boutique, poignées comprises)
+cargo test -p anyxboxx-rdna2-ref      → 55 passed (décodeur, wave, mémoire, atomiques, scalaires, vectoriel, SDWA/DPP, comparaisons, VOP3, SAD, division, f64, movrel, produits scalaires, boucle d'exécution)
+python -m pytest tests/test_rdna2_ref_parity.py → 8 passed (programmes fixes, 300 aléatoires, tests dédiés à la division et aux f64, cas de mémoire scalaire ; modèle Python contre binaire Rust)
 ```
+
+Les chiffres ci-dessus pour `xgameruntime` et `rdna2-ref` viennent des exécutions de la crate dans le worktree de développement ; les 1251 et 198 ont été mesurés avant que ces crates grossissent, et ne sont pas relancés ici.
 
 Le runtime a été compilé depuis cette branche (cargo, puis CMake). Avec `ANYXBOXX_REQUIRE_RUNTIME=1`, les tests des DLL de TomBox demandent aussi `python tools/build_tombox.py`.
 
@@ -99,3 +126,7 @@ Le runtime a été compilé depuis cette branche (cargo, puis CMake). Avec `ANYX
 - VIctory n'écrit les i/s que dans le titre de sa fenêtre. Une ligne d'i/s sur stdout dans VIctory permettrait aux deux lanceurs de l'afficher.
 - Le test `a_read_in_place_never_meets_the_gap_of_a_remapping` de VIctory (victory-hle, xmem) est instable : il échoue environ 3 fois sur 8 sur le fichier non modifié.
 - Le profil Windows+NVIDIA a été corrigé après ton essai : les interrupteurs de la PR #199 à `0` n'ont rien changé (2-3 i/s sur `main`, 5-7 i/s sur le fork à `80d58f8`).
+- CI sur `rust/full` (première exécution via les déclencheurs de la PR #228) : le travail pytest échouait à la copie des DLL Rust, car `file(COPY_FILE)` ne crée pas `runtime/build/bin` sur une compilation propre. Corrigé dans `7bc532ba` (`file(MAKE_DIRECTORY)` d'abord). Une exécution `tests.yml` lancée à la main sur `rust/full` passe ensuite dans les trois travaux.
+- Le test xmem `graphics_blocks_get_their_own_region_flagged_by_the_query` échouait de temps en temps : les tests partagent un seul espace d'adressage, et une région libérée par un test était reprise par un autre qui tournait en même temps. Les tests xmem passent maintenant à tour de rôle sur un même verrou (`7b69e6fb`) ; 15 exécutions de suite passent.
+- Le générateur de parité RDNA 2 envoyait parfois les branchements dans des mots de données, décodés en instructions mémoire (hors du modèle). Les branchements tombent désormais sur des débuts d'instruction.
+- Bogue du modèle Python (non corrigé ici, à signaler dans une issue) : `emu/rdna2_exec_wide.py`, `_fma`, calcule `float(Fraction(a) * Fraction(b) + Fraction(c))` pour des opérandes finis, et `float()` lève `OverflowError` quand le résultat exact dépasse l'intervalle des doubles, au lieu de rendre ±infini comme le fma IEEE. Le portage Rust rend ±infini ; le test aléatoire général laisse donc `v_fma_f64` de côté et un test dédié le couvre avec des opérandes qui ne peuvent pas déborder.

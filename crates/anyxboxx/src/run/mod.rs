@@ -56,6 +56,11 @@ pub struct RunArgs {
     /// Set VICTORY_CARD_REHASH_RUNS=1 (hash adjacent GPU memory ranges in batches).
     #[arg(long, alias = "BatchCardRehash")]
     pub batch_card_rehash: bool,
+    /// Use this victory.exe, built beforehand, and skip the cargo build (for Proton, where there
+    /// is no cargo: cross-build VIctory on Linux with `--target x86_64-pc-windows-msvc`).
+    /// The repository is then not needed.
+    #[arg(long, alias = "VictoryExe")]
+    pub victory_exe: Option<PathBuf>,
     /// Repository root (default: ANYXBOXX_REPO, then the folders above the binary and the
     /// current folder that hold third_party/victory/Cargo.toml).
     #[arg(long)]
@@ -66,6 +71,10 @@ pub struct RunArgs {
 pub enum RunError {
     #[error("third_party/victory/Cargo.toml is missing: this copy of AnyXboxX is incomplete.")]
     NoVictory,
+    #[error("victory.exe not found: '{0}'.")]
+    NoVictoryExe(String),
+    #[error("repository not found (pass --repo or set ANYXBOXX_REPO).")]
+    NoRepo,
     #[error("game_scarlett_master.exe not found in '{0}'.")]
     NoGame(String),
     #[error("cargo build failed (exit code {0}).")]
@@ -80,14 +89,21 @@ pub enum RunError {
     Spawn(String, std::io::Error),
 }
 
-/// Runs the launch like the script, step for step; returns VIctory's exit code.
-pub fn run(args: &RunArgs, repo: &Path) -> Result<i32, RunError> {
-    let victory = Victory::locate(repo)?;
+/// Runs the launch like the script, step for step; returns VIctory's exit code. With
+/// `--victory-exe` the build is skipped and the repository is not needed.
+pub fn run(args: &RunArgs, repo: Option<&Path>) -> Result<i32, RunError> {
+    let victory = match (&args.victory_exe, repo) {
+        (Some(exe), _) => Victory::prebuilt(exe)?,
+        (None, Some(repo)) => Victory::locate(repo)?,
+        (None, None) => return Err(RunError::NoRepo),
+    };
     game_exe(&args.game_dir)?;
-    println!("Building VIctory (diag profile, diagnostics feature)...");
-    let code = status(&mut victory.build_command(), "cargo")?;
-    if code != 0 {
-        return Err(RunError::BuildFailed(code));
+    if let Some(mut build) = victory.build_command() {
+        println!("Building VIctory (diag profile, diagnostics feature)...");
+        let code = status(&mut build, "cargo")?;
+        if code != 0 {
+            return Err(RunError::BuildFailed(code));
+        }
     }
     let env = environment(args)?;
     if args.precompile {
