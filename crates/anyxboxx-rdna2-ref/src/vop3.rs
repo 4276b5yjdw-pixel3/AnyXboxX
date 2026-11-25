@@ -387,6 +387,17 @@ pub fn execute(
     {
         return Ok(true);
     }
+    if crate::compare::execute_vop3(
+        wave,
+        name,
+        [fields.sources[0], fields.sources[1]],
+        literal,
+        fields.vdst,
+        fields.abs,
+        fields.neg,
+    )? {
+        return Ok(true);
+    }
     if opcode < 0x100 && crate::vop3_forms::compare(wave, name, &fields, literal)? {
         return Ok(true);
     }

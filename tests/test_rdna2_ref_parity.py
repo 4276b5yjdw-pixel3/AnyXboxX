@@ -228,6 +228,7 @@ def random_program(rng):
             or (name in VECTOR and name not in LITERAL_OPERATION_NAMES and (0x100 <= opcode < 0x140 or 0x180 <= opcode < 0x200))
             or (name in VECTOR_COMPARE and opcode < 0x100)
             or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE + DIV_NAMES
+            or name in COMPARE64
         ):
             names[family].append((opcode, name))
         if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
@@ -315,8 +316,10 @@ VOP3_LANE = ("v_readfirstlane_b32", "v_readlane_b32", "v_writelane_b32", "v_mbcn
 
 def vop3_words(rng, opcode, name):
     """A VOP3 instruction: two words (the low half first), a third word when a source is the literal."""
-    wide_sources = name in SAD_NAMES or name in VOP3_MAD64 or name.endswith("_f64")  # 64-bit reads of a VGPR pair
+    wide_sources = name in SAD_NAMES or name in VOP3_MAD64 or name.endswith(("_f64", "_u64", "_i64"))
     pool = list(range(256, 511)) if wide_sources else list(range(256, 512))
+    if name in COMPARE64 and not name.endswith("class_f32"):
+        pool = [code for code in OPERANDS if code != LITERAL] + list(range(256, 511))
     sources = [rng.choice(OPERANDS + pool) for _ in range(3)]
     # The SAD forms refuse any modifier: most of them get none, so that the executed path is covered too.
     plain = name in SAD_NAMES and rng.random() < 0.7
@@ -325,12 +328,12 @@ def vop3_words(rng, opcode, name):
     vdst = rng.randrange(256)
     if name in ("v_readfirstlane_b32", "v_readlane_b32"):
         vdst = rng.randrange(128)                                    # an SGPR destination
-    if name in VECTOR_COMPARE and not name.startswith("v_cmpx"):
+    if (name in VECTOR_COMPARE or name in COMPARE64) and "cmpx" not in name:
         vdst = rng.randrange(126)                                    # the compare writes the SGPR pair vdst
     field_8_14 = abs_bits
     if name in VOP3_CARRY or name in VOP3_MAD64:
         vdst = rng.randrange(255)
-    if name.endswith("_f64"):
+    if name.endswith("_f64") and name not in COMPARE64:
         vdst = rng.randrange(255)                                    # a 64-bit result takes vdst and vdst + 1
         field_8_14 = rng.randrange(126)                              # the carry SGPR pair sdst
     low = 0x35 << 26 | opcode << 16 | vdst | field_8_14 << 8 | rng.randrange(16) << 11 | clamp << 15

@@ -285,6 +285,92 @@ pub fn compare32(name: &str) -> Option<(bool, Compare32)> {
     Some((writes_exec, compare))
 }
 
+/// Input modifier of one source of a 64-bit (or class) compare, as the model's `_modify`.
+fn modify64(kind: &str, index: u32, value: u64, abs_bits: u32, neg_bits: u32) -> u64 {
+    if matches!(kind, "u64" | "i64") || (kind.starts_with("class") && index == 1) {
+        return value;
+    }
+    let sign = if kind == "class32" {
+        1u64 << 31
+    } else {
+        1u64 << 63
+    };
+    let mut out = value;
+    if abs_bits >> index & 1 == 1 {
+        out &= !sign;
+    }
+    if neg_bits >> index & 1 == 1 {
+        out ^= sign;
+    }
+    out
+}
+
+/// The VOP3 form of a 64-bit or class compare: any source codes, the input modifiers of the model, and the
+/// destination SGPR named by vdst (EXEC for the v_cmpx forms). `Ok(false)` for the other compares.
+pub fn execute_vop3(
+    wave: &mut Wave,
+    name: &str,
+    sources: [u32; 2],
+    literal: Option<u32>,
+    destination: u32,
+    abs_bits: u32,
+    neg_bits: u32,
+) -> Result<bool, Error> {
+    let Some((writes_exec, test, kind)) = split(name) else {
+        return Ok(false);
+    };
+    if !matches!(kind, "f64" | "u64" | "i64" | "class32" | "class64") {
+        return Ok(false);
+    }
+    let wide: &[u32] = match kind {
+        "class32" => &[],
+        "class64" => &sources[..1],
+        _ => &sources,
+    };
+    if wide.contains(&LITERAL) {
+        return Err(Error::Untranslated(format!(
+            "littéral dans une comparaison 64 bits : {name}"
+        )));
+    }
+    let mut mask = 0u64;
+    for lane in wave.active()? {
+        let (a, b) = match kind {
+            "class32" => (
+                u64::from(wave.read_lane(sources[0], lane, literal)?),
+                u64::from(wave.read_lane(sources[1], lane, literal)?),
+            ),
+            "class64" => (
+                read64(wave, sources[0], lane, true)?,
+                u64::from(wave.read_lane(sources[1], lane, literal)?),
+            ),
+            _ => {
+                let is_float = kind == "f64";
+                (
+                    read64(wave, sources[0], lane, is_float)?,
+                    read64(wave, sources[1], lane, is_float)?,
+                )
+            }
+        };
+        let a = modify64(kind, 0, a, abs_bits, neg_bits);
+        let b = modify64(kind, 1, b, abs_bits, neg_bits);
+        let hit = match kind {
+            "class32" => (b >> float_class(a, 32)) & 1 == 1,
+            "class64" => (b >> float_class(a, 64)) & 1 == 1,
+            "f64" => float_test(test, f64::from_bits(a), f64::from_bits(b)),
+            "u64" => integer_test(test, i128::from(a), i128::from(b)),
+            _ => integer_test(
+                test,
+                i128::from(sign_extend(a, 64)),
+                i128::from(sign_extend(b, 64)),
+            ),
+        };
+        mask |= u64::from(hit) << lane;
+    }
+    let target = if writes_exec { EXEC_LO } else { destination };
+    wave.write_mask(target, mask)?;
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
