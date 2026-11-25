@@ -13,6 +13,7 @@
 #![allow(non_snake_case)]
 
 mod entry;
+mod events;
 mod game_config;
 mod guid;
 mod hdr;

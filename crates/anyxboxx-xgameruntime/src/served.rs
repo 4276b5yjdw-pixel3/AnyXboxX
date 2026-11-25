@@ -81,6 +81,11 @@ fn object_for(name: &str, pairs: &[(Guid, Guid)], gdk: &[tables::GdkApi]) -> *co
         "SystemInterface" | "AnalyticsInterface" | "GameInterface" | "FeatureInterface"
         | "DisplayInterface" => crate::system_interface::methods(name),
         "GamertagInterface" => crate::user::gamertag_methods(),
+        "InviteInterface"
+        | "PendingInviteInterface"
+        | "ActivationInterface"
+        | "ProtocolInterface"
+        | "ErrorInterface" => crate::events::methods(name),
         _ => Vec::new(),
     };
     let object: &'static Object = object::build(slots, query_interface as *const c_void, &methods);
