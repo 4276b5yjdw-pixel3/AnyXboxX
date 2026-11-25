@@ -80,6 +80,7 @@ pub fn build_env(
         xg_dll: xg.map(|x| x.dll.clone()),
         xg_mode: xg.map_or(XgMode::Real, |x| x.mode),
         batch_card_rehash: false,
+        victory_exe: None,
         repo: None,
     })?;
     let profile_pairs = profile.env.iter().map(|(k, v)| (k.clone(), v.clone()));

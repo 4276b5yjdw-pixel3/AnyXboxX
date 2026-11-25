@@ -85,12 +85,16 @@ def launch(tmp_path, fake_tool, binary, options=(), *, cargo_exit=0, game_exe=Tr
     shutil.copy(fake_tool, tmp_path / "target" / "diag" / "victory.exe")
     shutil.copy(fake_tool, tmp_path / "tools" / "cargo.exe")
     (tmp_path / "xg_xs.dll").write_bytes(b"")
+    (tmp_path / "prebuilt").mkdir()
+    shutil.copy(fake_tool, tmp_path / "prebuilt" / "prebuilt.exe")
     log = tmp_path / "calls.log"
     env = {k: v for k, v in os.environ.items() if not k.startswith("VICTORY_")}
     env.update({"PATH": f"{tmp_path / 'tools'}{os.pathsep}{os.environ['PATH']}",
                 "CARGO_TARGET_DIR": str(tmp_path / "target"), "FAKE_TOOL_LOG": str(log),
-                "FAKE_TOOL_EXIT_CARGO": str(cargo_exit), "FAKE_TOOL_EXIT_VICTORY_RUN": str(VICTORY_EXIT)})
-    options = [o.replace("{xg}", str(tmp_path / "xg_xs.dll")) for o in options]
+                "FAKE_TOOL_EXIT_CARGO": str(cargo_exit), "FAKE_TOOL_EXIT_VICTORY_RUN": str(VICTORY_EXIT),
+                "FAKE_TOOL_EXIT_PREBUILT_RUN": str(VICTORY_EXIT)})
+    options = [o.replace("{xg}", str(tmp_path / "xg_xs.dll")).replace("{prebuilt}", str(tmp_path / "prebuilt"))
+               for o in options]
     command = [str(binary), "run", "--repo", str(tmp_path / "depot"), "--game-dir", str(game), *options]
     done = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
     calls = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
@@ -149,3 +153,30 @@ def test_a_missing_game_stops_before_building(tmp_path, fake_tool, binary):
 def test_powershell_option_names_still_work(tmp_path, fake_tool, binary):
     done, calls = launch(tmp_path, fake_tool, binary, ["--NoTunedSettings", "--Dred"])
     assert calls == [BUILD, GAME + ";".join(sorted((GAME_DIR, "VICTORY_D3D12_DRED=1")))], done.stderr
+
+
+# Linux (Proton): there is no cargo inside Proton, so VIctory is cross-built on the Linux side and
+# `--victory-exe` runs that build as is. The fake build is named prebuilt.exe, so its calls log as
+# `prebuilt`, apart from the repository's victory.exe; `cargo.exe` stays on the PATH, so any build
+# call would be logged too.
+PREBUILT_GAME = GAME.replace("victory run", "prebuilt run", 1)
+PREBUILT_TRANSLATE = TRANSLATE.replace("victory translate", "prebuilt translate", 1)
+
+
+def test_a_prebuilt_victory_is_run_without_building(tmp_path, fake_tool, binary):
+    done, calls = launch(tmp_path, fake_tool, binary, ["--victory-exe", r"{prebuilt}\prebuilt.exe"])
+    assert calls == [PREBUILT_GAME + ";".join(sorted((GAME_DIR, *TUNED)))], done.stderr
+    assert done.returncode == VICTORY_EXIT
+
+
+def test_a_prebuilt_victory_also_precompiles(tmp_path, fake_tool, binary):
+    done, calls = launch(tmp_path, fake_tool, binary,
+                         ["--no-tuned-settings", "--precompile", "--VictoryExe", r"{prebuilt}\prebuilt.exe"],
+                         precompile_inputs=True)
+    assert calls == [PREBUILT_TRANSLATE + GAME_DIR, PREBUILT_GAME + GAME_DIR], done.stderr
+
+
+def test_a_missing_prebuilt_victory_stops_before_anything_runs(tmp_path, fake_tool, binary):
+    done, calls = launch(tmp_path, fake_tool, binary, ["--victory-exe", r"{prebuilt}\missing.exe"])
+    assert calls == [] and done.returncode == 1
+    assert "victory.exe not found" in done.stderr

@@ -71,11 +71,8 @@ fn report<E: std::fmt::Display>(command: &str, outcome: Result<(), E>) -> ExitCo
 }
 
 fn launch(args: &run::RunArgs) -> ExitCode {
-    let Some(repo) = run::find_repo(args.repo.as_deref()) else {
-        eprintln!("anyxboxx run: repository not found (pass --repo or set ANYXBOXX_REPO).");
-        return ExitCode::FAILURE;
-    };
-    match run::run(args, &repo) {
+    let repo = run::find_repo(args.repo.as_deref());
+    match run::run(args, repo.as_deref()) {
         // VIctory's exit code passed on whole (a crash code such as 0xC0000005 included).
         Ok(code) => std::process::exit(code),
         Err(error) => {
