@@ -2,11 +2,12 @@
 //!
 //! `anyxboxx run --game-dir <folder> [...]` replaces the former `tools/lancer_victory.ps1`;
 //! `anyxboxx rapport <target>` replaces `scarlett.py --rapport`;
-//! `anyxboxx traduction <package> [image.svg]` replaces `scarlett.py --traduction`.
+//! `anyxboxx traduction <package> [image.svg]` replaces `scarlett.py --traduction`;
+//! `anyxboxx carte <package> <image.svg>` replaces `scarlett.py --carte`.
 
 use std::process::ExitCode;
 
-use anyxboxx::{rapport, run, traduction};
+use anyxboxx::{carte, rapport, run, traduction};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -28,6 +29,8 @@ enum Command {
     Rapport(rapport::RapportArgs),
     /// Translation progress of the console DLLs, and its SVG image (replaces scarlett.py --traduction).
     Traduction(traduction::TraductionArgs),
+    /// Progress map of the README, one cell per function (replaces scarlett.py --carte).
+    Carte(carte::CarteArgs),
 }
 
 fn main() -> ExitCode {
@@ -44,6 +47,7 @@ fn main() -> ExitCode {
             }
         },
         Command::Traduction(args) => report("traduction", traduction::traduction(&args)),
+        Command::Carte(args) => report("carte", carte::carte(&args)),
     }
 }
 

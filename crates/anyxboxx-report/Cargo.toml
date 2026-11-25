@@ -1,6 +1,6 @@
 [package]
 name = "anyxboxx-report"
-description = "Compatibility report of a title (scarlett.py --rapport): which imports are emulated, provided by the package or missing; reads MicrosoftGame.Config. Rust port of emu/report.py, emu/config.py and emu/translation.py (scarlett.py --traduction)."
+description = "Compatibility report of a title (scarlett.py --rapport): which imports are emulated, provided by the package or missing; reads MicrosoftGame.Config. Rust port of emu/report.py, emu/config.py, emu/translation.py and emu/status_map.py (scarlett.py --traduction, --carte)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

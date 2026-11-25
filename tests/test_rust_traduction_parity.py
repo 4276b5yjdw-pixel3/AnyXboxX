@@ -60,8 +60,8 @@ GAME_IMPORTS = [
 ]
 
 
-@pytest.fixture(scope="module")
-def binary():
+def require_binary():
+    """The Rust binary; absent: skipped, except in CI (ANYXBOXX_REQUIRE_RUNTIME=1)."""
     if not BINARY.is_file():
         if os.environ.get("ANYXBOXX_REQUIRE_RUNTIME") == "1":
             pytest.fail(f"{BINARY} absent: cargo build --release (root workspace).")
@@ -69,13 +69,21 @@ def binary():
     return BINARY
 
 
-@pytest.fixture(scope="module")
-def registry(tmp_path_factory):
+def write_registry(path):
     """The Python HLE registry as `family!function` lines: what emu/hle.resolve finds."""
-    path = tmp_path_factory.mktemp("registry") / "emulated.txt"
     keys = set(hle.REGISTRY) | set(hle.GUEST_CODE)
     path.write_text("\n".join(f"{group}!{name}" for group, name in sorted(keys)) + "\n", encoding="utf-8")
     return path
+
+
+@pytest.fixture(scope="module")
+def binary():
+    return require_binary()
+
+
+@pytest.fixture(scope="module")
+def registry(tmp_path_factory):
+    return write_registry(tmp_path_factory.mktemp("registry") / "emulated.txt")
 
 
 @pytest.fixture(scope="module")

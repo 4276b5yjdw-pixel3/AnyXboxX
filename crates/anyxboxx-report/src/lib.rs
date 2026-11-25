@@ -14,6 +14,7 @@ pub mod gdk;
 pub mod gpu;
 pub mod modules;
 pub mod package;
+pub mod status_map;
 pub mod text;
 pub mod translation;
 

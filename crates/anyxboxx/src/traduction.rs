@@ -38,7 +38,7 @@ pub struct TraductionArgs {
 
 /// What went wrong; the table may already be printed (the SVG is written last, as in Python).
 #[derive(Debug, thiserror::Error)]
-pub enum TraductionError {
+pub enum MeasureError {
     #[error("repository not found (pass --repo or set ANYXBOXX_REPO)")]
     NoRepo,
     #[error(transparent)]
@@ -50,14 +50,14 @@ pub enum TraductionError {
 }
 
 /// Every area, in the order of `print_translation`.
-pub fn areas(args: &TraductionArgs) -> Result<Vec<Area>, TraductionError> {
-    let repo = find_repo(args.repo.as_deref()).ok_or(TraductionError::NoRepo)?;
+pub fn areas(args: &TraductionArgs) -> Result<Vec<Area>, MeasureError> {
+    let repo = find_repo(args.repo.as_deref()).ok_or(MeasureError::NoRepo)?;
     let emulated = Emulated::load(args.emulated_list.as_deref())?;
-    let gpu = GpuCoverage::load(args.gpu_coverage.as_deref()).map_err(TraductionError::Gpu)?;
+    let gpu = GpuCoverage::load(args.gpu_coverage.as_deref()).map_err(MeasureError::Gpu)?;
     let contains = |dll: &str, function: &str| emulated.contains(dll, function);
     let rows = bench::rows(&args.package, &[], &contains);
     let sources = GdkSources::in_folder(&folders::gdk_sources(&repo));
-    let gdk = gdk::read(&sources).map_err(|e| TraductionError::Io(sources.table.clone(), e))?;
+    let gdk = gdk::read(&sources).map_err(|e| MeasureError::Io(sources.table.clone(), e))?;
     let runtime = folders::runtime(&repo);
     let tombox = folders::tombox(&repo);
     let mut areas = vec![
@@ -77,7 +77,7 @@ pub fn areas(args: &TraductionArgs) -> Result<Vec<Area>, TraductionError> {
 }
 
 /// Prints the table, then writes the image if asked.
-pub fn traduction(args: &TraductionArgs) -> Result<(), TraductionError> {
+pub fn traduction(args: &TraductionArgs) -> Result<(), MeasureError> {
     let areas = areas(args)?;
     println!("{}", translation::table(&areas));
     if let Some(path) = &args.svg {
@@ -86,7 +86,7 @@ pub fn traduction(args: &TraductionArgs) -> Result<(), TraductionError> {
     Ok(())
 }
 
-fn write_svg(path: &Path, areas: &[Area]) -> Result<(), TraductionError> {
+fn write_svg(path: &Path, areas: &[Area]) -> Result<(), MeasureError> {
     write_text(path, &translation::svg(areas, translation::SVG_TITLE))
-        .map_err(|e| TraductionError::Io(path.to_path_buf(), e))
+        .map_err(|e| MeasureError::Io(path.to_path_buf(), e))
 }
