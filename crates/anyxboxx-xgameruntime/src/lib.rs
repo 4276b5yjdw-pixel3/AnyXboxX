@@ -12,8 +12,10 @@
 
 #![allow(non_snake_case)]
 
+mod dxgi_factory;
 mod entry;
 mod events;
+mod frame_counter;
 mod game_config;
 mod guid;
 mod hdr;
