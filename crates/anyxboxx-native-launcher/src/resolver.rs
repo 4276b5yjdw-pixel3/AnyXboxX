@@ -4,6 +4,7 @@ use crate::hooks;
 use crate::image::Image;
 use crate::imports::{self, BindError, Import, Symbol};
 use crate::libraries::{LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR, LOAD_LIBRARY_SEARCH_SYSTEM32, Module};
+use crate::patch;
 use crate::redirect::{Redirect, redirect, runtime_for};
 use std::collections::HashMap;
 use std::ffi::{CString, OsString};
@@ -49,7 +50,24 @@ pub enum ResolveError {
     LocalModulePatching(PathBuf),
 }
 
-/// Resolve into the writable image. Local DLLs are explicitly rejected until IAT patching is wired.
+fn redirect_address(
+    dll: &[u8],
+    name: &[u8],
+    runtime: &[Module; 6],
+    game_dll: bool,
+    measuring: bool,
+) -> Option<usize> {
+    let dll = widen(dll)?;
+    match redirect(&dll.to_string_lossy(), name, game_dll, measuring) {
+        Some(Redirect::RuntimeExport(name)) => runtime[0]
+            .export(&CString::new(name).ok()?)
+            .map(|p| p.as_ptr() as usize),
+        Some(Redirect::Shim) => hooks::shim(name),
+        None => None,
+    }
+}
+
+/// Resolve imports into the writable image and patch local DLL imports.
 pub fn bind(
     image: &mut Image,
     runtime: &[Module; 6],
@@ -73,8 +91,24 @@ pub fn bind(
         } else {
             let local = game_folder.join(&name);
             if local.exists() {
-                // Loading without the patch would silently lose registry and DXGI hooks.
-                return Err(ResolveError::LocalModulePatching(local));
+                let module = Module::load(&local, 8).ok();
+                if let Some(module) = module {
+                    let base = module.handle().cast::<u8>();
+                    // SAFETY: Windows has loaded this module as a valid PE image.
+                    let nt = unsafe { base.add(60).cast::<u32>().read_unaligned() } as usize;
+                    // SAFETY: Windows verified the NT headers when loading the DLL.
+                    let size =
+                        unsafe { base.add(nt + 24 + 56).cast::<u32>().read_unaligned() } as usize;
+                    // SAFETY: this loaded module remains mapped; initialization is single-threaded here.
+                    unsafe {
+                        patch::patch_imports(base, size, |dll, symbol| {
+                            redirect_address(dll, symbol, runtime, true, measuring)
+                        })
+                    }
+                    .map_err(|_| ResolveError::LocalModulePatching(local.clone()))?;
+                }
+                modules.insert(entry.dll.clone(), module);
+                continue;
             }
             let basename = display
                 .rsplit(['\\', '/'])
@@ -99,14 +133,8 @@ pub fn bind(
         match &entry.symbol {
             Symbol::Ordinal(number) => module?.ordinal(*number).map(|p| p.as_ptr() as u64),
             Symbol::Name(name) => {
-                let dll = widen(&entry.dll)?;
-                let replacement = match redirect(&dll.to_string_lossy(), name, false, measuring) {
-                    Some(Redirect::RuntimeExport(name)) => runtime[0]
-                        .export(&CString::new(name).ok()?)
-                        .map(|p| p.as_ptr() as u64),
-                    Some(Redirect::Shim) => hooks::shim(name).map(|address| address as u64),
-                    None => None,
-                };
+                let replacement =
+                    redirect_address(&entry.dll, name, runtime, false, measuring).map(|p| p as u64);
                 replacement.or_else(|| {
                     module?
                         .export(&CString::new(name.as_slice()).ok()?)

@@ -8,6 +8,8 @@ pub mod imports;
 pub mod libraries;
 #[cfg(windows)]
 pub mod memory;
+#[cfg(windows)]
+pub mod patch;
 pub mod redirect;
 #[cfg(windows)]
 pub mod registration;

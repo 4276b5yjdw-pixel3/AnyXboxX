@@ -174,10 +174,10 @@ fn decodes_named_and_ordinal_imports_and_rejects_truncated_tables() {
 
 #[cfg(windows)]
 #[test]
-fn resolves_system_import_and_refuses_unpatched_local_dll() {
+fn resolves_system_import() {
     use anyxboxx_native_launcher::{
         libraries::{LOAD_LIBRARY_SEARCH_SYSTEM32, Module},
-        resolver::{ResolveError, bind},
+        resolver::bind,
     };
     use std::path::Path;
     let mut file = fixture();
@@ -193,11 +193,34 @@ fn resolves_system_import_and_refuses_unpatched_local_dll() {
     let absent = Path::new(r"Z:\AnyXboxXMissingFolder");
     bind(&mut image, &[system; 6], absent, absent, false).unwrap();
     assert_ne!(&image.bytes[0x11a0..0x11a8], &[0; 8]);
+}
+
+#[cfg(windows)]
+#[test]
+fn patches_named_import_in_a_synthetic_mapped_dll() {
+    use anyxboxx_native_launcher::patch::patch_imports;
+    let mut file = fixture();
+    put32(&mut file, 0x98 + 112 + 8, 0x1140);
+    put32(&mut file, 0x340, 0x1180);
+    put32(&mut file, 0x34c, 0x11c0);
+    put32(&mut file, 0x350, 0x11a0);
+    put64(&mut file, 0x380, 0x11d0);
+    put64(&mut file, 0x388, 0x8000_0000_0000_0007);
+    file[0x3c0..0x3c9].copy_from_slice(b"test.dll\0");
+    file[0x3d2..0x3d7].copy_from_slice(b"Func\0");
     let mut image = Image::parse(&file).unwrap();
-    let windows = std::env::var_os("SystemRoot").unwrap();
-    let local = Path::new(&windows).join("System32");
-    assert!(matches!(
-        bind(&mut image, &[system; 6], &local, absent, false),
-        Err(ResolveError::LocalModulePatching(_))
-    ));
+    // SAFETY: this vector is a live writable synthetic image and no other thread accesses it.
+    unsafe {
+        patch_imports(
+            image.bytes.as_mut_ptr(),
+            image.bytes.len(),
+            |dll, symbol| {
+                assert_eq!((dll, symbol), (&b"test.dll"[..], &b"Func"[..]));
+                Some(0x1234)
+            },
+        )
+    }
+    .unwrap();
+    assert_eq!(&image.bytes[0x11a0..0x11a8], &0x1234u64.to_le_bytes());
+    assert_eq!(&image.bytes[0x11a8..0x11b0], &[0; 8]);
 }
