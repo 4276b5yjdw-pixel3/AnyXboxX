@@ -4,6 +4,7 @@ pub mod image;
 pub mod imports;
 #[cfg(windows)]
 pub mod memory;
+pub mod redirect;
 
 /// Extract the executable name using the native launcher's manifest scanning rules.
 ///
