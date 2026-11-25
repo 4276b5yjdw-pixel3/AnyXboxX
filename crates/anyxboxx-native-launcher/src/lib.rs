@@ -1,6 +1,8 @@
 //! Components of the native launcher port. The C++ launcher remains the runtime entry point.
 
 #[cfg(windows)]
+pub mod exceptions;
+#[cfg(windows)]
 pub mod hooks;
 pub mod image;
 pub mod imports;
