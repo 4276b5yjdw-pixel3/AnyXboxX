@@ -1,0 +1,86 @@
+use anyxboxx_native_launcher::image::{Image, ImageError};
+
+fn put16(data: &mut [u8], at: usize, n: u16) {
+    data[at..at + 2].copy_from_slice(&n.to_le_bytes());
+}
+fn put32(data: &mut [u8], at: usize, n: u32) {
+    data[at..at + 4].copy_from_slice(&n.to_le_bytes());
+}
+fn put64(data: &mut [u8], at: usize, n: u64) {
+    data[at..at + 8].copy_from_slice(&n.to_le_bytes());
+}
+
+fn fixture() -> Vec<u8> {
+    let mut file = vec![0; 0x400];
+    put16(&mut file, 0, 0x5a4d);
+    put32(&mut file, 60, 0x80);
+    put32(&mut file, 0x80, 0x4550);
+    put16(&mut file, 0x84, 0x8664);
+    put16(&mut file, 0x86, 1);
+    put16(&mut file, 0x94, 240);
+    let optional = 0x98;
+    put16(&mut file, optional, 0x20b);
+    put32(&mut file, optional + 16, 0x1000);
+    put64(&mut file, optional + 24, 0x140000000);
+    put32(&mut file, optional + 56, 0x2000);
+    put32(&mut file, optional + 60, 0x200);
+    put32(&mut file, optional + 112 + 5 * 8, 0x1100);
+    put32(&mut file, optional + 116 + 5 * 8, 12);
+    let section = optional + 240;
+    put32(&mut file, section + 8, 0x200);
+    put32(&mut file, section + 12, 0x1000);
+    put32(&mut file, section + 16, 0x200);
+    put32(&mut file, section + 20, 0x200);
+    put32(&mut file, section + 36, 0x60000020);
+    put64(&mut file, 0x220, 0x140001234);
+    put32(&mut file, 0x300, 0x1000);
+    put32(&mut file, 0x304, 12);
+    put16(&mut file, 0x308, 0xa020);
+    file
+}
+
+#[test]
+fn maps_sections_and_applies_dir64_relocation() {
+    let mut image = Image::parse(&fixture()).unwrap();
+    assert_eq!(image.preferred_base, 0x140000000);
+    assert_eq!(image.entry_rva, 0x1000);
+    assert_eq!(image.sections[0].characteristics, 0x60000020);
+    assert_eq!(&image.bytes[0x1020..0x1028], &0x140001234u64.to_le_bytes());
+    image.relocate(0x150000000).unwrap();
+    assert_eq!(&image.bytes[0x1020..0x1028], &0x150001234u64.to_le_bytes());
+}
+
+#[test]
+fn rejects_invalid_headers_and_sections() {
+    assert!(matches!(
+        Image::parse(b"not a PE"),
+        Err(ImageError::InvalidPe)
+    ));
+    let mut file = fixture();
+    put16(&mut file, 0x84, 0x14c);
+    assert!(matches!(Image::parse(&file), Err(ImageError::NotPe32Plus)));
+    let mut file = fixture();
+    put32(&mut file, 0x98 + 240 + 12, 0x1fff);
+    assert!(matches!(
+        Image::parse(&file),
+        Err(ImageError::SectionOutsideImage)
+    ));
+}
+
+#[test]
+fn refuses_missing_or_invalid_relocations() {
+    let mut file = fixture();
+    put32(&mut file, 0x98 + 112 + 5 * 8, 0);
+    let mut image = Image::parse(&file).unwrap();
+    assert_eq!(
+        image.relocate(0x150000000),
+        Err(ImageError::MissingRelocations)
+    );
+    let mut file = fixture();
+    put32(&mut file, 0x304, 0x100);
+    let mut image = Image::parse(&file).unwrap();
+    assert_eq!(
+        image.relocate(0x150000000),
+        Err(ImageError::InvalidRelocations)
+    );
+}

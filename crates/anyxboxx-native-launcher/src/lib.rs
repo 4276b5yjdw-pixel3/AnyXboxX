@@ -1,5 +1,7 @@
 //! Components of the native launcher port. The C++ launcher remains the runtime entry point.
 
+pub mod image;
+
 /// Extract the executable name using the native launcher's manifest scanning rules.
 ///
 /// The caller must limit the input to the first MiB, as the C++ launcher does. The returned
