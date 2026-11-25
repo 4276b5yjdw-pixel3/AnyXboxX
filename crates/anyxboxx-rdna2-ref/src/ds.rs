@@ -1,15 +1,17 @@
 //! LDS instructions (DS) of the reference interpreter: ds_read and ds_write (b32 to b128, and the
 //! sub-dword kinds u8, i8, u16, i16, b8, b16), the read2 and write2 forms and their st64 variant, and
-//! ds_nop, and the atomics of `ds_atomic` (simple and extended forms, wrxchg2). Port of `_lds` and its
-//! helpers in `emu/rdna2_exec_memory.py` for those names. The _d16 halves and the lane operations
-//! (ds_swizzle, ds_permute, ds_bpermute) are not here yet: `supports` says so and `execute` refuses
-//! them with `Error::Untranslated`.
+//! ds_nop, the atomics of `ds_atomic` (simple and extended forms, wrxchg2), the _d16 halves of
+//! `ds_half`, and the lane exchanges of `ds_lanes` (ds_swizzle, ds_permute, ds_bpermute). Port of `_lds`
+//! and its helpers in `emu/rdna2_exec_memory.py` for those names. Anything else is refused with
+//! `Error::Untranslated`.
 //!
 //! The 64-bit word: bits 0-7 OFFSET0, 8-15 OFFSET1, 32-39 ADDR, 40-47 DATA0, 48-55 DATA1, 56-63 VDST.
 //! Each lane addresses the LDS of its wave (64 KiB), at ADDR + offset, modulo 64 KiB. An access that
 //! would run past the end is refused (the Python slices it, which changes the array's length).
 
 use crate::ds_atomic;
+use crate::ds_half;
+use crate::ds_lanes;
 use crate::error::Error;
 use crate::memory::le_words;
 use crate::wave::Wave;
@@ -94,7 +96,11 @@ fn shape(name: &str) -> Option<Shape> {
 
 /// Whether the interpreter executes this DS mnemonic.
 pub fn supports(name: &str) -> bool {
-    name == "ds_nop" || shape(name).is_some() || ds_atomic::shape(name).is_some()
+    name == "ds_nop"
+        || shape(name).is_some()
+        || ds_atomic::shape(name).is_some()
+        || ds_half::shape(name).is_some()
+        || ds_lanes::NAMES.contains(&name)
 }
 
 fn check_vgpr(first: usize, count: usize) -> Result<(), Error> {
@@ -107,7 +113,12 @@ fn check_vgpr(first: usize, count: usize) -> Result<(), Error> {
 }
 
 /// The `size` bytes held by the VGPRs from `register` in `lane`, little-endian.
-fn store_bytes(wave: &Wave, register: usize, lane: usize, size: usize) -> Result<Vec<u8>, Error> {
+pub(crate) fn store_bytes(
+    wave: &Wave,
+    register: usize,
+    lane: usize,
+    size: usize,
+) -> Result<Vec<u8>, Error> {
     let count = size.div_ceil(DWORD);
     check_vgpr(register, count)?;
     let mut bytes = Vec::with_capacity(count * DWORD);
@@ -120,7 +131,7 @@ fn store_bytes(wave: &Wave, register: usize, lane: usize, size: usize) -> Result
 
 /// Writes loaded bytes into the VGPRs from `target` in `lane`. A sub-dword load fills one VGPR, the
 /// value zero-extended, or sign-extended for the signed kinds.
-fn load_into(
+pub(crate) fn load_into(
     wave: &mut Wave,
     target: usize,
     lane: usize,
@@ -183,6 +194,12 @@ pub fn execute(wave: &mut Wave, name: &str, word: u64) -> Result<(), Error> {
     }
     if let Some(atomic) = ds_atomic::shape(name) {
         return ds_atomic::execute(wave, atomic, &Fields::new(word));
+    }
+    if let Some(half) = ds_half::shape(name) {
+        return ds_half::execute(wave, half, &Fields::new(word));
+    }
+    if ds_lanes::NAMES.contains(&name) {
+        return ds_lanes::execute(wave, name, &Fields::new(word));
     }
     let shape = shape(name)
         .ok_or_else(|| Error::Untranslated(format!("instruction non traduite : {name} (DS)")))?;
@@ -255,7 +272,9 @@ mod tests {
     fn only_the_names_it_executes_are_supported() {
         assert!(supports("ds_nop"));
         assert!(supports("ds_read2_b32"));
-        assert!(!supports("ds_swizzle_b32"));
-        assert!(!supports("ds_write_b16_d16_hi"));
+        assert!(supports("ds_swizzle_b32"));
+        assert!(supports("ds_write_b16_d16_hi"));
+        assert!(!supports("ds_write_b16_d16"));
+        assert!(!supports("ds_read_b32_d16"));
     }
 }

@@ -588,3 +588,106 @@ def test_lds_atomic_programs_match_the_python_model():
         python = run_python(lanes, False, [], program_words)
         assert python.startswith("steps"), "le cas doit s'exécuter"
         assert_same(exe, lanes, False, [], program_words)
+
+
+def test_lds_half_and_lane_exchange_programs_match_the_python_model():
+    """Acces _d16 (moitie de VGPR gardee) et ds_swizzle/ds_permute/ds_bpermute, en wave32 et wave64."""
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4
+    cases = [
+        # _d16 : lecture signee et non signee des moities basse et haute, ecritures _hi
+        (32, words(lane4, vop1("v_mov_b32", 1, 255), 0x80FF7F80, vop1("v_mov_b32", 6, 255), 0xAAAAAAAA,
+                   vop1("v_mov_b32", 7, 255), 0x55555555,
+                   ds("ds_write_b32", addr=4, data0=1),
+                   ds("ds_read_i8_d16", vdst=6, addr=4),
+                   ds("ds_read_u8_d16_hi", vdst=6, addr=4, offset0=1),
+                   ds("ds_read_u16_d16", vdst=7, addr=4),
+                   ds("ds_read_u16_d16_hi", vdst=7, addr=4, offset0=2),
+                   ds("ds_write_b8_d16_hi", addr=4, data0=1, offset0=8),
+                   ds("ds_write_b16_d16_hi", addr=4, data0=1, offset0=12),
+                   ds("ds_read_b32", vdst=8, addr=4, offset0=8))),
+        # ds_swizzle : quad perm, reverse (BITMASK), puis permute et bpermute (decalage de 4 octets)
+        (32, words(lane4,
+                   ds("ds_swizzle_b32", vdst=6, data0=4, offset0=0xB1, offset1=0x80),
+                   ds("ds_swizzle_b32", vdst=7, data0=4, offset0=0x1F, offset1=0x7C),
+                   ds("ds_bpermute_b32", vdst=8, addr=4, data0=4, offset0=4),
+                   ds("ds_permute_b32", vdst=9, addr=4, data0=4, offset0=4))),
+        # wave64 : chaque moitie de 32 lignes echange seule
+        (64, words(lane4,
+                   ds("ds_swizzle_b32", vdst=6, data0=4, offset0=0xB1, offset1=0x80),
+                   ds("ds_bpermute_b32", vdst=8, addr=4, data0=4, offset0=4),
+                   ds("ds_permute_b32", vdst=9, addr=4, data0=4, offset0=4))),
+    ]
+    for lanes, program_words in cases:
+        python = run_python(lanes, False, [], program_words)
+        assert python.startswith("steps"), "le cas doit s'executer"
+        assert_same(exe, lanes, False, [], program_words)
+
+
+def vmem(family, name, vdst=0, addr=0, data=0, saddr=125, offset=0, glc=0):
+    """Les deux mots d'une instruction FLAT, GLOBAL ou SCRATCH (décalage sur 12 bits, GLC, ADDR, DATA,
+    SADDR, VDST)."""
+    segment = {"FLAT": 0, "SCRATCH": 1, "GLOBAL": 2}[family]     # bits 14-15 du premier mot
+    first = 0x37 << 26 | segment << 14 | OPCODES[family, name] << 18 | glc << 16 | offset & 0xFFF
+    return first, addr | data << 8 | saddr << 16 | vdst << 24
+
+
+def test_flat_global_scratch_programs_match_the_python_model():
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4 ; v5 reste nul (adresse haute)
+    cases = [
+        # FLAT : chargements (dword, signé, court, paire), écriture, atomiques avec retour
+        (32, [], [(0, list(range(64))), (0x200, [0x80FF7F80] * 64)], words(
+            lane4,
+            vmem("FLAT", "flat_load_dword", vdst=6, addr=4),
+            vmem("FLAT", "flat_store_dword", addr=4, data=6, offset=256),
+            vmem("FLAT", "flat_load_sbyte", vdst=8, addr=4, offset=0x200),
+            vmem("FLAT", "flat_load_ushort", vdst=9, addr=4, offset=0x200),
+            vmem("FLAT", "flat_load_dwordx2", vdst=10, addr=4, offset=0x200),
+            vmem("FLAT", "flat_atomic_add", vdst=12, addr=4, data=6, offset=0x300, glc=1),
+            vmem("FLAT", "flat_atomic_cmpswap", vdst=14, addr=4, data=6, offset=0x300, glc=1))),
+        # GLOBAL avec SADDR (paire SGPR + VGPR 32 bits, décalage négatif), SCRATCH en adresse VGPR
+        (64, [(2, 0x1000), (3, 0)], [(0x1000, list(range(64)))], words(
+            lane4,
+            vmem("GLOBAL", "global_load_dword", vdst=6, addr=4, saddr=2),
+            vmem("GLOBAL", "global_store_dword", addr=4, data=6, saddr=2, offset=-4),
+            vmem("GLOBAL", "global_load_ubyte", vdst=8, addr=4, saddr=2),
+            vmem("SCRATCH", "scratch_store_dword", addr=4, data=6, offset=0x400),
+            vmem("SCRATCH", "scratch_load_dword", vdst=9, addr=4, offset=0x400))),
+    ]
+    for lanes, scalars, memory, program_words in cases:
+        python = run_python(lanes, False, scalars, program_words, memory)
+        assert python.startswith("steps"), "le cas doit s'exécuter"
+        assert_same(exe, lanes, False, scalars, program_words, memory)
+
+
+def mubuf(name, vdata=0, vaddr=0, srsrc=0, soffset=125, offset=0, offen=0, idxen=0, glc=0):
+    """Les deux mots d'une instruction MUBUF (décalage, OFFEN, IDXEN, GLC ; VADDR, VDATA, SRSRC en quadruplets
+    de SGPR, SOFFSET)."""
+    first = 0x38 << 26 | OPCODES["MUBUF", name] << 18 | glc << 14 | idxen << 13 | offen << 12 | offset & 0xFFF
+    return first, vaddr | vdata << 8 | srsrc << 16 | soffset << 24
+
+
+def test_buffer_programs_match_the_python_model():
+    exe = binary()
+    lane4 = vop2("v_lshlrev_b32", 4, 130, 0)     # v4 = lane * 4
+    cases = [
+        # descripteur à pas nul : adresse de base 0x2000, 256 octets ; accès hors des enregistrements
+        (32, [(8, 0x2000), (9, 0), (10, 0x100)], [(0x2000, list(range(128)))], words(
+            lane4,
+            mubuf("buffer_load_dword", vdata=6, vaddr=4, srsrc=2, offen=1),
+            mubuf("buffer_store_dword", vdata=6, vaddr=4, srsrc=2, offen=1, offset=0x80),
+            mubuf("buffer_load_ubyte", vdata=8, vaddr=4, srsrc=2, offen=1, offset=0x10),
+            mubuf("buffer_load_dword", vdata=10, vaddr=4, srsrc=2, idxen=1),
+            mubuf("buffer_atomic_add", vdata=6, vaddr=4, srsrc=2, offen=1, offset=0x40, glc=1))),
+        # pas de 16 octets avec indice : seuls les indices inférieurs à 8 existent (wave64)
+        (64, [(8, 0x3000), (9, 16 << 16), (10, 8)], [(0x3000, list(range(64)))], words(
+            lane4,
+            mubuf("buffer_load_dword", vdata=6, vaddr=4, srsrc=2, idxen=1),
+            mubuf("buffer_store_dword", vdata=6, vaddr=4, srsrc=2, idxen=1, offset=4),
+            mubuf("buffer_load_sbyte", vdata=12, vaddr=4, srsrc=2, idxen=1, offen=0, glc=0))),
+    ]
+    for lanes, scalars, memory, program_words in cases:
+        python = run_python(lanes, False, scalars, program_words, memory)
+        assert python.startswith("steps"), "le cas doit s'exécuter"
+        assert_same(exe, lanes, False, scalars, program_words, memory)
