@@ -102,7 +102,7 @@ fn allocates_relocates_and_protects_a_synthetic_image() {
 
 #[test]
 fn decodes_named_and_ordinal_imports_and_rejects_truncated_tables() {
-    use anyxboxx_native_launcher::imports::{Import, Symbol, imports};
+    use anyxboxx_native_launcher::imports::{BindError, Import, Symbol, bind, imports};
     let mut file = fixture();
     put32(&mut file, 0x98 + 112 + 8, 0x1140);
     put32(&mut file, 0x340, 0x1180);
@@ -127,6 +127,16 @@ fn decodes_named_and_ordinal_imports_and_rejects_truncated_tables() {
                 slot: 0x11a8
             },
         ]
+    );
+    let mut bound = Image::parse(&file).unwrap();
+    let missing = bind(&mut bound, |import| match import.symbol {
+        Symbol::Name(_) => Some(0x1234),
+        Symbol::Ordinal(_) => None,
+    })
+    .unwrap_err();
+    assert_eq!(&bound.bytes[0x11a0..0x11a8], &0x1234u64.to_le_bytes());
+    assert!(
+        matches!(missing, BindError::Missing(entries) if entries[0].symbol == Symbol::Ordinal(7))
     );
     put64(&mut file, 0x380, 0x4000);
     assert!(imports(&Image::parse(&file).unwrap()).is_err());

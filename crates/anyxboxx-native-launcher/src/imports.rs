@@ -85,3 +85,30 @@ pub fn imports(image: &Image) -> Result<Vec<Import>, InvalidImports> {
     }
     Ok(result)
 }
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum BindError {
+    InvalidTable,
+    Missing(Vec<Import>),
+}
+
+/// Resolve imports and write their IAT entries. Missing symbols are reported as an error.
+pub fn bind(
+    image: &mut Image,
+    mut resolve: impl FnMut(&Import) -> Option<u64>,
+) -> Result<(), BindError> {
+    let imports = imports(image).map_err(|_| BindError::InvalidTable)?;
+    let mut missing = Vec::new();
+    for import in imports {
+        if let Some(address) = resolve(&import).filter(|&value| value != 0) {
+            image.bytes[import.slot..import.slot + 8].copy_from_slice(&address.to_le_bytes());
+        } else {
+            missing.push(import);
+        }
+    }
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(BindError::Missing(missing))
+    }
+}
