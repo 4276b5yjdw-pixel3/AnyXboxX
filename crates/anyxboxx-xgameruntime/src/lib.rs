@@ -14,8 +14,10 @@
 
 mod entry;
 mod guid;
+mod hdr;
 mod log;
 mod object;
+mod registry;
 mod served;
 mod system;
 mod tables;
