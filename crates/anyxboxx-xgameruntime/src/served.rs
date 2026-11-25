@@ -78,6 +78,8 @@ fn object_for(name: &str, pairs: &[(Guid, Guid)], gdk: &[tables::GdkApi]) -> *co
         .unwrap_or(0);
     let methods = match name {
         "UserInterface" => crate::user::methods(),
+        "SystemInterface" | "AnalyticsInterface" | "GameInterface" | "FeatureInterface"
+        | "DisplayInterface" => crate::system_interface::methods(name),
         "GamertagInterface" => crate::user::gamertag_methods(),
         _ => Vec::new(),
     };

@@ -13,6 +13,7 @@
 #![allow(non_snake_case)]
 
 mod entry;
+mod game_config;
 mod guid;
 mod hdr;
 mod log;
@@ -20,6 +21,7 @@ mod object;
 mod registry;
 mod served;
 mod system;
+mod system_interface;
 mod tables;
 mod user;
 mod user_async;

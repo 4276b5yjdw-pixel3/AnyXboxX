@@ -71,15 +71,6 @@ pub fn close_handle(user: *mut c_void) {
     unsafe { drop(Box::from_raw(user.cast::<UserHandle>())) };
 }
 
-/// The XUID of a valid user handle, for the other interfaces (saves).
-///
-/// # Safety
-/// As [`valid`].
-pub unsafe fn local_user_id(user: *const c_void) -> Option<u64> {
-    // SAFETY: forwarded contract.
-    (unsafe { valid(user) }).then_some(XUID)
-}
-
 // --- Handles ----------------------------------------------------------------------
 
 /// XUserDuplicateHandle (slot 3).
