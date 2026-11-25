@@ -83,6 +83,11 @@ pub fn integer(kind: &str, width: u32, old: u64, a: u64, b: u64) -> Option<u64> 
     Some(value & mask)
 }
 
+/// The new value of an integer or float atomic (`atomic_float`), or `None` for a kind neither knows.
+pub fn apply(kind: &str, width: u32, old: u64, a: u64, b: u64) -> Option<u64> {
+    integer(kind, width, old, a, b).or_else(|| crate::atomic_float::float(kind, width, old, a, b))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,6 +123,16 @@ mod tests {
     #[test]
     fn unknown_kinds_are_none() {
         assert_eq!(integer("fadd", 32, 0, 0, 0), None);
+        assert_eq!(apply("fmul", 32, 0, 0, 0), None);
+    }
+
+    #[test]
+    fn apply_takes_the_float_kinds_too() {
+        assert_eq!(
+            apply("fadd", 32, 0x3F80_0000, 0x3F80_0000, 0),
+            Some(0x4000_0000)
+        );
+        assert_eq!(apply("add", 32, 1, 2, 0), Some(3));
     }
 
     #[test]

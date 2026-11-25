@@ -1051,3 +1051,121 @@ def test_refused_d16_typed_and_image_accesses_match_the_python_model():
             assert run_python(lanes, False, scalars, program_words) == "error untranslated\n", instruction
             assert_same(exe, lanes, False, scalars, program_words)
 
+
+FLOAT32_SPECIALS = (0x00000000, 0x80000000, 0x3F800000, 0xBF800000, 0x40000000, 0x3F000000, 0x7FC00001,
+                    0x7F800001, 0xFFC00003, 0x7F800000, 0xFF800000, 0x7F7FFFFF, 0xFF7FFFFF, 0x00000001,
+                    0x80000001, 0x007FFFFF, 0x3FC00000, 0x33800000)
+FLOAT64_SPECIALS = (0x0000000000000000, 0x8000000000000000, 0x3FF0000000000000, 0xBFF0000000000000,
+                    0x4000000000000000, 0x7FF8000000000001, 0x7FF0000000000001, 0xFFF8000000000003,
+                    0x7FF0000000000000, 0xFFF0000000000000, 0x7FEFFFFFFFFFFFFF, 0x0000000000000001,
+                    0x8000000000000001, 0x3CA0000000000000, 0x3FF8000000000000)
+FLOAT_DATA32, FLOAT_DATA64, FLOAT_COMPARE32, FLOAT_COMPARE64 = 0x8000, 0x8400, 0x8800, 0x8C00
+FLOAT_OLD, FLOAT_OLD_STEP = 0x10000, 0x400
+FLOAT_VECTOR_ATOMICS = ("fcmpswap", "fmin", "fmax", "fcmpswap_x2", "fmin_x2", "fmax_x2")
+
+
+def float_bits_values(rng, specials, width, lanes):
+    return [rng.choice(specials) if rng.random() < 0.7 else rng.getrandbits(width) for _ in range(lanes)]
+
+
+def compare_values(rng, old, width):
+    """Valeurs comparées de fcmpswap/cmpst : souvent égales à l'ancienne (ou le zéro de signe opposé)."""
+    sign = 1 << (width - 1)
+    chosen = []
+    for value in old:
+        roll = rng.random()
+        if roll < 0.4:
+            chosen.append(value)
+        elif roll < 0.6 and value & ~sign == 0:
+            chosen.append(value ^ sign)
+        else:
+            chosen.append(rng.choice(FLOAT32_SPECIALS if width == 32 else FLOAT64_SPECIALS))
+    return chosen
+
+
+def split64(values):
+    return [half for value in values for half in (value & 0xFFFFFFFF, value >> 32)]
+
+
+def float_atomic_memory(rng, lanes, regions):
+    """Données, valeurs comparées et anciennes valeurs (une copie par région) des atomiques flottants."""
+    old32 = float_bits_values(rng, FLOAT32_SPECIALS, 32, lanes)
+    old64 = float_bits_values(rng, FLOAT64_SPECIALS, 64, lanes)
+    memory = [(FLOAT_DATA32, float_bits_values(rng, FLOAT32_SPECIALS, 32, lanes)),
+              (FLOAT_DATA64, split64(float_bits_values(rng, FLOAT64_SPECIALS, 64, lanes))),
+              (FLOAT_COMPARE32, compare_values(rng, old32, 32)),
+              (FLOAT_COMPARE64, split64(compare_values(rng, old64, 64)))]
+    for k, width in enumerate(regions):
+        memory.append((FLOAT_OLD + k * FLOAT_OLD_STEP, old32 if width == 32 else split64(old64)))
+    return memory
+
+
+def float_operand_loads():
+    """v4 = ligne × 4, v5 = ligne × 8 ; v10 données 32 bits, v11 comparées, v12-v13 et v14-v15 en 64 bits."""
+    return [vop2("v_lshlrev_b32", 4, 130, 0), vop2("v_lshlrev_b32", 5, 131, 0),
+            vmem("GLOBAL", "global_load_dword", vdst=10, addr=4, saddr=2),
+            vmem("GLOBAL", "global_load_dword", vdst=11, addr=4, saddr=8),
+            vmem("GLOBAL", "global_load_dwordx2", vdst=12, addr=5, saddr=6),
+            vmem("GLOBAL", "global_load_dwordx2", vdst=14, addr=5, saddr=10)]
+
+
+def float_atomic_scalars(regions):
+    scalars = [(2, FLOAT_DATA32), (6, FLOAT_DATA64), (8, FLOAT_COMPARE32), (10, FLOAT_COMPARE64)]
+    return scalars + [(12 + 2 * k, FLOAT_OLD + k * FLOAT_OLD_STEP) for k in range(regions)]
+
+
+def float_vector_atomic_program():
+    """GLOBAL (adresse SADDR + VGPR) puis FLAT (adresse VGPR 64 bits), chaque atomique sur sa région."""
+    body, regions = [], []
+    for family in ("GLOBAL", "FLAT"):
+        for kind in FLOAT_VECTOR_ATOMICS:
+            k, wide = len(regions), kind.endswith("_x2")
+            regions.append(64 if wide else 32)
+            data = (12 if wide else 10)
+            name = f"{family.lower()}_atomic_{kind}"
+            glc = int(k % 3 != 2)
+            if family == "GLOBAL":
+                body.append(vmem(family, name, vdst=20 + 2 * k, addr=5 if wide else 4, data=data, saddr=12 + 2 * k,
+                                 glc=glc))
+            else:
+                # v6-v7 : adresse 64 bits de la région (v7 reste nul)
+                body += [vop2("v_add_nc_u32", 6, LITERAL, 5 if wide else 4), FLOAT_OLD + k * FLOAT_OLD_STEP]
+                body.append(vmem(family, name, vdst=20 + 2 * k, addr=6, data=data, glc=glc))
+    return words(*float_operand_loads(), *body), regions
+
+
+FLOAT_LDS_ATOMICS = ("ds_add_f32", "ds_add_rtn_f32", "ds_min_f32", "ds_min_rtn_f32", "ds_max_f32",
+                     "ds_max_rtn_f32", "ds_cmpst_f32", "ds_cmpst_rtn_f32", "ds_min_f64", "ds_min_rtn_f64",
+                     "ds_max_f64", "ds_max_rtn_f64", "ds_cmpst_f64", "ds_cmpst_rtn_f64")
+
+
+def float_lds_atomic_program():
+    """Anciennes valeurs écrites dans la LDS (une zone par atomique), l'atomique, puis la zone relue."""
+    body = [vmem("GLOBAL", "global_load_dword", vdst=16, addr=4, saddr=12),
+            vmem("GLOBAL", "global_load_dwordx2", vdst=18, addr=5, saddr=14)]
+    for j, name in enumerate(FLOAT_LDS_ATOMICS):
+        wide = name.endswith("f64")
+        addr, old = (5, 18) if wide else (4, 16)
+        offset = j * 0x200
+        place = dict(offset0=offset & 0xFF, offset1=offset >> 8)
+        data0, data1 = ((14 if wide else 11), (12 if wide else 10)) if "cmpst" in name else ((12 if wide else 10), 0)
+        body.append(ds("ds_write_b64" if wide else "ds_write_b32", addr=addr, data0=old, **place))
+        body.append(ds(name, vdst=30 + 2 * j, addr=addr, data0=data0, data1=data1, **place))
+        body.append(ds("ds_read_b64" if wide else "ds_read_b32", vdst=60 + 2 * j, addr=addr, **place))
+    return words(*float_operand_loads(), *body), [32, 64]
+
+
+def test_float_atomic_programs_match_the_python_model():
+    """Atomiques flottants GLOBAL, FLAT et LDS (fcmpswap, fmin, fmax, fadd, fcmpst, 32 et 64 bits) sur des
+    valeurs spéciales (zéros signés, NaN calmes et signalants, infinis, dénormaux)."""
+    exe = binary()
+    rng = random.Random(SEED)
+    for build in (float_vector_atomic_program, float_lds_atomic_program):
+        program_words, regions = build()
+        for lanes in (32, 64, 32, 64):
+            memory = float_atomic_memory(rng, lanes, regions)
+            scalars = float_atomic_scalars(len(regions))
+            python = run_python(lanes, False, scalars, program_words, memory)
+            assert python.startswith("steps"), f"le cas doit s'exécuter : {python}"
+            assert_same(exe, lanes, False, scalars, program_words, memory)
+

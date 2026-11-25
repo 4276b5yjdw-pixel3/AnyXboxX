@@ -13,6 +13,7 @@
 //! `image_exec`). Not yet: graphics; they refuse with `Error::Untranslated`.
 
 pub mod atomic;
+pub mod atomic_float;
 pub mod buffer_format;
 pub mod compare;
 pub mod decode;

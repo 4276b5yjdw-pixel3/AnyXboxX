@@ -4,8 +4,9 @@
 //! and `_lds_atomic`, `_lds_atomic_ext`, `_lds_exchange2` in `emu/rdna2_exec_atomic.py` and
 //! `emu/rdna2_exec_memory.py`.
 //!
-//! Float atomics (f32, f64) are refused: the Python model has them, the port does not yet. `min` and
-//! `max` take their kind from the type (u: unsigned, i: signed) and refuse b32 and b64. `i32` exists
+//! Float atomics (f32, f64) are `min`, `max`, `add` and `cmpst` only, as `fmin`, `fmax`, `fadd` and
+//! `fcmpst` of `atomic_float`. `min` and `max` take their kind from the type (u: unsigned, i: signed,
+//! f: float) and refuse b32 and b64. `i32` exists
 //! only in the simple forms. `wrxchg` and `wrap` need `_rtn`. An access past the end of the LDS is
 //! refused, where the Python would slice a shorter array.
 
@@ -22,7 +23,7 @@ const OPS: [&str; 14] = [
     "wrxchg", "wrap",
 ];
 
-/// One LDS atomic: the `atomic::integer` kind, the width in bits and whether the old value comes back.
+/// One LDS atomic: the `atomic::apply` kind, the width in bits and whether the old value comes back.
 /// `Exchange` is the two-access `wrxchg2` form, with its stride in elements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Atomic {
@@ -37,8 +38,17 @@ pub enum Atomic {
     },
 }
 
-/// The kind `atomic::integer` takes for `op` on a type whose first letter is `letter`, if it has one.
+/// The kind `atomic::apply` takes for `op` on a type whose first letter is `letter`, if it has one.
 fn kind_for(op: &str, letter: char) -> Option<&'static str> {
+    if letter == 'f' {
+        return match op {
+            "min" => Some("fmin"),
+            "max" => Some("fmax"),
+            "add" => Some("fadd"),
+            "cmpst" => Some("fcmpst"),
+            _ => None,
+        };
+    }
     Some(match (op, letter) {
         ("min", 'u') => "umin",
         ("max", 'u') => "umax",
@@ -70,6 +80,8 @@ fn data_type(suffix: &str) -> Option<(u32, char)> {
         "u64" => (64, 'u'),
         "i64" => (64, 'i'),
         "b64" => (64, 'b'),
+        "f32" => (32, 'f'),
+        "f64" => (64, 'f'),
         _ => return None,
     })
 }
@@ -191,7 +203,7 @@ fn op_lane(
     let old = read_value(wave, start, size);
     let a = lane_value(wave, fields.data0, lane, words)?;
     let b = lane_value(wave, fields.data1, lane, words)?;
-    let new = atomic::integer(kind, width, old, a, b).ok_or_else(|| {
+    let new = atomic::apply(kind, width, old, a, b).ok_or_else(|| {
         Error::Untranslated(format!("instruction non traduite : atomique {kind}"))
     })?;
     write_value(wave, start, size, new);
@@ -291,11 +303,31 @@ mod tests {
     }
 
     #[test]
-    fn min_and_max_refuse_b_types_and_floats() {
+    fn min_and_max_refuse_b_types() {
         assert_eq!(shape("ds_min_b32"), None);
         assert_eq!(shape("ds_max_rtn_b64"), None);
-        assert_eq!(shape("ds_min_rtn_f32"), None);
-        assert_eq!(shape("ds_add_f32"), None);
+    }
+
+    #[test]
+    fn float_types_take_min_max_add_and_cmpst_only() {
+        assert_eq!(
+            shape("ds_min_rtn_f32"),
+            Some(Atomic::Op {
+                kind: "fmin",
+                width: 32,
+                returns: true
+            })
+        );
+        assert_eq!(
+            shape("ds_cmpst_f64"),
+            Some(Atomic::Op {
+                kind: "fcmpst",
+                width: 64,
+                returns: false
+            })
+        );
+        assert_eq!(shape("ds_sub_f32"), None);
+        assert_eq!(shape("ds_add_src2_f32"), None);
     }
 
     #[test]
