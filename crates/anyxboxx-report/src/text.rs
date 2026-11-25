@@ -61,17 +61,23 @@ pub fn capitalize(text: &str) -> String {
     }
 }
 
-/// `f"{n:,}".replace(",", " ")`: thousands separated by spaces.
+/// `f"{n:,}"`: thousands separated by commas. jour_j.py then replaces every comma of the line
+/// with a space, the ones of the text around included (see `spaced`).
 pub fn thousands(value: u64) -> String {
     let digits = value.to_string();
     let mut out = String::new();
     for (index, digit) in digits.chars().enumerate() {
         if index > 0 && (digits.len() - index).is_multiple_of(3) {
-            out.push(' ');
+            out.push(',');
         }
         out.push(digit);
     }
     out
+}
+
+/// `line.replace(",", " ")`.
+pub fn spaced(line: &str) -> String {
+    line.replace(',', " ")
 }
 
 #[cfg(test)]
@@ -104,10 +110,13 @@ mod tests {
     }
 
     #[test]
-    fn thousands_use_spaces() {
+    fn thousands_are_grouped_then_spaced() {
         assert_eq!(thousands(0), "0");
         assert_eq!(thousands(999), "999");
-        assert_eq!(thousands(1000), "1 000");
-        assert_eq!(thousands(1234567), "1 234 567");
+        assert_eq!(thousands(1000), "1,000");
+        assert_eq!(
+            spaced(&format!("`a,b`, {}", thousands(1234567))),
+            "`a b`  1 234 567"
+        );
     }
 }

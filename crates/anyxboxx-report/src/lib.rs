@@ -12,6 +12,7 @@ use anyxboxx_pe::{LoadError, default_allocate, read_pe};
 pub mod bench;
 pub mod gdk;
 pub mod gpu;
+pub mod jour_j;
 pub mod modules;
 pub mod package;
 pub mod status_map;

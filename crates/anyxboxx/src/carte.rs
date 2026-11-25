@@ -12,9 +12,8 @@ use anyxboxx_report::status_map::{self, MapInputs, Status};
 use anyxboxx_report::text::write_text;
 use clap::Args;
 
-use crate::emulated::{Emulated, folders};
+use crate::emulated::{Emulated, MeasureError, folders};
 use crate::run::find_repo;
-use crate::traduction::MeasureError;
 
 #[derive(Debug, Clone, Args)]
 pub struct CarteArgs {

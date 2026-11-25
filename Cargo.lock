@@ -265,6 +265,7 @@ dependencies = [
  "thiserror 2.0.21",
  "victory-hle",
  "victory-pe",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -332,6 +333,7 @@ dependencies = [
  "anyxboxx-pe",
  "regex",
  "roxmltree",
+ "sha2",
  "thiserror 2.0.21",
  "victory-pe",
 ]

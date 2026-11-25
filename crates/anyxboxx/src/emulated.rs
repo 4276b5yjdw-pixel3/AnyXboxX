@@ -4,11 +4,27 @@
 //! the Python HLE registry this way).
 
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyxboxx_report::ReportError;
 
 use crate::rapport::{family, table, victory_resolves};
+
+/// Why a report command stopped (`traduction` prints its table before writing the SVG, as in
+/// Python, so the table may already be out).
+#[derive(Debug, thiserror::Error)]
+pub enum MeasureError {
+    #[error("repository not found (pass --repo or set ANYXBOXX_REPO)")]
+    NoRepo,
+    #[error(transparent)]
+    Report(#[from] anyxboxx_report::ReportError),
+    #[error("{0}")]
+    Gpu(String),
+    #[error("{0}: {1}")]
+    Io(PathBuf, std::io::Error),
+    #[error("game executable missing: {0}")]
+    Missing(PathBuf),
+}
 
 pub enum Emulated {
     /// What VIctory binds when it runs the game.

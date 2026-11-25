@@ -16,7 +16,7 @@ use anyxboxx_report::text::write_text;
 use anyxboxx_report::translation::{self, Area};
 use clap::Args;
 
-use crate::emulated::{Emulated, folders};
+use crate::emulated::{Emulated, MeasureError, folders};
 use crate::run::find_repo;
 
 #[derive(Debug, Clone, Args)]
@@ -34,19 +34,6 @@ pub struct TraductionArgs {
     /// Repository root (default: found from the binary or the current folder).
     #[arg(long)]
     pub repo: Option<PathBuf>,
-}
-
-/// What went wrong; the table may already be printed (the SVG is written last, as in Python).
-#[derive(Debug, thiserror::Error)]
-pub enum MeasureError {
-    #[error("repository not found (pass --repo or set ANYXBOXX_REPO)")]
-    NoRepo,
-    #[error(transparent)]
-    Report(#[from] anyxboxx_report::ReportError),
-    #[error("{0}")]
-    Gpu(String),
-    #[error("{0}: {1}")]
-    Io(PathBuf, std::io::Error),
 }
 
 /// Every area, in the order of `print_translation`.

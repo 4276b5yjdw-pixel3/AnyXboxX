@@ -3,11 +3,12 @@
 //! `anyxboxx run --game-dir <folder> [...]` replaces the former `tools/lancer_victory.ps1`;
 //! `anyxboxx rapport <target>` replaces `scarlett.py --rapport`;
 //! `anyxboxx traduction <package> [image.svg]` replaces `scarlett.py --traduction`;
-//! `anyxboxx carte <package> <image.svg>` replaces `scarlett.py --carte`.
+//! `anyxboxx carte <package> <image.svg>` replaces `scarlett.py --carte`;
+//! `anyxboxx jour-j <package | exe>` replaces `tools/jour_j.py`.
 
 use std::process::ExitCode;
 
-use anyxboxx::{carte, rapport, run, traduction};
+use anyxboxx::{carte, jour_j, rapport, run, traduction};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -31,6 +32,8 @@ enum Command {
     Traduction(traduction::TraductionArgs),
     /// Progress map of the README, one cell per function (replaces scarlett.py --carte).
     Carte(carte::CarteArgs),
+    /// First-launch report of a console executable, written outside the repository (replaces tools/jour_j.py).
+    JourJ(jour_j::JourJArgs),
 }
 
 fn main() -> ExitCode {
@@ -48,6 +51,7 @@ fn main() -> ExitCode {
         },
         Command::Traduction(args) => report("traduction", traduction::traduction(&args)),
         Command::Carte(args) => report("carte", carte::carte(&args)),
+        Command::JourJ(args) => report("jour-j", jour_j::jour_j(&args)),
     }
 }
 
