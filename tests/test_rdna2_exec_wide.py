@@ -55,6 +55,29 @@ def test_double_operations_returning_nan(name, value):
     assert math.isnan(result64(unary(name, value), 4))
 
 
+def unary_bits(name, bits):
+    wave = rdna2_exec.run(program(*mov64(2, bits), vop1(name, 4, V + 2)))
+    return wave.v[4][0] | wave.v[5][0] << 32
+
+
+QNAN64, NEG_QNAN64, SNAN64 = 0x7FF8_0000_0000_1234, 0xFFF8_0000_0000_1234, 0x7FF0_0000_0000_0001
+NEG_ZERO64 = 1 << 63
+
+
+@pytest.mark.parametrize("name, bits, expected", [
+    ("v_fract_f64", QNAN64, QNAN64), ("v_fract_f64", NEG_QNAN64, NEG_QNAN64),       # NaN rendu tel quel
+    ("v_fract_f64", SNAN64, 0x7FF8_0000_0000_0001),                                 # rendu silencieux
+    ("v_fract_f64", dbits(math.inf), 0x7FF8_0000_0000_0000), ("v_fract_f64", dbits(-math.inf), 0x7FF8_0000_0000_0000),
+    ("v_fract_f64", dbits(-1e-20), 0x3FEF_FFFF_FFFF_FFFF),                           # jamais 1.0 (LLVM)
+    ("v_fract_f64", NEG_ZERO64, 0), ("v_fract_f64", dbits(2.5), dbits(0.5)),
+    ("v_trunc_f64", dbits(-0.5), NEG_ZERO64), ("v_ceil_f64", dbits(-0.5), NEG_ZERO64),
+    ("v_rndne_f64", dbits(-0.5), NEG_ZERO64), ("v_floor_f64", NEG_ZERO64, NEG_ZERO64),
+    ("v_floor_f64", dbits(0.5), 0), ("v_trunc_f64", SNAN64, 0x7FF8_0000_0000_0001),
+])
+def test_double_rounding_and_fract_edge_cases(name, bits, expected):
+    assert unary_bits(name, bits) == expected
+
+
 @pytest.mark.parametrize("name, value, expected", [
     ("v_cvt_i32_f64", 2.9, 2), ("v_cvt_i32_f64", -2.9, -2), ("v_cvt_i32_f64", 1e10, 0x7FFF_FFFF),
     ("v_cvt_i32_f64", -math.inf, 0x8000_0000), ("v_cvt_i32_f64", math.nan, 0),
@@ -163,9 +186,10 @@ def test_literal_on_a_64_bit_source_is_named():
         rdna2_exec.run(program(vop1("v_sqrt_f64", 4, LITERAL), 0x4000_0000))
 
 
-def test_recompiler_names_doubles_without_hlsl_equivalent():
-    with pytest.raises(rdna2_hlsl.Untranslatable, match="v_sqrt_f64"):
-        rdna2_hlsl.translate(program(*mov64(2, dbits(2.0)), vop1("v_sqrt_f64", 4, V + 2)))
+@pytest.mark.parametrize("name", ["v_sqrt_f64", "v_fract_f64"])
+def test_recompiler_names_doubles_without_hlsl_equivalent(name):
+    with pytest.raises(rdna2_hlsl.Untranslatable, match=name):
+        rdna2_hlsl.translate(program(*mov64(2, dbits(2.0)), vop1(name, 4, V + 2)))
 
 
 def wide_program():
