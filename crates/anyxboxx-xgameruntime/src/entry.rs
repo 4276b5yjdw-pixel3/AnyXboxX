@@ -82,7 +82,7 @@ pub unsafe fn query(
         && let Some(object) = served::find(&provider_id, &iid_id)
     {
         // SAFETY: `out` was checked non-null.
-        unsafe { *out = object as *const _ as *mut c_void };
+        unsafe { *out = object.cast_mut() };
         trace_query(&provider_id, &iid_id, "servie par AnyXboxX");
         return S_OK;
     }

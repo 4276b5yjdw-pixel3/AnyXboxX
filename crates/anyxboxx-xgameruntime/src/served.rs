@@ -1,8 +1,9 @@
 //! The interfaces AnyXboxX serves itself (`served_interfaces.inc`), and their IUnknown.
 //!
-//! One static object per C++ object name (`TaskQueueInterface`, `UserInterface`…): it answers
-//! every (provider, interface) pair the table gives it, and its method table is sized from the
-//! largest slot the GDK table gives those pairs.
+//! One object per C++ object name (`TaskQueueInterface`, `UserInterface`…): it answers every
+//! (provider, interface) pair the table gives it. The task queue is VIctory's object (`xasync`,
+//! the same provider and methods); the others are built here, with their method tables sized from
+//! the largest slot the GDK table gives their pairs, and their methods still to be written.
 
 use std::collections::BTreeMap;
 use std::ffi::c_void;
@@ -19,12 +20,17 @@ const IUNKNOWN: Guid = Guid {
     data4: [0xC0, 0, 0, 0, 0, 0, 0, 0x46],
 };
 
-/// One served pair and the object that answers it.
+/// One served pair and the object that answers it (a static object, never freed).
 pub struct Served {
     pub provider: Guid,
     pub iid: Guid,
-    pub object: &'static Object,
+    pub object: *const c_void,
 }
+
+// SAFETY: the objects are static and immutable once the table is built.
+unsafe impl Send for Served {}
+// SAFETY: as above.
+unsafe impl Sync for Served {}
 
 fn table() -> &'static [Served] {
     static TABLE: OnceLock<Vec<Served>> = OnceLock::new();
@@ -49,13 +55,7 @@ fn build_table() -> Vec<Served> {
     let mut table = Vec::new();
     for name in order {
         let pairs = &pairs_by_object[&name];
-        let slots = gdk
-            .iter()
-            .filter(|api| pairs.contains(&(api.provider, api.iid)))
-            .map(|api| api.slot + 1)
-            .max()
-            .unwrap_or(0);
-        let object = object::build(slots, query_interface as *const c_void, &[]);
+        let object = object_for(&name, pairs, &gdk);
         table.extend(pairs.iter().map(|&(provider, iid)| Served {
             provider,
             iid,
@@ -65,8 +65,23 @@ fn build_table() -> Vec<Served> {
     table
 }
 
+/// The static object of one C++ object name, serving `pairs`.
+fn object_for(name: &str, pairs: &[(Guid, Guid)], gdk: &[tables::GdkApi]) -> *const c_void {
+    if name == "TaskQueueInterface" {
+        return std::ptr::from_ref(&victory_hle::modules::xasync::OBJECT).cast();
+    }
+    let slots = gdk
+        .iter()
+        .filter(|api| pairs.contains(&(api.provider, api.iid)))
+        .map(|api| api.slot + 1)
+        .max()
+        .unwrap_or(0);
+    let object: &'static Object = object::build(slots, query_interface as *const c_void, &[]);
+    std::ptr::from_ref(object).cast()
+}
+
 /// The served object for `(provider, iid)`, if AnyXboxX serves that pair.
-pub fn find(provider: &Guid, iid: &Guid) -> Option<&'static Object> {
+pub fn find(provider: &Guid, iid: &Guid) -> Option<*const c_void> {
     table()
         .iter()
         .find(|served| served.provider == *provider && served.iid == *iid)
@@ -79,8 +94,8 @@ pub fn pairs() -> impl Iterator<Item = (Guid, Guid)> {
     table().iter().map(|served| (served.provider, served.iid))
 }
 
-/// IUnknown::QueryInterface of a served object: itself for IUnknown and for each interface the
-/// table gives that object, `E_NOINTERFACE` otherwise.
+/// IUnknown::QueryInterface of an object this module built: itself for IUnknown and for each
+/// interface the table gives it, `E_NOINTERFACE` otherwise.
 ///
 /// # Safety
 /// `this` is a served object (the title got it from [`find`]); `iid` and `out` are valid pointers
@@ -99,14 +114,13 @@ pub unsafe extern "system" fn query_interface(
     let Some(&iid) = (unsafe { iid.as_ref() }) else {
         return E_NOINTERFACE;
     };
-    let this = this as *const Object;
     let answers = iid == IUNKNOWN
         || table()
             .iter()
-            .any(|served| std::ptr::eq(served.object, this) && served.iid == iid);
+            .any(|served| served.object == this.cast_const() && served.iid == iid);
     if answers {
         // SAFETY: `out` was checked non-null above.
-        unsafe { *out = this.cast_mut().cast() };
+        unsafe { *out = this };
         S_OK
     } else {
         E_NOINTERFACE
@@ -132,24 +146,36 @@ mod tests {
     }
 
     #[test]
-    fn query_interface_answers_iunknown_and_the_served_iid_only() {
-        let task_queue = tables::served()
+    fn the_task_queue_is_the_object_of_victory() {
+        let entry = tables::served()
             .into_iter()
             .find(|e| e.object == "TaskQueueInterface")
             .unwrap();
-        let object = find(&task_queue.provider, &task_queue.iid).unwrap();
-        let this = object as *const Object as *mut c_void;
+        let object = find(&entry.provider, &entry.iid).unwrap();
+        assert_eq!(
+            object,
+            std::ptr::from_ref(&victory_hle::modules::xasync::OBJECT).cast()
+        );
+    }
+
+    #[test]
+    fn query_interface_answers_iunknown_and_the_served_iid_only() {
+        let user = tables::served()
+            .into_iter()
+            .find(|e| e.object == "UserInterface")
+            .unwrap();
+        let this = find(&user.provider, &user.iid).unwrap().cast_mut();
         let mut out: *mut c_void = std::ptr::null_mut();
         // SAFETY: `this` is a served object and the GUID and out pointers are valid.
         let hr = unsafe { query_interface(this, &IUNKNOWN, &mut out) };
         assert_eq!((hr, out), (S_OK, this));
         // SAFETY: as above.
-        let hr = unsafe { query_interface(this, &task_queue.iid, &mut out) };
+        let hr = unsafe { query_interface(this, &user.iid, &mut out) };
         assert_eq!((hr, out), (S_OK, this));
-        let other = Guid::parse("01ACD177-91F9-4763-A38E-CCBB55CE32E0").unwrap();
+        let gamertag = Guid::parse("CEF4FAC0-7676-4A94-A119-4C43F9EB5B74").unwrap();
         out = std::ptr::dangling_mut::<c_void>();
-        // SAFETY: as above.
-        let hr = unsafe { query_interface(this, &other, &mut out) };
+        // SAFETY: as above; the gamertag interface belongs to another object.
+        let hr = unsafe { query_interface(this, &gamertag, &mut out) };
         assert_eq!((hr, out), (E_NOINTERFACE, std::ptr::null_mut()));
     }
 }

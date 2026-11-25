@@ -13,6 +13,10 @@ name = "xgameruntime"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
+[dependencies]
+# VIctory's task queue (XTaskQueue, XAsync, XThread) is served from here, not ported.
+victory-hle.workspace = true
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61.2", features = [
     "Win32_Foundation",
