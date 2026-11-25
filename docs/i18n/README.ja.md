@@ -231,7 +231,7 @@ def XSystemGetDeviceType(c):
 
 ## コントリビュート
 
-`main` ブランチは保護されています。すべての貢献はレビューされるプルリクエストを経由し、テストに合格する必要があります。バグやエミュレートすべき関数は issue で報告してください。詳しいルールは [CONTRIBUTING.md](../../CONTRIBUTING.md)（フランス語）にあります。
+`main` ブランチは保護されています。すべての貢献はレビューされるプルリクエストを経由し、テストに合格する必要があります。バグやエミュレートすべき関数は issue で報告してください。詳しいルールは [CONTRIBUTING.md](../../CONTRIBUTING.md) にあります。
 
 議論、サポート、テスト報告：[Discord](https://discord.gg/TcX42vRyPU)。
 
