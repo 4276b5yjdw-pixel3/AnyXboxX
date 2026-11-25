@@ -1,17 +1,39 @@
 //! Running a program: one instruction at a time, until s_endpgm or the end of the binary (port of
 //! `step` and `run` of `emu/rdna2_exec.py`).
 //!
-//! Families are added in order: scalar (SOP1, SOP2, SOPC, SOPK, SOPP) and branches first. The other
+//! Families: scalar (SOP1, SOP2, SOPC, SOPK, SOPP) and branches, then VOP1 and VOP2 (`vector`). The other
 //! families refuse with `Untranslated`, which names the instruction, as the Python does for the
 //! instructions it has not written.
 
 use crate::decode::{Classified, DWORD, classify, mnemonic};
 use crate::error::Error;
 use crate::scalar;
+use crate::vector;
 use crate::wave::{MAX_STEPS, Wave};
 
 /// The families this module executes.
 const SCALAR_FAMILIES: [&str; 5] = ["SOP1", "SOP2", "SOPC", "SOPK", "SOPP"];
+const VECTOR_FAMILIES: [&str; 2] = ["VOP1", "VOP2"];
+/// The source codes that announce an SDWA or DPP word: refused here, executed by the Python model.
+const EXTENSION_CODES: [u32; 4] = [0xE9, 0xEA, 0xF9, 0xFA];
+
+/// Runs one VOP1 or VOP2 instruction: no-ops, the carry chain, or the vector table.
+fn execute_vector(
+    wave: &mut Wave,
+    name: &str,
+    family: &str,
+    word: u32,
+    literal: Option<u32>,
+) -> Result<bool, Error> {
+    if vector::is_no_operation(name) {
+        return Ok(true);
+    }
+    let fields = vector::fields(family, word);
+    if family == "VOP2" && vector::is_carry(name) {
+        return vector::execute_carry(wave, name, &fields, literal);
+    }
+    vector::execute(wave, name, &fields, literal)
+}
 
 /// Branches of the Python `BRANCHES` table: the condition, read from the wave.
 fn branch_taken(name: &str, wave: &Wave) -> Result<Option<bool>, Error> {
@@ -54,7 +76,8 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
             "instruction non traduite : {name} ({family}, opcode 0x{opcode:X})"
         ))
     };
-    if !SCALAR_FAMILIES.contains(&family) {
+    let vector_family = VECTOR_FAMILIES.contains(&family);
+    if !SCALAR_FAMILIES.contains(&family) && !vector_family {
         return Err(refused());
     }
     if wave.pc + size * DWORD > data.len() {
@@ -63,11 +86,21 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
             wave.pc
         )));
     }
-    wave.steps += 1;
     let word = word_at(data, wave.pc);
+    if vector_family && EXTENSION_CODES.contains(&(word & 0x1FF)) {
+        return Err(refused());
+    }
+    wave.steps += 1;
     let literal = (size > 1).then(|| word_at(data, wave.pc + DWORD));
     let fields = scalar::fields(word);
     let next_pc = wave.pc + size * DWORD;
+    if vector_family {
+        if !execute_vector(wave, &name, family, word, literal)? {
+            return Err(refused());
+        }
+        wave.pc = next_pc;
+        return Ok(true);
+    }
     if let Some(taken) = branch_taken(&name, wave)? {
         wave.pc = if taken {
             let offset = i64::from(fields.simm16 as u16 as i16) * DWORD as i64;
@@ -134,10 +167,10 @@ mod tests {
 
     #[test]
     fn an_unknown_instruction_is_named_as_untranslated() {
-        let data = program(&[0x3F << 25]); // a VOP1 the model does not execute yet
+        let data = program(&[0x3E << 25]); // a VOPC the model does not execute yet
         let mut wave = Wave::new(32).unwrap();
         match run(&data, &mut wave) {
-            Err(Error::Untranslated(message)) => assert!(message.contains("VOP1"), "{message}"),
+            Err(Error::Untranslated(message)) => assert!(message.contains("VOPC"), "{message}"),
             other => panic!("expected untranslated, got {other:?}"),
         }
     }

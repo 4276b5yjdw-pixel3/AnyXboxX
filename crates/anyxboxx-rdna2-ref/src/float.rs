@@ -1,14 +1,25 @@
 //! Single-precision values as the model holds them: bits, with arithmetic in double precision and
-//! the result rounded once to single precision (`emu/rdna2_exec_ops.py`, `float_bits`).
+//! the result rounded once to single precision (`emu/rdna2_exec_ops.py`: `float_bits`, `_fma`,
+//! `_float_op`, and the Python builtins the table uses: `min`, `max`, `math.frexp`).
+
+/// The bits of Python's `float('nan')` as `float_bits` returns them: a positive quiet NaN.
+pub const CANONICAL_NAN: u32 = 0x7FC0_0000;
+/// The largest single-precision value below 1.0 (`ALMOST_ONE_F32`).
+pub const ALMOST_ONE: u32 = 0x3F7F_FFFF;
 
 /// IEEE 754 single-precision bits of a double. Values beyond the format are ±infinity.
 pub fn float_bits(value: f64) -> u32 {
     (value as f32).to_bits()
 }
 
-/// The single-precision value of some bits.
+/// The single-precision value of some bits, as a double (exact).
 pub fn bits_float(bits: u32) -> f64 {
     f64::from(f32::from_bits(bits))
+}
+
+/// Bits of a result of `_float_op`: `None` is the Python `ValueError`, which gives the canonical NaN.
+pub fn result_bits(value: Option<f64>) -> u32 {
+    value.map_or(CANONICAL_NAN, float_bits)
 }
 
 /// The inline float constants of source operands 240 to 248 (the Python `INLINE_FLOATS`).
@@ -28,6 +39,75 @@ pub fn inline_constant(code: u32) -> Option<u64> {
     Some(u64::from(float_bits(value)))
 }
 
+/// Python's `min(a, b)`: `a` unless `b` is smaller (so a NaN in `a` wins).
+pub fn py_min(a: f64, b: f64) -> f64 {
+    if b < a { b } else { a }
+}
+
+/// Python's `max(a, b)`: `a` unless `b` is larger.
+pub fn py_max(a: f64, b: f64) -> f64 {
+    if b > a { b } else { a }
+}
+
+/// `math.frexp`: `x = m * 2^e` with 0.5 <= |m| < 1 (zero, infinities and NaN return `(x, 0)`).
+pub fn frexp(x: f64) -> (f64, i32) {
+    if x == 0.0 || !x.is_finite() {
+        return (x, 0);
+    }
+    let bits = x.to_bits();
+    let exponent = ((bits >> 52) & 0x7FF) as i32;
+    if exponent == 0 {
+        // Subnormal: scale into the normal range first.
+        let (mantissa, scaled) = frexp(x * 2f64.powi(64));
+        return (mantissa, scaled - 64);
+    }
+    let mantissa = f64::from_bits((bits & !(0x7FF << 52)) | (1022 << 52));
+    (mantissa, exponent - 1022)
+}
+
+/// `a × b + c` rounded once to single precision (`_fma` of the model): the sum is rounded to odd
+/// when it is inexact, then the single-precision rounding of `float_bits` is the exact one.
+/// NaN operands are returned as they are; an infinite or NaN sum without a NaN operand is NaN.
+pub fn fma(a: f64, b: f64, c: f64) -> f64 {
+    let product = a * b;
+    let total = product + c;
+    if total.is_nan() || total.is_infinite() {
+        return first_nan(a, b, c, total);
+    }
+    let back = total - product;
+    let error = (product - (total - back)) + (c - back);
+    let (mantissa, _) = frexp(total);
+    let parity = (mantissa * 2f64.powi(53)).rem_euclid(2.0);
+    if error != 0.0 && parity == 0.0 {
+        return if error > 0.0 {
+            total.next_up()
+        } else {
+            total.next_down()
+        };
+    }
+    total
+}
+
+/// The NaN of `a × b + c` when the sum is not finite: the first NaN operand, else the sum if it
+/// is infinite, else the canonical NaN.
+fn first_nan(a: f64, b: f64, c: f64, total: f64) -> f64 {
+    for operand in [a, b, c] {
+        if operand.is_nan() {
+            return operand;
+        }
+    }
+    if total.is_nan() { f64::NAN } else { total }
+}
+
+/// `legacy` fused multiply-add: `z` when either product factor is zero (DX9 rules), else `fma`.
+pub fn legacy_fma(x: f64, y: f64, z: f64) -> f64 {
+    if x == 0.0 || y == 0.0 {
+        z
+    } else {
+        fma(x, y, z)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,5 +125,30 @@ mod tests {
         assert_eq!(float_bits(1e300), 0x7F80_0000);
         assert_eq!(float_bits(-1e300), 0xFF80_0000);
         assert_eq!(bits_float(0x3F80_0000), 1.0);
+    }
+
+    #[test]
+    fn frexp_splits_normal_subnormal_and_special_values() {
+        assert_eq!(frexp(8.0), (0.5, 4));
+        assert_eq!(frexp(-0.75), (-0.75, 0));
+        assert_eq!(frexp(f64::from_bits(1)), (0.5, -1073));
+        assert_eq!(frexp(0.0), (0.0, 0));
+    }
+
+    #[test]
+    fn min_and_max_keep_the_first_operand_on_nan_like_python() {
+        assert!(py_min(f64::NAN, 1.0).is_nan());
+        assert_eq!(py_min(1.0, f64::NAN), 1.0);
+        assert_eq!(py_max(2.0, 3.0), 3.0);
+    }
+
+    #[test]
+    fn fma_rounds_the_exact_sum_once() {
+        // 1 + 2^-24 is a tie for single precision: the exact sum rounds to even (1.0).
+        assert_eq!(float_bits(fma(1.0, 1.0, 2f64.powi(-24))), 0x3F80_0000);
+        assert_eq!(
+            float_bits(fma(f64::INFINITY, 1.0, -f64::INFINITY)),
+            CANONICAL_NAN
+        );
     }
 }

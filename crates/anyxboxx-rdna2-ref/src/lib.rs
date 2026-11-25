@@ -13,6 +13,7 @@ pub mod exec;
 pub mod float;
 pub mod mnemonics;
 pub mod scalar;
+pub mod vector;
 pub mod wave;
 
 pub use error::Error;

@@ -18,8 +18,8 @@ from pathlib import Path
 import pytest
 
 from emu import rdna2_exec
-from emu.rdna2_exec import Wave
-from emu.rdna2_exec_ops import BRANCHES, NO_OPERATION, SCALAR
+from emu.rdna2_exec import VOP2_CARRY, Wave
+from emu.rdna2_exec_ops import BRANCHES, NO_OPERATION, SCALAR, VECTOR, VECTOR_NO_OPERATION
 from emu.rdna2_ops import MNEMONICS
 
 REPO = Path(__file__).resolve().parents[1]
@@ -143,24 +143,73 @@ def test_fixed_scalar_programs_match_the_python_model():
         assert_same(exe, lanes, scc, scalars, words)
 
 
+V0 = 256                        # v0 as a source operand (9 bits)
+ONE_F, TWO_F = 242, 244         # inline constants 1.0 and 2.0
+
+
+def vop1(name, vdst, src0):
+    return 0x3F << 25 | vdst << 17 | OPCODES["VOP1", name] << 9 | src0
+
+
+def vop2(name, vdst, src0, vsrc1):
+    return OPCODES["VOP2", name] << 25 | vdst << 17 | vsrc1 << 9 | src0
+
+
+def test_fixed_vector_programs_match_the_python_model():
+    exe = binary()
+    cases = [
+        (32, False, [], program(vop1("v_cvt_f32_u32", 1, V0), vop2("v_mul_f32", 1, TWO_F, 1),
+                                vop2("v_add_f32", 1, ONE_F, 1))),
+        (32, False, [], program(vop2("v_add_co_ci_u32", 2, V0, V0), vop2("v_sub_co_ci_u32", 3, V0, 2))),
+        (64, True, [], program(vop2("v_add_co_ci_u32", 2, V0, V0), vop1("v_readfirstlane_b32", 5, V0))),
+        (32, False, [], program(vop1("v_sqrt_f32", 1, 255), 0xC080_0000, vop2("v_min_f32", 2, 255, 1), 0x7FC0_0000)),
+        (32, False, [], [vop2("v_madmk_f32", 1, V0, 2), 0x4000_0000, sopp("s_endpgm")]),
+        (32, False, [], program(vop1("v_fract_f32", 1, 255), 0xFF80_0000, vop1("v_rcp_f32", 2, 128))),
+        (32, False, [], program(vop1("v_cvt_flr_i32_f32", 1, 255), 0x7FC0_0000)),
+    ]
+    for lanes, scc, scalars, words in cases:
+        assert_same(exe, lanes, scc, scalars, words)
+
+
 def test_a_literal_operand_is_the_second_word_in_both_models():
     exe = binary()
     words = program(sop1("s_mov_b32", 0, 255), 0xDEAD_BEEF, sop2("s_xor_b32", 1, 0, 255), 0x0F0F_0F0F)
     assert_same(exe, 32, False, [], words)
 
 
+# Float literals the model treats specially: NaN, infinities, signed zeros, subnormals, the largest finite
+# value, one. Half the literals come from this list, the rest are random 32-bit patterns.
+SPECIAL_LITERALS = (
+    0x7FC0_0000, 0xFFC0_0000, 0x7F80_0000, 0xFF80_0000, 0x0000_0000, 0x8000_0000, 0x0000_0001,
+    0x8000_0001, 0x7F7F_FFFF, 0x3F80_0000, 0xC080_0000, 0x3F00_0000, 0x4000_0000,
+)
+VECTOR_FAMILIES = ("VOP1", "VOP2")
+
+
+def literal_bits(rng):
+    return rng.choice(SPECIAL_LITERALS) if rng.random() < 0.5 else rng.getrandbits(32)
+# Literal-carrying VOP2 opcodes (v_madmk, v_madak, v_fmamk, v_fmaak, f32 and f16): the literal is always there.
+VOP2_WITH_LITERAL = {0x20, 0x21, 0x2C, 0x2D, 0x37, 0x38}
+
+
 def random_program(rng):
-    """Instructions scalaires aléatoires, valides pour les deux modèles, branches vers l'avant seulement."""
-    names = {family: [] for family in SCALAR_FAMILIES}
+    """Instructions scalaires et vectorielles aléatoires, valides pour les deux modèles, branches vers
+    l'avant seulement."""
+    names = {family: [] for family in SCALAR_FAMILIES + VECTOR_FAMILIES}
     for (family, opcode), name in MNEMONICS.items():
-        if family in names and name != "s_endpgm" and (name in SCALAR or name in BRANCHES or name in NO_OPERATION):
+        if family in SCALAR_FAMILIES and name != "s_endpgm" and (
+            name in SCALAR or name in BRANCHES or name in NO_OPERATION
+        ):
+            names[family].append((opcode, name))
+        if family in VECTOR_FAMILIES and (name in VECTOR or name in VECTOR_NO_OPERATION or name in VOP2_CARRY):
             names[family].append((opcode, name))
     words = []
     for _ in range(rng.randrange(1, 11)):
-        family = rng.choice(SCALAR_FAMILIES)
+        family = rng.choice((*SCALAR_FAMILIES, *VECTOR_FAMILIES))
         opcode, name = rng.choice(names[family])
         ssrc0, ssrc1 = rng.choice(OPERANDS), rng.choice(OPERANDS)
-        sdst = rng.randrange(128)
+        # 64-bit results need the register after sdst: stay below s126 (s127 is the last).
+        sdst = rng.randrange(126)
         if family == "SOP2":
             word = sop2_word(opcode, sdst, ssrc0, ssrc1)
         elif family == "SOP1":
@@ -169,14 +218,23 @@ def random_program(rng):
             word = 0x17E << 23 | opcode << 16 | ssrc1 << 8 | ssrc0
         elif family == "SOPK":
             word = 0b1011 << 28 | opcode << 23 | sdst << 16 | rng.getrandbits(16)
-        else:
+        elif family == "SOPP":
             simm16 = rng.randrange(1, 4) if name in BRANCHES else rng.randrange(0, 3)
             word = 0x17F << 23 | opcode << 16 | simm16
+        elif family == "VOP1":
+            # v_readfirstlane_b32 writes an SGPR through the vdst field: keep it below s128.
+            vdst = rng.randrange(128) if name == "v_readfirstlane_b32" else rng.randrange(256)
+            word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
+        else:
+            vdst, vsrc1 = rng.randrange(256), rng.randrange(256)
+            word = opcode << 25 | vdst << 17 | vsrc1 << 9 | ssrc0
         words.append(word)
-        # Only the operands the family reads count: SOP1 has one source, the others two.
-        sources = (ssrc0,) if family == "SOP1" else (ssrc0, ssrc1) if family in ("SOP2", "SOPC") else ()
-        if LITERAL in sources:
-            words.append(rng.getrandbits(32))
+        # The operands each family reads from the source fields (vsrc1 of VOP2 is a VGPR, never a literal).
+        sources = {"SOP1": (ssrc0,), "VOP1": (ssrc0,), "VOP2": (ssrc0,), "SOP2": (ssrc0, ssrc1), "SOPC": (ssrc0, ssrc1)}
+        needs_literal = LITERAL in sources.get(family, ())
+        needs_literal = needs_literal or (family == "VOP2" and opcode in VOP2_WITH_LITERAL)
+        if needs_literal:
+            words.append(literal_bits(rng))
     return words
 
 
