@@ -37,6 +37,10 @@ pub struct Wave {
     pub lds: Vec<u8>,
     /// The EXP exports: target, then lane, then the four values (`wave.exports` in the Python).
     pub exports: BTreeMap<u32, BTreeMap<usize, [u32; 4]>>,
+    /// The primitive VINTRP reads the parameters of (`wave.primitive` in the Python).
+    pub primitive: u64,
+    /// Per-lane primitives, when given (`wave.primitives`); a lane it lacks takes `primitive`.
+    pub primitives: Option<BTreeMap<usize, u64>>,
 }
 
 impl Wave {
@@ -58,6 +62,8 @@ impl Wave {
             memory: Memory::default(),
             lds: vec![0; crate::ds::LDS_SIZE],
             exports: BTreeMap::new(),
+            primitive: 0,
+            primitives: None,
         };
         let all = if lanes == 64 {
             u64::MAX

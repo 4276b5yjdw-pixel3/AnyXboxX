@@ -95,9 +95,10 @@ def render(wave):
     return "\n".join(lines) + "\n"
 
 
-def run_python(lanes, scc, scalars, words, memory=()):
+def run_python(lanes, scc, scalars, words, memory=(), primitive=0, primitives=None):
     wave = Wave(lanes=lanes)
     wave.exports = {}                   # EXP : comme run_vertex et run_pixel_wave (emu/rdna2_exec_graphics.py)
+    wave.primitive, wave.primitives = primitive, primitives       # VINTRP : primitive commune, ou par ligne
     wave.scc = scc
     for index, value in scalars:
         wave.s[index] = value
@@ -113,8 +114,10 @@ def run_python(lanes, scc, scalars, words, memory=()):
     return render(wave)
 
 
-def run_rust(exe, lanes, scc, scalars, words, memory=()):
-    lines = [f"lanes {lanes}", f"scc {int(scc)}"]
+def run_rust(exe, lanes, scc, scalars, words, memory=(), primitive=0, primitives=None):
+    lines = [f"lanes {lanes}", f"scc {int(scc)}", f"primitive {primitive}"]
+    if primitives is not None:
+        lines.append("primitives " + " ".join(f"{lane}:{value}" for lane, value in primitives.items()))
     lines += [f"s {index} {value:X}" for index, value in scalars]
     lines += [f"mem {address:X} " + " ".join(f"{value:08X}" for value in values) for address, values in memory]
     lines.append("program " + " ".join(f"{word:08X}" for word in words))
@@ -125,10 +128,10 @@ def run_rust(exe, lanes, scc, scalars, words, memory=()):
     return done.stdout
 
 
-def assert_same(exe, lanes, scc, scalars, words, memory=()):
-    rust = run_rust(exe, lanes, scc, scalars, words, memory)
-    python = run_python(lanes, scc, scalars, words, memory)
-    assert rust == python, f"lanes={lanes} scc={scc} scalars={scalars} memory={memory}\nprogram={[hex(w) for w in words]}\n" \
+def assert_same(exe, lanes, scc, scalars, words, memory=(), **graphics):
+    rust = run_rust(exe, lanes, scc, scalars, words, memory, **graphics)
+    python = run_python(lanes, scc, scalars, words, memory, **graphics)
+    assert rust == python, f"lanes={lanes} scc={scc} scalars={scalars} memory={memory} graphics={graphics}\nprogram={[hex(w) for w in words]}\n" \
                            f"rust:\n{rust}\npython:\n{python}"
 
 
@@ -1353,3 +1356,94 @@ def test_export_programs_match_the_python_model():
         outcomes[run_python(lanes, False, scalars, program_words).split()[0]] += 1
         assert_same(exe, lanes, False, scalars, program_words)
     assert outcomes["steps"] >= EXPORT_PROGRAMS // 2, outcomes
+
+
+PARAMETERS = 0x54000                            # emu/rdna2_graphics.py : P0, P10, P20 par canal d'attribut
+PRIMITIVE_WORDS = 8 * 4 * 3                     # param0-7, 4 canaux, 3 mots
+INTERP_PRIMITIVES = 4
+INTERP_PROGRAMS = 150
+INTERP_SPECIALS = (0x7FC0_0000, 0xFFC0_0001, 0x7F80_0001, 0xFF80_0002, 0x7F80_0000, 0xFF80_0000,
+                   0x8000_0000, 0x0000_0001, 0x7F7F_FFFF, 0x3F80_0000, 0xBF00_0000)
+
+
+def vintrp(op, vdst, vsrc, attr, chan):
+    """Instruction VINTRP (un mot) : op 0 p1, 1 p2, 2 mov, 3 sans nom."""
+    return 0x32 << 26 | vdst << 18 | op << 16 | attr << 10 | chan << 8 | vsrc
+
+
+def parameter_memory(rng, specials=0.1):
+    """Zone PARAMETERS de INTERP_PRIMITIVES primitives : flottants ordinaires, parfois spéciaux."""
+    values = []
+    for _ in range(INTERP_PRIMITIVES * PRIMITIVE_WORDS):
+        if rng.random() < specials:
+            values.append(rng.choice(INTERP_SPECIALS))
+        else:
+            values.append(f32_bits(rng.uniform(-8.0, 8.0)))
+    return [(PARAMETERS, values)]
+
+
+def barycentrics():
+    """v1 = i (ligne / 64), v2 = j (1 - i), comme les entrées v0/v1 d'un PS, dans d'autres registres."""
+    return [vop1("v_cvt_f32_u32", 1, V0),
+            vop2("v_mul_f32", 1, LITERAL, 1), 0x3C80_0000,
+            vop2("v_sub_f32", 2, ONE_F, 1)]
+
+
+def interp_cases():
+    """(lanes, scalaires, programme, primitive, primitives) : p1 puis p2 puis export, mov et ses sources,
+    primitives par ligne, EXEC partiel ou vide, attribut 8, opcode 3 et formes VOP3 refusés."""
+    full = [vintrp(0, 3, 1, 2, 1), vintrp(1, 3, 2, 2, 1), vintrp(0, 4, 1, 7, 3), vintrp(1, 4, 2, 7, 3),
+            vintrp(2, 5, 0, 0, 0), vintrp(2, 6, 1, 5, 2), vintrp(2, 7, 2, 6, 3), vintrp(2, 8, 9, 1, 1),
+            *exp(32, 0xF, (3, 4, 5, 6))]
+    cases = []
+    for lanes in (32, 64):
+        for scalars in ([], [(126, 0x0F0F_00F1), (127, 0x8000_0001)], [(126, 0), (127, 0)]):
+            cases += [
+                (lanes, scalars, program(*barycentrics(), *full), 0, None),
+                (lanes, scalars, program(*barycentrics(), *full), 3, {0: 1, 5: 2, 33: 0, 63: 3}),
+                (lanes, scalars, program(*barycentrics(), vintrp(0, 2, 2, 4, 0), vintrp(1, 2, 2, 4, 0)), 1, {}),
+                (lanes, scalars, program(*barycentrics(), vintrp(0, 3, 1, 8, 0)), 0, None),
+                (lanes, scalars, program(*barycentrics(), vintrp(3, 3, 1, 0, 0)), 0, None),
+                (lanes, scalars, program(*vop3("v_interp_p1_f32", 3, (V0 + 1, 0, 0))), 0, None),
+                (lanes, scalars, program(*vop3("v_interp_mov_f32", 3, (0, 0, 0))), 0, None),
+                (lanes, scalars, program(*vop3("v_interp_p2_f16", 3, (V0 + 1, 0, V0 + 2))), 0, None),
+            ]
+    return cases
+
+
+def interp_instruction(rng):
+    roll = rng.random()
+    if roll < 0.02:
+        return [vintrp(3, rng.randrange(3, 10), rng.randrange(10), rng.randrange(8), rng.randrange(4))]
+    attr = 8 + rng.randrange(56) if roll < 0.04 else rng.randrange(8)
+    op = rng.randrange(3)
+    vsrc = rng.randrange(4) if op == 2 and rng.random() < 0.8 else rng.randrange(10)
+    word = [vintrp(op, rng.randrange(3, 10), vsrc, attr, rng.randrange(4))]
+    if rng.random() < 0.15:
+        word += exp(32 + rng.randrange(8), rng.getrandbits(4), tuple(rng.randrange(10) for _ in range(4)))
+    return word
+
+
+def test_interpolation_programs_match_the_python_model():
+    """VINTRP : p1, p2 (produit puis somme arrondis séparément), mov, primitive commune ou par ligne,
+    valeurs spéciales (NaN, infinis, sous-normaux), et les refus partagés ; plus des programmes au hasard."""
+    exe = binary()
+    rng = random.Random(SEED)
+    for lanes, scalars, words, primitive, primitives in interp_cases():
+        assert_same(exe, lanes, False, scalars, words, parameter_memory(rng), primitive=primitive,
+                    primitives=primitives)
+    outcomes = {"steps": 0, "error": 0}
+    for _ in range(INTERP_PROGRAMS):
+        lanes = rng.choice((32, 64))
+        scalars = [(126, rng.getrandbits(32)), (127, rng.getrandbits(32))] if rng.random() < 0.4 else []
+        primitive = rng.randrange(INTERP_PRIMITIVES)
+        primitives = None
+        if rng.random() < 0.5:
+            primitives = {lane: rng.randrange(INTERP_PRIMITIVES) for lane in rng.sample(range(lanes), 12)}
+        body = [word for _ in range(rng.randrange(1, 8)) for word in interp_instruction(rng)]
+        program_words = program(*barycentrics(), *body)
+        memory = parameter_memory(rng, specials=rng.choice((0.0, 0.1, 0.5)))
+        graphics = {"primitive": primitive, "primitives": primitives}
+        outcomes[run_python(lanes, False, scalars, program_words, memory, **graphics).split()[0]] += 1
+        assert_same(exe, lanes, False, scalars, program_words, memory, **graphics)
+    assert outcomes["steps"] >= INTERP_PROGRAMS // 2, outcomes
