@@ -21,6 +21,14 @@ const BINK_WORD: u64 = 0x05e5_0000;
 const AMD_WORD: u64 = 0xa800_4000;
 const GRANULARITY: usize = 64 << 10;
 
+/// The tests share one address space: a region freed by one test can be given to another running at
+/// the same time, which made `graphics_blocks_get_their_own_region_flagged_by_the_query` fail now and
+/// then (its freed block still answered MEM_COMMIT). Each test that allocates or queries takes turns.
+fn serial() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 fn era_word(memory_type: u64, alignment_log2: u64, page_size: u64, reserved: u64) -> u64 {
     page_size << 14 | alignment_log2 << 24 | memory_type << 29 | reserved << 33
 }
@@ -61,6 +69,7 @@ fn zeroed(block: *const c_void, len: usize) -> bool {
 
 #[test]
 fn decode_export_splits_with_the_era_layout() {
+    let _serial = serial();
     let mut fields = EraFields::default();
     // SAFETY: a writable structure.
     unsafe { AnyXboxX_DecodeAllocAttributes(AMD_WORD, &mut fields) };
@@ -79,6 +88,7 @@ fn decode_export_splits_with_the_era_layout() {
 
 #[test]
 fn heap_blocks_honour_the_alignment_and_are_zeroed() {
+    let _serial = serial();
     for log2 in [0, 5, 12, 16, 20] {
         let word = era_word(0, log2, 0, 0) | 0xe5 << 16;
         let block = XMemAllocDefault(257, word);
@@ -96,6 +106,7 @@ fn heap_blocks_honour_the_alignment_and_are_zeroed() {
 
 #[test]
 fn graphics_blocks_get_their_own_region_flagged_by_the_query() {
+    let _serial = serial();
     let graphics = XMemAllocDefault(4096, AMD_WORD);
     let heap = XMemAllocDefault(257, BINK_WORD);
     assert_eq!(graphics as usize % GRANULARITY, 0);
@@ -119,6 +130,7 @@ fn graphics_blocks_get_their_own_region_flagged_by_the_query() {
 
 #[test]
 fn physical_type_is_served_as_committed_pages() {
+    let _serial = serial();
     let word = 0xf081_4000; // type 7, 64 KiB pages, 64 KiB alignment
     let block = XMemAllocDefault(0x6_0000, word);
     assert!(!block.is_null() && (block as usize).is_multiple_of(GRANULARITY));
@@ -129,6 +141,7 @@ fn physical_type_is_served_as_committed_pages() {
 
 #[test]
 fn unservable_attributes_return_null_with_an_error() {
+    let _serial = serial();
     for (word, error) in [
         (era_word(7, 17, 0, 0), ERROR_NOT_SUPPORTED),
         (era_word(12, 0, 0, 0), ERROR_INVALID_PARAMETER),
@@ -145,6 +158,7 @@ fn unservable_attributes_return_null_with_an_error() {
 
 #[test]
 fn query_fails_cleanly() {
+    let _serial = serial();
     let mut buffer = [0xd7u8; 64];
     // SAFETY: a 64-byte buffer; the address is in kernel space.
     let ok = unsafe {
@@ -181,6 +195,7 @@ unsafe extern "system" fn hook_free(address: *mut c_void, _attributes: u64) {
 
 #[test]
 fn each_block_goes_back_to_the_allocator_that_made_it() {
+    let _serial = serial();
     let before = XMemAlloc(64, 0);
     XMemSetAllocationHooks(Some(hook_alloc), Some(hook_free));
     let (mut alloc, mut release) = (None, None);
@@ -206,6 +221,7 @@ fn release(address: *mut c_void) {
 
 #[test]
 fn virtual_alloc_serves_the_measured_shapes() {
+    let _serial = serial();
     for (kind, attributes, protect, state) in [
         (0x2040_1000, 0x283, 0x42404, MEM_COMMIT),
         (0x2040_2000, 0x21, 4, MEM_RESERVE),
@@ -227,6 +243,7 @@ fn virtual_alloc_serves_the_measured_shapes() {
 
 #[test]
 fn virtual_alloc_refuses_undefined_flags() {
+    let _serial = serial();
     for (kind, attributes, protect) in [
         (0x4_2000, 7, 0),       // no protection
         (0x2040_0000, 0x21, 4), // neither reserve nor commit
@@ -241,6 +258,7 @@ fn virtual_alloc_refuses_undefined_flags() {
 
 #[test]
 fn physical_pages_are_issued_mapped_and_freed() {
+    let _serial = serial();
     let mut count = 2usize;
     let mut frames = [0usize; 2];
     // SAFETY: a count and room for two numbers.
@@ -266,6 +284,7 @@ fn physical_pages_are_issued_mapped_and_freed() {
 
 #[test]
 fn physical_requests_out_of_shape_are_refused() {
+    let _serial = serial();
     let mut count = 0usize;
     let mut frames = [0usize; 1];
     clear_error();
@@ -280,6 +299,7 @@ fn physical_requests_out_of_shape_are_refused() {
 
 #[test]
 fn unserved_calls_say_so() {
+    let _serial = serial();
     assert_eq!(XMemIsToolsMemAvailable(), 0);
     clear_error();
     assert_eq!(XMemTransferMemory(), 0);
