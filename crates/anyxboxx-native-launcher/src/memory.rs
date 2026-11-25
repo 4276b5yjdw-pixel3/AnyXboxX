@@ -1,6 +1,7 @@
 //! Windows allocation and protection of a mapped native PE image.
 
 use crate::image::{Image, ImageError};
+use std::cell::Cell;
 use std::ffi::c_void;
 use std::fmt;
 use std::ptr::{self, NonNull};
@@ -34,6 +35,8 @@ pub enum MemoryError {
     Allocation(std::io::Error),
     Relocation(ImageError),
     Protection(std::io::Error),
+    AlreadyProtected,
+    WrongImage,
 }
 
 impl fmt::Display for MemoryError {
@@ -42,6 +45,8 @@ impl fmt::Display for MemoryError {
             Self::Allocation(error) => write!(f, "mémoire de l'image indisponible: {error}"),
             Self::Relocation(error) => error.fmt(f),
             Self::Protection(error) => write!(f, "protection de l'image impossible: {error}"),
+            Self::AlreadyProtected => f.write_str("image déjà protégée"),
+            Self::WrongImage => f.write_str("taille d'image incohérente"),
         }
     }
 }
@@ -51,6 +56,7 @@ impl std::error::Error for MemoryError {}
 pub struct Allocation {
     base: NonNull<u8>,
     size: usize,
+    protected: Cell<bool>,
 }
 
 impl Allocation {
@@ -73,7 +79,11 @@ impl Allocation {
         };
         let base = NonNull::new(base.cast::<u8>())
             .ok_or_else(|| MemoryError::Allocation(std::io::Error::last_os_error()))?;
-        let allocation = Self { base, size };
+        let allocation = Self {
+            base,
+            size,
+            protected: Cell::new(false),
+        };
         image
             .relocate(base.as_ptr() as u64)
             .map_err(MemoryError::Relocation)?;
@@ -86,8 +96,23 @@ impl Allocation {
         self.base.as_ptr()
     }
 
+    /// Copy the image after imports are bound, before applying page protections.
+    pub fn sync(&self, image: &Image) -> Result<(), MemoryError> {
+        if self.protected.get() {
+            return Err(MemoryError::AlreadyProtected);
+        }
+        if image.bytes.len() != self.size {
+            return Err(MemoryError::WrongImage);
+        }
+        // SAFETY: the unprotected allocation is writable and matches the image length.
+        unsafe { ptr::copy_nonoverlapping(image.bytes.as_ptr(), self.base.as_ptr(), self.size) };
+        Ok(())
+    }
+
     /// Apply the same section protection choices as the native launcher.
     pub fn protect(&self, image: &Image) -> Result<(), MemoryError> {
+        // A partial failure can leave some pages read-only, so further sync must be refused.
+        self.protected.set(true);
         self.protect_range(0, image.headers_size as usize, PAGE_READONLY)?;
         for section in &image.sections {
             let length = section.virtual_size.max(section.raw_size) as usize;
