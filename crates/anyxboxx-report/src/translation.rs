@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use crate::bench::BenchRow;
+use crate::bench::{BenchRow, resolved};
 use crate::gdk::GdkRuntime;
 use crate::gpu::GpuCoverage;
 use crate::modules::{exported_names, imported_names, package_modules};
@@ -125,11 +125,7 @@ pub fn gdk_runtime_area(gdk: &GdkRuntime) -> Area {
 
 /// System functions imported by the package and resolved (emulated or provided by a DLL).
 pub fn functions_area(rows: &[BenchRow]) -> Area {
-    let total = rows.iter().map(|r| r.imports).sum();
-    let done = rows
-        .iter()
-        .map(|r| py_round(r.imports as f64 * r.coverage / 100.0) as usize)
-        .sum();
+    let (done, total) = resolved(rows);
     Area::new(
         "System functions imported by the package",
         done,

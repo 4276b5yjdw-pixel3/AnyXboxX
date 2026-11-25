@@ -4,11 +4,12 @@
 //! `anyxboxx rapport <target>` replaces `scarlett.py --rapport`;
 //! `anyxboxx traduction <package> [image.svg]` replaces `scarlett.py --traduction`;
 //! `anyxboxx carte <package> <image.svg>` replaces `scarlett.py --carte`;
-//! `anyxboxx jour-j <package | exe>` replaces `tools/jour_j.py`.
+//! `anyxboxx jour-j <package | exe>` replaces `tools/jour_j.py`;
+//! `anyxboxx banc <folder>` replaces the static columns of `scarlett.py --banc`.
 
 use std::process::ExitCode;
 
-use anyxboxx::{carte, jour_j, rapport, run, traduction};
+use anyxboxx::{banc, carte, jour_j, rapport, run, traduction};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -34,6 +35,8 @@ enum Command {
     Carte(carte::CarteArgs),
     /// First-launch report of a console executable, written outside the repository (replaces tools/jour_j.py).
     JourJ(jour_j::JourJArgs),
+    /// Test bench: imports resolved per module; load and init are not run (replaces scarlett.py --banc).
+    Banc(banc::BancArgs),
 }
 
 fn main() -> ExitCode {
@@ -52,6 +55,7 @@ fn main() -> ExitCode {
         Command::Traduction(args) => report("traduction", traduction::traduction(&args)),
         Command::Carte(args) => report("carte", carte::carte(&args)),
         Command::JourJ(args) => report("jour-j", jour_j::jour_j(&args)),
+        Command::Banc(args) => report("banc", banc::banc(&args).map(|table| println!("{table}"))),
     }
 }
 
