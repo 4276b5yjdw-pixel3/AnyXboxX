@@ -148,6 +148,7 @@ py -3.12 -m venv .venv
 原生模式需要 C++ 运行时。可使用 Visual Studio 2022 或 2026（C++ 工作负载）和 CMake 编译：
 
 ```powershell
+cargo build --release
 cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
 ```

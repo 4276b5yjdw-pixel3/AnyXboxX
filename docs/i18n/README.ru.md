@@ -148,6 +148,7 @@ py -3.12 -m venv .venv
 Нативному режиму нужен C++ рантайм. Он собирается с помощью Visual Studio 2022 или 2026 (рабочая нагрузка C++) и CMake:
 
 ```powershell
+cargo build --release
 cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
 ```

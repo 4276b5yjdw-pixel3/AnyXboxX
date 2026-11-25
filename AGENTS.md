@@ -35,9 +35,9 @@ git submodule update --init
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
 .\.venv\Scripts\python.exe tools\build_tombox.py   # DLL console de TomBox dans runtime\build\tombox (lues par défaut)
+cargo build --release; cargo test --release        # root workspace (crates/): before cmake, which copies the Rust runtime DLLs
 cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
-cargo build --release; cargo test --release        # root workspace (crates/), needed by the parity tests
 .\.venv\Scripts\python.exe -m pytest
 ```
 

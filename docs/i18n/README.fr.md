@@ -150,6 +150,7 @@ py -3.12 -m venv .venv
 Le mode natif a besoin du runtime C++. Il se compile avec Visual Studio 2022 ou 2026 (charge C++) et CMake :
 
 ```powershell
+cargo build --release
 cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
 ```

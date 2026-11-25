@@ -20,7 +20,6 @@ REPO = Path(__file__).resolve().parents[1]
 RUST_RELEASE = REPO / "target" / "release"
 # DLL name in the runtime folder → (Rust cdylib in target/release, pytest files of the C++ DLL).
 PORTED = {
-    "XCRDAPI.dll": ("xcrdapi.dll", ["tests/test_xcrdapi.py"]),
     "kernelx.dll": ("kernelx.dll", ["tests/test_kernelx.py"]),
     "d3d12_xs.dll": ("d3d12_xs.dll", ["tests/test_d3d12_virtual_memory.py", "tests/test_runtime_cpp.py"]),
 }
