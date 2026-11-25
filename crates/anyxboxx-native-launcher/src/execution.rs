@@ -42,7 +42,7 @@ pub unsafe fn launch(
     runtime: [Module; 6],
     measuring: bool,
 ) -> Result<i32, String> {
-    let mut image = Image::parse(bytes).map_err(|error| error.to_string())?;
+    let mut image = Image::parse(bytes).map_err(|error| format!("{error} (erreur 0)"))?;
     let allocation = Allocation::map(&mut image).map_err(|error| error.to_string())?;
     let wide_path: Vec<u16> = path.as_os_str().encode_wide().collect();
     let context = hooks::HookContext {
@@ -65,7 +65,7 @@ pub unsafe fn launch(
     let allocation = Box::leak(Box::new(allocation));
     // SAFETY: caller accepts execution of TLS callbacks and the leaked mapping stays alive.
     unsafe { registration::register(&image, allocation, runtime[4]) }
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| format!("{error} (erreur 0)"))?;
     // SAFETY: caller ensures no other thread reads the process command-line buffers.
     unsafe { command_line::adopt(path) };
     // SAFETY: caller accepts execution of the trusted, initialized image.
