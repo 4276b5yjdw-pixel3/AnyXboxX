@@ -20,6 +20,7 @@ import pytest
 from emu import rdna2_exec
 from emu.rdna2_exec import VOP2_CARRY, Wave
 from emu.rdna2_exec_cmp64 import COMPARE64
+from emu.rdna2_exec_dot import OPERATIONS as DOT_OPERATIONS
 from emu.rdna2_exec_movrel import SCALAR as MOVREL_SCALAR, VECTOR as MOVREL_VECTOR
 from emu.rdna2_exec_wide import OPERATIONS as WIDE_OPERATIONS
 from emu.rdna2_exec_vop3 import VECTOR3
@@ -217,7 +218,7 @@ def random_program(rng):
 
     Les branches sautent vers le début d'une instruction plus loin dans le programme (ou vers s_endpgm) :
     sans cela un saut tombe dans un mot de données, qui se décode en instruction mémoire (hors du modèle)."""
-    names = {family: [] for family in (*SCALAR_FAMILIES, *VECTOR_FAMILIES, "VOPC", "VOP3")}
+    names = {family: [] for family in (*SCALAR_FAMILIES, *VECTOR_FAMILIES, "VOPC", "VOP3", "VOP3P")}
     for (family, opcode), name in MNEMONICS.items():
         if family in SCALAR_FAMILIES and name != "s_endpgm" and (
             name in MOVREL_SCALAR or
@@ -237,6 +238,8 @@ def random_program(rng):
         ):
             names[family].append((opcode, name))
         if family == "VOP1" and (name in WIDE_GENERIC or name in MOVREL_VECTOR):
+            names[family].append((opcode, name))
+        if family == "VOP3P" and name in DOT_OPERATIONS:
             names[family].append((opcode, name))
         if family == "VOPC" and (name in VECTOR_COMPARE or name in COMPARE64):
             names[family].append((opcode, name))
@@ -263,7 +266,7 @@ def random_program(rng):
 
 def instruction(rng, names):
     """One random instruction: (its words, the branch template when it is a branch)."""
-    family = rng.choice((*SCALAR_FAMILIES, *VECTOR_FAMILIES, "VOPC", "VOP3"))
+    family = rng.choice((*SCALAR_FAMILIES, *VECTOR_FAMILIES, "VOPC", "VOP3", "VOP3P"))
     opcode, name = rng.choice(names[family])
     ssrc0, ssrc1 = rng.choice(OPERANDS), rng.choice(OPERANDS)
     # 64-bit results need the register after sdst: stay below s126 (s127 is the last).
@@ -290,6 +293,8 @@ def instruction(rng, names):
         word = 0x3F << 25 | vdst << 17 | opcode << 9 | ssrc0
     elif family == "VOP3":
         return vop3_words(rng, opcode, name)
+    elif family == "VOP3P":
+        return vop3p_words(rng, opcode)
     elif family == "VOPC":
         # A VGPR pair as source 0 (64-bit compares read v[n], v[n+1]): n + 1 stays below v256.
         ssrc0 = rng.choice(OPERANDS + list(range(256, 511)))
@@ -354,6 +359,21 @@ def vop3_words(rng, opcode, name):
     low = 0x35 << 26 | opcode << 16 | vdst | field_8_14 << 8 | rng.randrange(16) << 11 | clamp << 15
     high = sources[0] | sources[1] << 9 | sources[2] << 18 | (0 if plain else rng.randrange(4)) << 27 | (
         0 if plain else rng.randrange(8)) << 29
+    words = [low, high]
+    if LITERAL in sources:
+        words.append(literal_bits(rng))
+    return words, None
+
+
+def vop3p_words(rng, opcode):
+    """A VOP3P dot product: the default form most of the time (op_sel_hi all ones, no modifiers)."""
+    sources = [rng.choice(OPERANDS + list(range(256, 512))) for _ in range(3)]
+    plain = rng.random() < 0.8
+    low = (0x33 << 26 | opcode << 16 | rng.randrange(256) | (1 << 14)
+           | (0 if plain else rng.randrange(8) << 8 | rng.randrange(8) << 11 | rng.randrange(2) << 15))
+    high = (sources[0] | sources[1] << 9 | sources[2] << 18
+            | ((1 << 27 | 1 << 28) if plain else rng.randrange(4) << 27)
+            | (0 if plain else rng.randrange(8) << 29))
     words = [low, high]
     if LITERAL in sources:
         words.append(literal_bits(rng))

@@ -12,6 +12,7 @@ use crate::ext;
 use crate::scalar;
 use crate::vector;
 use crate::vop3;
+use crate::vop3p;
 use crate::wave::{MAX_STEPS, Wave};
 
 /// The families this module executes.
@@ -116,7 +117,13 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let vector_family = VECTOR_FAMILIES.contains(&family);
     let compare_family = family == "VOPC";
     let vop3_family = family == "VOP3";
-    if !SCALAR_FAMILIES.contains(&family) && !vector_family && !compare_family && !vop3_family {
+    let vop3p_family = family == "VOP3P";
+    if !SCALAR_FAMILIES.contains(&family)
+        && !vector_family
+        && !compare_family
+        && !vop3_family
+        && !vop3p_family
+    {
         return Err(refused());
     }
     if wave.pc + size * DWORD > data.len() {
@@ -135,6 +142,15 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
         let literal3 = (size > 2).then(|| word_at(data, wave.pc + 2 * DWORD));
         if !vop3::execute(wave, &name, wide, literal3)? {
+            return Err(refused());
+        }
+        wave.pc = next_pc;
+        return Ok(true);
+    }
+    if vop3p_family {
+        let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
+        let literal3 = (size > 2).then(|| word_at(data, wave.pc + 2 * DWORD));
+        if !vop3p::execute(wave, &name, wide, literal3)? {
             return Err(refused());
         }
         wave.pc = next_pc;

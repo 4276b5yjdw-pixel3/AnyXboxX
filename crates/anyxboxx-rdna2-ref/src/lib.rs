@@ -21,6 +21,7 @@ pub mod scalar;
 pub mod vector;
 pub mod vop3;
 pub mod vop3_forms;
+pub mod vop3p;
 pub mod wave;
 pub mod wide;
 
