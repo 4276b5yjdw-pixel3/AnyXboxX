@@ -71,6 +71,19 @@ def test_thread_local_works_without_python(tmp_path, runtime_dir):
     assert launch(runtime_dir, exe).returncode & 0xFFFF_FFFF == VALUE
 
 
+def test_tls_process_attach_callback_runs_before_entry(tmp_path, runtime_dir):
+    counter, callback = 0x128, 0x40
+
+    def code(_iat):
+        return (Asm().rip(b"\x8b\x05", counter).raw(b"\x6b\xc0\x2a").ret()
+                .at(callback).rip(b"\xff\x05", counter).ret().at(DIRECTORY + 40).build())
+
+    pointers = {DIRECTORY: TEMPLATE, DIRECTORY + 8: TEMPLATE + 4, DIRECTORY + 16: INDEX,
+                DIRECTORY + 24: CALLBACKS, CALLBACKS: callback}
+    exe = build_pe(tmp_path / "tls-callback.exe", code, dll=False, pointers=pointers, tls=DIRECTORY)
+    assert launch(runtime_dir, exe).returncode == 42
+
+
 def test_package_folder_launches_its_declared_executable(tmp_path, runtime_dir):
     build_pe(tmp_path / "game.exe", lambda iat: Asm().mov_eax(7).ret().build(), dll=False)
     (tmp_path / "MicrosoftGame.config").write_text(
