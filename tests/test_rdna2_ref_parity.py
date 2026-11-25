@@ -1223,3 +1223,68 @@ def operand_select_cases():
 def test_vop3_operand_select_forms_match_the_python_model():
     assert_select_cases(operand_select_cases())
 
+
+COMPARE32_NAMES = sorted(name for (family, name) in OPCODES if family == "VOPC" and name in VECTOR_COMPARE)
+COMPARE64_NAMES = sorted(name for (family, name) in OPCODES if family == "VOPC" and name in COMPARE64)
+READABLE_SCALARS = (*range(0, 106), *range(128, 209), *range(240, 249))
+COMPARE_PROGRAMS = 200
+
+
+def vopc(name, src0, vsrc1):
+    return 0x3E << 25 | OPCODES["VOPC", name] << 17 | vsrc1 << 9 | src0
+
+
+def compare_operands():
+    """v1-v6 : entiers et flottants différents par ligne (octets et demi-mots variés)."""
+    return [vop2("v_mul_u32_u24", 1, LITERAL, 0), 0x01030507,
+            vop2("v_xor_b32", 2, LITERAL, 1), 0x80FF7F00,
+            vop1("v_cvt_f32_u32", 3, V0),
+            vop2("v_sub_f32", 4, LITERAL, 3), 0x41000000,
+            vop2("v_lshlrev_b32", 5, 144, 4),
+            vop2("v_mul_f32", 6, LITERAL, 4), 0x7F7FFFFF]
+
+
+def sdwa_compare_word(rng, lanes, vsrc1):
+    """Mot SDWA d'une comparaison : sources lisibles (VGPR v0-v7 ou SGPR lisible), SDST hors de s127
+    en wave64 (le modèle Python écrirait s128)."""
+    ext = rng.getrandbits(32) & ~0xFF
+    if ext >> 23 & 1:
+        ext |= rng.choice(READABLE_SCALARS)
+    else:
+        ext |= rng.randrange(8)
+    if ext >> 31 & 1 and vsrc1 not in READABLE_SCALARS:
+        ext &= ~(1 << 31)
+    if lanes == 64 and (ext >> 8 & 0x7F) == 127:
+        ext &= ~(1 << 8)
+    return ext
+
+
+def compare_instruction(rng, lanes):
+    """Une comparaison VOPC en SDWA (le plus souvent), DPP16 ou DPP8, ou une comparaison 64 bits ou class
+    dont la source 0 est un code d'extension."""
+    roll = rng.random()
+    vsrc1 = rng.randrange(8) if rng.random() < 0.8 else rng.randrange(256)
+    if roll < 0.75:
+        return [vopc(rng.choice(COMPARE32_NAMES), 0xF9, vsrc1), sdwa_compare_word(rng, lanes, vsrc1)]
+    if roll < 0.9:
+        return [vopc(rng.choice(COMPARE32_NAMES), rng.choice((0xFA, 0xE9, 0xEA)), vsrc1), rng.getrandbits(32)]
+    return [vopc(rng.choice(COMPARE64_NAMES), rng.choice(EXT_CODES), rng.randrange(7)), rng.getrandbits(32)]
+
+
+def test_vopc_sdwa_and_dpp_programs_match_the_python_model():
+    """VOPC en SDWA (sélections, signe, abs/neg, destination VCC, SDST ou EXEC), DPP refusé, et les
+    comparaisons 64 bits dont la source 0 est un code d'extension (refus sur la première ligne active,
+    masque nul quand EXEC est vide)."""
+    exe = binary()
+    rng = random.Random(SEED)
+    outcomes = {"steps": 0, "error": 0}
+    for _ in range(COMPARE_PROGRAMS):
+        lanes = rng.choice((32, 64))
+        scalars = [(index, rng.getrandbits(32)) for index in rng.sample(range(106), 12)]
+        if rng.random() < 0.1:
+            scalars += [(126, 0), (127, 0)]                 # EXEC vide : aucune ligne ne lit
+        body = [word for _ in range(rng.randrange(1, 5)) for word in compare_instruction(rng, lanes)]
+        program_words = program(*compare_operands(), *body)
+        outcomes[run_python(lanes, False, scalars, program_words).split()[0]] += 1
+        assert_same(exe, lanes, False, scalars, program_words)
+    assert outcomes["steps"] >= COMPARE_PROGRAMS // 4, outcomes

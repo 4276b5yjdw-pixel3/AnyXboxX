@@ -10,6 +10,7 @@ use crate::decode::{Classified, DWORD, classify, mnemonic};
 use crate::ds;
 use crate::error::Error;
 use crate::ext;
+use crate::ext_compare;
 use crate::flat;
 use crate::format_exec;
 use crate::image_exec;
@@ -24,7 +25,7 @@ use crate::wave::{MAX_STEPS, Wave};
 /// The families this module executes.
 const SCALAR_FAMILIES: [&str; 5] = ["SOP1", "SOP2", "SOPC", "SOPK", "SOPP"];
 const VECTOR_FAMILIES: [&str; 2] = ["VOP1", "VOP2"];
-/// The source codes that announce an SDWA or DPP word: refused here, executed by the Python model.
+/// The source codes that announce an SDWA or DPP word.
 const EXTENSION_CODES: [u32; 4] = [0xE9, 0xEA, 0xF9, 0xFA];
 
 /// Runs one VOP1 or VOP2 instruction: no-ops, the carry chain, the vector table, or the SDWA and DPP
@@ -77,6 +78,27 @@ fn execute_vector(
         return vector::execute_carry(wave, name, &fields, literal);
     }
     vector::execute(wave, name, &fields, literal)
+}
+
+/// Runs one VOPC instruction. The 32-bit compares take the SDWA form (`ext_compare`) and refuse DPP16
+/// and DPP8; the 64-bit and class compares read an extension code as a plain source, which fails on the
+/// first active lane, as in the Python (they are dispatched before its SDWA and DPP check).
+fn execute_compare(
+    wave: &mut Wave,
+    name: &str,
+    word: u32,
+    literal: Option<u32>,
+) -> Result<bool, Error> {
+    let (src0, vsrc1) = (word & 0x1FF, (word >> 9) & 0xFF);
+    if EXTENSION_CODES.contains(&src0) && ext_compare::supports(name) {
+        if src0 != ext::SDWA {
+            return Err(ext_compare::refuse_dpp(name, src0 == ext::DPP16));
+        }
+        let ext = literal.ok_or_else(|| Error::Operand("mot d'extension absent".into()))?;
+        ext_compare::execute(wave, name, vsrc1, ext)?;
+        return Ok(true);
+    }
+    compare::execute(wave, name, src0, vsrc1, literal)
 }
 
 /// Branches of the Python `BRANCHES` table: the condition, read from the wave.
@@ -221,10 +243,7 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
         return Ok(true);
     }
     if compare_family {
-        // The SDWA and DPP forms of VOPC are not modelled yet: refused, as untranslated.
-        let (src0, vsrc1) = (word & 0x1FF, (word >> 9) & 0xFF);
-        if EXTENSION_CODES.contains(&src0) || !compare::execute(wave, &name, src0, vsrc1, literal)?
-        {
+        if !execute_compare(wave, &name, word, literal)? {
             return Err(refused());
         }
         wave.pc = next_pc;

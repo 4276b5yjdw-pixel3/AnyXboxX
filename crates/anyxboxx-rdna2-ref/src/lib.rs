@@ -25,6 +25,7 @@ pub mod ds_lanes;
 pub mod error;
 pub mod exec;
 pub mod ext;
+pub mod ext_compare;
 pub mod flat;
 pub mod float;
 pub mod format_access;
