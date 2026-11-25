@@ -45,5 +45,8 @@ all = { level = "warn", priority = -1 }
 chunks_exact_to_as_chunks = "allow"
 
 [profile.release]
+# Abort on panic: crates/anyxboxx-tls is a no_std cdylib (its TLS block must hold only the carrier),
+# and rustc refuses unwinding panics without std. The strategy is per profile, not per package.
+panic = "abort"
 opt-level = 3
 debug = "line-tables-only"
