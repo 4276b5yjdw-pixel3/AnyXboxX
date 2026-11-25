@@ -1202,3 +1202,24 @@ def assert_select_cases(cases):
 def test_vop3p_forms_match_the_python_model():
     assert_select_cases(vop3p_cases())
 
+
+def vop3(name, vdst, sources, op_sel=0, clamp=0, abs_bits=0, neg=0, omod=0):
+    low = 0x35 << 26 | OPCODES["VOP3", name] << 16 | vdst | abs_bits << 8 | op_sel << 11 | clamp << 15
+    return low, sources[0] | sources[1] << 9 | sources[2] << 18 | omod << 27 | neg << 29
+
+
+def operand_select_cases():
+    """(instruction, exécutée) : v_sat_pk_u8_i16 (seul résultat 16 bits du modèle) avec op_sel ou clamp,
+    refusé par le modèle Python, et les formes qu'il exécute en ignorant op_sel (résultat 32 bits)."""
+    sources = (V0 + 1, V0 + 2, V0 + 1)
+    cases = [(vop3("v_sat_pk_u8_i16", 9, sources, op_sel=op_sel, clamp=clamp), False)
+             for op_sel, clamp in ((1, 0), (2, 0), (4, 0), (8, 0), (0, 1), (15, 1))]
+    return cases + [(vop3("v_sat_pk_u8_i16", 9, sources), True),
+                    (vop3("v_add_nc_u32", 9, sources, op_sel=15), True),
+                    (vop3("v_fma_f32", 9, sources, op_sel=9), True),
+                    (vop3("v_med3_i32", 9, sources, op_sel=6), True)]
+
+
+def test_vop3_operand_select_forms_match_the_python_model():
+    assert_select_cases(operand_select_cases())
+
