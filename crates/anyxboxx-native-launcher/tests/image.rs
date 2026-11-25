@@ -84,3 +84,18 @@ fn refuses_missing_or_invalid_relocations() {
         Err(ImageError::InvalidRelocations)
     );
 }
+
+#[cfg(windows)]
+#[test]
+fn allocates_relocates_and_protects_a_synthetic_image() {
+    use anyxboxx_native_launcher::memory::Allocation;
+    let mut image = Image::parse(&fixture()).unwrap();
+    let allocation = Allocation::map(&mut image).unwrap();
+    let expected = (allocation.base() as u64)
+        .wrapping_add(0x1234)
+        .to_le_bytes();
+    // SAFETY: the fixture maps this offset inside the live allocation.
+    let actual = unsafe { std::slice::from_raw_parts(allocation.base().add(0x1020), 8) };
+    assert_eq!(actual, expected);
+    allocation.protect(&image).unwrap();
+}

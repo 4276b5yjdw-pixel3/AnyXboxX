@@ -1,6 +1,8 @@
 //! Components of the native launcher port. The C++ launcher remains the runtime entry point.
 
 pub mod image;
+#[cfg(windows)]
+pub mod memory;
 
 /// Extract the executable name using the native launcher's manifest scanning rules.
 ///
