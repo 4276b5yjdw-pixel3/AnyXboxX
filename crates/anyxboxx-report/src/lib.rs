@@ -9,7 +9,13 @@ use std::path::Path;
 
 use anyxboxx_pe::{LoadError, default_allocate, read_pe};
 
+pub mod bench;
+pub mod gdk;
+pub mod gpu;
+pub mod modules;
 pub mod package;
+pub mod text;
+pub mod translation;
 
 pub use package::resolve_target;
 

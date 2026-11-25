@@ -330,8 +330,10 @@ name = "anyxboxx-report"
 version = "0.1.0"
 dependencies = [
  "anyxboxx-pe",
+ "regex",
  "roxmltree",
  "thiserror 2.0.21",
+ "victory-pe",
 ]
 
 [[package]]

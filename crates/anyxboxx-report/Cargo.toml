@@ -1,6 +1,6 @@
 [package]
 name = "anyxboxx-report"
-description = "Compatibility report of a title (scarlett.py --rapport): which imports are emulated, provided by the package or missing; reads MicrosoftGame.Config. Rust port of emu/report.py and emu/config.py."
+description = "Compatibility report of a title (scarlett.py --rapport): which imports are emulated, provided by the package or missing; reads MicrosoftGame.Config. Rust port of emu/report.py, emu/config.py and emu/translation.py (scarlett.py --traduction)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,9 @@ publish.workspace = true
 anyxboxx-pe.workspace = true
 thiserror.workspace = true
 roxmltree.workspace = true
+victory-pe.workspace = true
+# Same versions as the launcher's: the GDK tables are read with the Python patterns.
+regex = "1"
 
 [lints]
 workspace = true

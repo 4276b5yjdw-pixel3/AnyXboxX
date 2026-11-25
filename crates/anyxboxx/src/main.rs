@@ -1,11 +1,12 @@
 //! `anyxboxx`: AnyXboxX's command line in Rust (docs/architecture-rust.md).
 //!
 //! `anyxboxx run --game-dir <folder> [...]` replaces the former `tools/lancer_victory.ps1`;
-//! `anyxboxx rapport <target>` replaces `scarlett.py --rapport`.
+//! `anyxboxx rapport <target>` replaces `scarlett.py --rapport`;
+//! `anyxboxx traduction <package> [image.svg]` replaces `scarlett.py --traduction`.
 
 use std::process::ExitCode;
 
-use anyxboxx::{rapport, run};
+use anyxboxx::{rapport, run, traduction};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -25,6 +26,8 @@ enum Command {
     Run(run::RunArgs),
     /// Compatibility report of an executable or package folder (replaces scarlett.py --rapport).
     Rapport(rapport::RapportArgs),
+    /// Translation progress of the console DLLs, and its SVG image (replaces scarlett.py --traduction).
+    Traduction(traduction::TraductionArgs),
 }
 
 fn main() -> ExitCode {
@@ -40,6 +43,18 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Command::Traduction(args) => report("traduction", traduction::traduction(&args)),
+    }
+}
+
+/// Exit code of a report command; its error goes to stderr after `anyxboxx <command>: `.
+fn report<E: std::fmt::Display>(command: &str, outcome: Result<(), E>) -> ExitCode {
+    match outcome {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("anyxboxx {command}: {error}");
+            ExitCode::FAILURE
+        }
     }
 }
 

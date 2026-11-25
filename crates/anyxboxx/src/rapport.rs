@@ -48,7 +48,7 @@ pub fn family(dll: &str) -> String {
     }
 }
 
-fn table(path: &Path) -> Result<BTreeSet<String>, ReportError> {
+pub(crate) fn table(path: &Path) -> Result<BTreeSet<String>, ReportError> {
     Ok(std::fs::read_to_string(path)?
         .lines()
         .map(str::trim)
@@ -59,7 +59,7 @@ fn table(path: &Path) -> Result<BTreeSet<String>, ReportError> {
 
 /// What VIctory binds when it runs the game: its HLE registry, then the host DLLs its default
 /// policy lets through (Windows API sets the console shares with the PC).
-fn victory_resolves(dll: &str, function: &str) -> bool {
+pub(crate) fn victory_resolves(dll: &str, function: &str) -> bool {
     let symbol = match function.strip_prefix('#').map(str::parse::<u16>) {
         Some(Ok(ordinal)) => ImportSymbol::Ordinal(ordinal),
         _ => ImportSymbol::Name {
