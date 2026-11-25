@@ -1015,3 +1015,39 @@ def test_refused_image_instructions_match_the_python_model():
         program_words = words(instruction)
         assert run_python(32, False, scalars, program_words) == "error untranslated\n", instruction
         assert_same(exe, 32, False, scalars, program_words)
+
+
+D16_BIT = 1 << 31                               # mot 2 d'une instruction MIMG : d16
+
+
+def refused_d16_accesses():
+    """(scalaires, instruction) : les formes _d16 typées (MUBUF, MTBUF) et les images d16, refusées par
+    les deux modèles (rdna2_exec_format et rdna2_image ne les prennent pas en charge)."""
+    buffer = buffer_descriptor(2, IDENTITY | 22 << 12)
+    image = [(16 + i, value) for i, value in
+             enumerate(rdna2_image.encode_image(IMAGE_ADDRESS, rdna2_image.FORMAT_32_FLOAT, 4, 4)) if value]
+    image += [(24 + i, value) for i, value in enumerate(rdna2_image.encode_sampler()) if value]
+    cases = []
+    for (family, name), _ in sorted(OPCODES.items()):
+        if "_format_d16" not in name:
+            continue
+        if family == "MUBUF":
+            cases.append((buffer, mubuf(name, vdata=8, srsrc=2)))
+        elif family == "MTBUF":
+            cases.append((buffer, mtbuf(name, 22, vdata=8, srsrc=2)))
+    for name in ("image_load", "image_load_mip", "image_store", "image_store_mip", "image_get_resinfo",
+                 "image_sample", "image_sample_l", "image_sample_lz_o", "image_sample_c", "image_gather4"):
+        cases.append((image, mimg(name, vdata=8, vaddr=0, dmask=1, second_flags=D16_BIT)))
+    return cases
+
+
+def test_refused_d16_typed_and_image_accesses_match_the_python_model():
+    exe = binary()
+    cases = refused_d16_accesses()
+    assert len(cases) >= 28, len(cases)
+    for scalars, instruction in cases:
+        program_words = words(instruction)
+        for lanes in (32, 64):
+            assert run_python(lanes, False, scalars, program_words) == "error untranslated\n", instruction
+            assert_same(exe, lanes, False, scalars, program_words)
+
