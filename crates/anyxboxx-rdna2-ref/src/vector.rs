@@ -114,7 +114,7 @@ fn fract(x: f64) -> Option<f64> {
         return None;
     }
     if x.is_infinite() {
-        return Some(f64::NAN);
+        return Some(crate::float::canonical_nan64());
     }
     let floor = signed_round(x, f64::floor)?;
     Some(py_min(x - floor, bits_float(ALMOST_ONE)))
