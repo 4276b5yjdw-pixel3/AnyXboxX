@@ -350,6 +350,13 @@ name = "anyxboxx-xcrdapi"
 version = "0.1.0"
 
 [[package]]
+name = "anyxboxx-xgameruntime"
+version = "0.1.0"
+dependencies = [
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "anyxboxx-xmem"
 version = "0.1.0"
 dependencies = [
