@@ -21,6 +21,28 @@ cargo build --release --workspace
 - The PowerShell option names are accepted too (`--GameDir`, `--XgDll`, `--XgMode`, `--Precompile`, `--Dred`, `--NoTunedSettings`, `--SkipPipelines`, `--BatchCardRehash`). `anyxboxx run --help` lists them.
 - One game at a time: close any running game first. The graphical launcher checks this itself.
 
+### Linux (Proton)
+
+Native Linux builds are not supported: VIctory, which the root workspace uses through `victory-hle`, only builds for Windows (`victory-gpu` uses its `#[cfg(windows)]` modules unconditionally). Cross-build both workspaces for Windows instead, with an MSVC CRT and SDK on Linux (for example [xwin](https://github.com/Jake-Shadle/xwin)) and `lld-link`:
+
+```bash
+cargo build --release --workspace --target x86_64-pc-windows-msvc \
+    --exclude anyxboxx-kernelx --exclude anyxboxx-d3d12-xs
+(cd third_party/victory && cargo build --profile diag -p victory --features diagnostics --target x86_64-pc-windows-msvc)
+```
+
+- `kernelx` and `d3d12_xs` need MSVC's `lib.exe` to make the `.exp` of their forwarder table (`anyxboxx-forwarders::link`); `llvm-lib /DEF` writes only the `.lib`. Not blocking: the game runs through VIctory, which does not load these DLLs.
+- There is no cargo inside Proton, so `anyxboxx.exe run` takes the cross-built VIctory with `--victory-exe` and skips the build (the repository is then not needed). Run it with Proton's `wine` and the Wine prefix of your choice, paths written as `Z:\…`:
+
+```bash
+VKD3D_CONFIG=descriptor_heap "$PROTON/files/bin/wine" target/x86_64-pc-windows-msvc/release/anyxboxx.exe run \
+    --victory-exe 'Z:\…\third_party\victory\target\x86_64-pc-windows-msvc\diag\victory.exe' \
+    --game-dir 'Z:\…\your game folder'
+```
+
+- `anyxboxx run` sets the Windows tuned set (`TUNED`), not the `linux-amd` profile, which only the graphical launcher reads. Wine passes the Linux environment on, so export `VKD3D_CONFIG=descriptor_heap` (the title's view heap is larger than vkd3d-proton's default cap) and, for the `linux-amd` values, add `--no-tuned-settings` and export them yourself.
+- The graphical launcher has no `--victory-exe` yet: its Play and Shaders pages start with the cargo build, which fails under Proton.
+
 ### Graphical launcher (`crates/anyxboxx-launcher`)
 
 It is built with egui through eframe 0.34: pure Rust, no C++ binding, no installer. The window has four pages with progress bars, a log and a few dialogs, which immediate-mode egui draws in a few hundred lines. Raw Win32 would have meant hand-written message loops and layout for the same pages. The logic lives in plain modules that the window only calls, so the 80 tests never open a window.
