@@ -1,5 +1,5 @@
 //! The environment `anyxboxx run` gives VIctory: the same variables, values and conditions as
-//! `tools/lancer_victory.ps1`.
+//! the former `tools/lancer_victory.ps1`.
 
 use std::ffi::OsString;
 use std::path::Path;

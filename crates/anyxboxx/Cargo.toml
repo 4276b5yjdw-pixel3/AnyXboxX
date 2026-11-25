@@ -1,6 +1,6 @@
 [package]
 name = "anyxboxx"
-description = "AnyXboxX command line: runs the game through VIctory (replaces tools/lancer_victory.ps1) and the reports of scarlett.py."
+description = "AnyXboxX command line: runs the game through VIctory (replaces the former tools/lancer_victory.ps1) and the reports of scarlett.py."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

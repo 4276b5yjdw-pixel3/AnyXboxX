@@ -1,6 +1,6 @@
 //! `anyxboxx`: AnyXboxX's command line in Rust (docs/architecture-rust.md).
 //!
-//! `anyxboxx run --game-dir <folder> [...]` replaces `tools/lancer_victory.ps1`;
+//! `anyxboxx run --game-dir <folder> [...]` replaces the former `tools/lancer_victory.ps1`;
 //! `anyxboxx rapport <target>` replaces `scarlett.py --rapport`.
 
 use std::process::ExitCode;
@@ -21,7 +21,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Build VIctory and launch it on your own game folder (replaces tools/lancer_victory.ps1).
+    /// Build VIctory and launch it on your own game folder (replaces the former tools/lancer_victory.ps1).
     Run(run::RunArgs),
     /// Compatibility report of an executable or package folder (replaces scarlett.py --rapport).
     Rapport(rapport::RapportArgs),

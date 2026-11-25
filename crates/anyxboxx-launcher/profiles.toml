@@ -16,7 +16,7 @@
 
 # ---------------------------------------------------------------------------------------------
 # Windows + NVIDIA: the maintainer's working set (VICTORY_SHADER_LOOP_LIMIT and the five others
-# equal anyxboxx::run::TUNED, which tools/lancer_victory.ps1 also sets).
+# equal anyxboxx::run::TUNED, which the former tools/lancer_victory.ps1 also sets).
 #
 # Measured by the maintainer on 2026-11-25: 2-3 fps on main after PR #199, 5-7 fps on the fork at
 # 80d58f8. Turning PR #199's switches off (all at "0") did not change the main figure, so this

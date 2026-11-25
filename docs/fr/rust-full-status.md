@@ -46,7 +46,7 @@ Profils (`crates/anyxboxx-launcher/profiles.toml`, un test chacun) :
 
 | Composant (avant) | Langage avant | Maintenant sur `rust/full` | Vérification de parité | Ancien code |
 | --- | --- | --- | --- | --- |
-| `tools/lancer_victory.ps1` | PowerShell | `crates/anyxboxx` (`anyxboxx run`) | `tests/test_anyxboxx_run.py` : les deux lanceurs tournent avec un faux cargo et un faux victory.exe et doivent faire les mêmes appels, avec le même environnement `VICTORY_*` et le même code de sortie (9 cas) | gardé comme oracle |
+| l'ancien `tools/lancer_victory.ps1` | PowerShell | `crates/anyxboxx` (`anyxboxx run`) | `tests/test_anyxboxx_run.py` : les deux lanceurs tournent avec un faux cargo et un faux victory.exe et doivent faire les mêmes appels, avec le même environnement `VICTORY_*` et le même code de sortie (9 cas) | gardé comme oracle |
 | `emu/loader.py` (chargeur PE) | Python | `crates/anyxboxx-pe` (tables lues par `victory-pe`) | `tests/test_rust_pe_parity.py` : 13 images fabriquées à partir de sources donnent le même JSON, protections des pages comprises | gardé comme oracle |
 | `emu/report.py`, `emu/config.py` (`--rapport`) | Python | `crates/anyxboxx-report` + `anyxboxx rapport` | `tests/test_rust_rapport_parity.py` : avec le registre HLE Python, le même texte sur 7 cibles et les mêmes refus sur 5 | gardé comme oracle |
 | `rust/` (textures, son, passerelle RDNA 2) | Rust | déplacé dans `crates/` (phase 1) ; un seul espace Cargo | `test_textures.py`, `test_audio.py`, `test_tombox_bridge.py` existants, inchangés | `rust/Cargo.toml` supprimé |

@@ -46,7 +46,7 @@ Profiles (`crates/anyxboxx-launcher/profiles.toml`, one test each):
 
 | Component (before) | Language before | Now on `rust/full` | Parity check | Old code |
 | --- | --- | --- | --- | --- |
-| `tools/lancer_victory.ps1` | PowerShell | `crates/anyxboxx` (`anyxboxx run`) | `tests/test_anyxboxx_run.py`: both launchers run with a fake cargo and victory.exe and must make the same calls, with the same `VICTORY_*` environment and the same exit code (9 cases) | kept as oracle |
+| the former `tools/lancer_victory.ps1` | PowerShell | `crates/anyxboxx` (`anyxboxx run`) | `tests/test_anyxboxx_run.py`: both launchers run with a fake cargo and victory.exe and must make the same calls, with the same `VICTORY_*` environment and the same exit code (9 cases) | kept as oracle |
 | `emu/loader.py` (PE loader) | Python | `crates/anyxboxx-pe` (tables parsed by `victory-pe`) | `tests/test_rust_pe_parity.py`: 13 images built from source give the same JSON, page protections included | kept as oracle |
 | `emu/report.py`, `emu/config.py` (`--rapport`) | Python | `crates/anyxboxx-report` + `anyxboxx rapport` | `tests/test_rust_rapport_parity.py`: given the Python HLE registry, the same text on 7 targets and the same refusals on 5 | kept as oracle |
 | `rust/` (texture, audio, RDNA 2 bridge) | Rust | moved into `crates/` (phase 1); one Cargo workspace | existing `test_textures.py`, `test_audio.py`, `test_tombox_bridge.py` unchanged | `rust/Cargo.toml` deleted |

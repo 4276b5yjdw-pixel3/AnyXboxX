@@ -1,5 +1,5 @@
 //! `anyxboxx run`: builds VIctory (cargo does nothing when it is current) and launches it on the
-//! user's own game folder. Rust replacement of `tools/lancer_victory.ps1`, step for step: same
+//! user's own game folder. Rust replacement of the former `tools/lancer_victory.ps1`, step for step: same
 //! checks, same build command, same environment, same precompile step, same exit code.
 
 mod settings;
