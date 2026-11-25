@@ -54,6 +54,6 @@ Registre des données propriétaires indispensables à un format, admises par d�
 
 | Fichier | Format | Contenu | Décision du mainteneur |
 | --- | --- | --- | --- |
-| `third_party/victory/crates/victory-formats/src/bcpack-tables.bin` (environ 78 Kio, venu avec la copie de VIctory) | BCPack | Tables constantes du format : modèles d'entropie, tables de rang des indices, codes de contrôle, dictionnaires par format (voir `third_party/victory/docs/asset-policy.md`) | **À décider** : proposée par la PR qui copie VIctory dans le dépôt ; admise dans VIctory par décision de son propriétaire le 2026-11-23 |
+| `third_party/victory/crates/victory-formats/src/bcpack-tables.bin` (environ 78 Kio, venu avec la copie de VIctory) | BCPack | Tables constantes du format : modèles d'entropie, tables de rang des indices, codes de contrôle, dictionnaires par format (voir `third_party/victory/docs/asset-policy.md`) | **Admise par décision du mainteneur le 2026-11-25** (#199) ; admise dans VIctory par décision de son propriétaire le 2026-11-23 |
 
 Aucun fichier de jeu, de console ou de SDK n'est inclus dans le dépôt.
