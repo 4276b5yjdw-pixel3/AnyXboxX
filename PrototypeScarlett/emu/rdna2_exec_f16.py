@@ -65,6 +65,15 @@ def half_clamp(bits):
     return min(bits, HALF_ONE)
 
 
+def half_toward_zero(value):
+    """Bits binary16 de `value` arrondi vers zéro : l'arrondi au plus proche, reculé d'un pas s'il s'éloigne
+    de zéro ; un fini trop grand donne ±65504, jamais l'infini ; NaN → 0x7E00."""
+    if math.isnan(value) or math.isinf(value):
+        return half_bits(value)
+    bits = half_bits(value)
+    return bits - 1 if abs(bits_half(bits)) > abs(value) else bits
+
+
 H = bits_half
 
 # Opérations f16 : nom → (types des sources src0..src2, fonction(a, b, c, d, k)).
@@ -83,11 +92,14 @@ OPERATIONS = {
     "v_min_f16": ("hh", lambda a, b, c, d, k: half_min(a, b)),
     # Au-delà de ±64, le résultat f16 vaut déjà 0 ou l'infini : borner l'exposant ne change rien.
     "v_ldexp_f16": ("hi", lambda a, b, c, d, k: half_bits(math.ldexp(H(a), max(-64, min(64, signed(b, 16)))))),
+    # ISA RDNA 2, §12.7, VOP2 47 (p. 135) : D.f16_lo = f32_to_f16(S0), D.f16_hi = f32_to_f16(S1), vers zéro.
+    "v_cvt_pkrtz_f16_f32": ("ww", lambda a, b, c, d, k: half_toward_zero(bits_float(b)) << 16
+                            | half_toward_zero(bits_float(a))),
     "v_cvt_f16_f32": ("w", lambda a, b, c, d, k: half_bits(bits_float(a))),
     "v_cvt_f32_f16": ("h", lambda a, b, c, d, k: FLOAT_NAN if _is_nan(a) else float_bits(H(a))),
 }
 # Résultat sur 32 bits (le VGPR entier) ; les autres écrivent une moitié et gardent l'autre.
-WORD_RESULT = frozenset({"v_cvt_f32_f16"})
+WORD_RESULT = frozenset({"v_cvt_f32_f16", "v_cvt_pkrtz_f16_f32"})
 VGPR_FIRST = 256
 EXTENSIONS = frozenset({0xE9, 0xEA, 0xF9, 0xFA})        # src0 de DPP8, DPP8_FI, SDWA, DPP16
 
