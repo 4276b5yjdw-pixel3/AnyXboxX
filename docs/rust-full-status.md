@@ -60,16 +60,17 @@ Profiles (`crates/anyxboxx-launcher/profiles.toml`, one test each):
 | `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, a `no_std` cdylib | `test_native_tls.py`, `test_native_tls_callbacks.py`, identical export table | **deleted** |
 | `runtime/xmem` | `crates/anyxboxx-xmem` (ERA attributes shared with VIctory's xmem module) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
 | `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (task queue = VIctory's `xasync`) | 66 of the 90 GDK tests pass against it | kept: saves, store, platform (HDR, networking), gamer picture and the DXGI frame counter are not ported yet |
+| `runtime/launcher` | `crates/anyxboxx-native-launcher` | `tests/test_rust_native_launcher_parity.py` runs the synthetic native launcher suite against both implementations | kept as `anyxboxx_cpp.exe` for parity; TomBox-dependent cases require its DLLs |
 | Graphical launcher | `crates/anyxboxx-launcher` (new) | 80 Rust tests | |
 
-How the Rust runtime DLLs reach the runtime folder: `cargo build --release` builds them, and `runtime/CMakeLists.txt` copies them from `target/release` into `runtime/build/bin` (`rust_dlls.cmake`; a missing one stops the build with the command to run). So `cargo build --release` now comes before `cmake` (CI, AGENTS.md, READMEs).
+How the Rust runtime DLLs and native launcher reach the runtime folder: `cargo build --release` builds them, and `runtime/CMakeLists.txt` copies them from `target/release` into `runtime/build/bin` (`rust_dlls.cmake`; a missing one stops the build with the command to run). The native launcher is `runtime/build/bin/anyxboxx.exe`; the separate `target/release/anyxboxx.exe` is the VIctory CLI. So `cargo build --release` now comes before `cmake` (CI, AGENTS.md, READMEs).
 
 TLS carrier finding: as a `no_std` cdylib, its TLS block holds exactly the carrier (262,208 bytes, no Rust std thread-locals). The game's template therefore shares it as with the C++ DLL. `no_std` needs `panic = "abort"`, which Cargo only accepts for the whole release profile, so the root workspace's release profile now aborts on panic.
 
 **Still C++:**
 
 - `runtime/xgameruntime` (24 of its 90 tests still fail with the Rust DLL).
-- `runtime/launcher` (`anyxboxx.exe`): decision D4 deletes it, but its native-mode tests have no Rust counterpart yet.
+- `runtime/launcher`: retained as the `anyxboxx_cpp.exe` parity oracle.
 - `runtime/gpu_runner`: phase 4.
 - `runtime/third_party/libhttpclient-task`: goes with xgameruntime.
 

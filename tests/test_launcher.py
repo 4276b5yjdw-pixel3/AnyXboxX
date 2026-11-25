@@ -32,6 +32,18 @@ def test_console_memory_import_is_served_by_the_runtime(tmp_path, runtime_dir):
     assert pointer != 0 and pointer % 64 == 0
 
 
+def test_dynamic_loading_redirects_console_runtime(tmp_path, runtime_dir):
+    def code(iat):
+        return (Asm().frame().lea_rcx(0x200).call_iat(iat[("kernel32.dll", "LoadLibraryA")])
+                .mov_rcx_rax().lea_rdx(0x220).call_iat(iat[("kernel32.dll", "GetProcAddress")])
+                .nonzero_rax_to_eax().unframe().ret().at(0x200).raw(b"xmem.dll\0")
+                .at(0x220).raw(b"XMemAlloc\0").build())
+
+    imports = [("kernel32.dll", "LoadLibraryA"), ("kernel32.dll", "GetProcAddress")]
+    exe = build_pe(tmp_path / "dynamic.exe", code, imports=imports, dll=False)
+    assert launch(runtime_dir, exe).returncode == 1
+
+
 def test_thread_local_works_without_python(tmp_path, runtime_dir):
     pointers = {DIRECTORY: TEMPLATE, DIRECTORY + 8: TEMPLATE + 4, DIRECTORY + 16: INDEX, DIRECTORY + 24: CALLBACKS}
     exe = build_pe(tmp_path / "tls.exe", lambda iat: tls_reader(), dll=False, pointers=pointers, tls=DIRECTORY)

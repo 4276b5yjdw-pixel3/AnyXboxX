@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from conftest import RUNTIME_DIR, runtime_built
+from pe_builder import Asm, build_pe
 
 REPO = Path(__file__).resolve().parents[1]
 RUST = REPO / "target" / "release" / "anyxboxx-native-launcher.exe"
@@ -45,8 +46,15 @@ def test_usage_and_invalid_pe_errors_match_cpp(tmp_path):
     shutil.copyfile(RUST, runtime / "rust.exe")
     image = tmp_path / "synthetic-invalid.exe"
     image.write_bytes(b"not a PE")
-    for args in ([], [str(image)]):
+    no_reloc = build_pe(tmp_path / "synthetic-no-reloc.exe", lambda iat: Asm().mov_eax(7).ret().build(),
+                        dll=False, base=0xFFFF_0000_0000_0000)
+    for args in ([], [str(image)], [str(no_reloc)]):
         outputs = [subprocess.run([str(runtime / name), *args], capture_output=True, timeout=30)
                    for name in ("anyxboxx_cpp.exe", "rust.exe")]
         assert outputs[0].returncode == outputs[1].returncode == 1
-        assert outputs[0].stderr.replace(b"\r\n", b"\n") == outputs[1].stderr.replace(b"\r\n", b"\n")
+        def decode(data):
+            try:
+                return data.decode("utf-8").replace("\r\n", "\n")
+            except UnicodeDecodeError:
+                return data.decode("mbcs").replace("\r\n", "\n")
+        assert decode(outputs[0].stderr) == decode(outputs[1].stderr)

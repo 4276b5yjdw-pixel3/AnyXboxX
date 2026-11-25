@@ -1,8 +1,12 @@
 //! Assemble the native image loader and call the mapped entry point.
 
 use crate::{
-    command_line, exceptions, hooks, image::Image, imports::Symbol, libraries::Module,
-    memory::Allocation, registration, resolver,
+    command_line, exceptions, hooks,
+    image::Image,
+    imports::Symbol,
+    libraries::Module,
+    memory::{Allocation, MemoryError},
+    registration, resolver,
 };
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
@@ -43,7 +47,14 @@ pub unsafe fn launch(
     measuring: bool,
 ) -> Result<i32, String> {
     let mut image = Image::parse(bytes).map_err(|error| format!("{error} (erreur 0)"))?;
-    let allocation = Allocation::map(&mut image).map_err(|error| error.to_string())?;
+    let allocation = Allocation::map(&mut image).map_err(|error| match error {
+        MemoryError::Allocation(error) => format!(
+            "mémoire de l'image indisponible (erreur {})",
+            error.raw_os_error().unwrap_or(0)
+        ),
+        MemoryError::Relocation(error) => format!("{error} (erreur 0)"),
+        error => error.to_string(),
+    })?;
     let wide_path: Vec<u16> = path.as_os_str().encode_wide().collect();
     let context = hooks::HookContext {
         base: allocation.base() as usize,
