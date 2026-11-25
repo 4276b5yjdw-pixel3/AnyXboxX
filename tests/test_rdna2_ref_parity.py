@@ -21,6 +21,7 @@ from emu import rdna2_exec
 from emu.rdna2_exec import VOP2_CARRY, Wave
 from emu.rdna2_exec_cmp64 import COMPARE64
 from emu.rdna2_exec_dot import OPERATIONS as DOT_OPERATIONS
+from emu.rdna2_exec_memory import PAGE
 from emu.rdna2_exec_movrel import SCALAR as MOVREL_SCALAR, VECTOR as MOVREL_VECTOR
 from emu.rdna2_exec_wide import OPERATIONS as WIDE_OPERATIONS
 from emu.rdna2_exec_vop3 import VECTOR3
@@ -84,14 +85,20 @@ def render(wave):
     for index, lanes in enumerate(wave.v[:256]):
         if any(lanes):
             lines.append(f"v {index} " + " ".join(f"{value:08X}" for value in lanes))
+    for page, data in sorted(wave.memory.pages.items()):
+        words = struct.unpack("<1024I", bytes(data))
+        entries = "".join(f" {i * 4:X}:{value:08X}" for i, value in enumerate(words) if value)
+        lines.append(f"page {page * PAGE:016X}{entries}")
     return "\n".join(lines) + "\n"
 
 
-def run_python(lanes, scc, scalars, words):
+def run_python(lanes, scc, scalars, words, memory=()):
     wave = Wave(lanes=lanes)
     wave.scc = scc
     for index, value in scalars:
         wave.s[index] = value
+    for address, values in memory:
+        wave.memory.write_words(address, values)
     data = struct.pack(f"<{len(words)}I", *words)
     try:
         rdna2_exec.run(data, wave)
@@ -102,9 +109,10 @@ def run_python(lanes, scc, scalars, words):
     return render(wave)
 
 
-def run_rust(exe, lanes, scc, scalars, words):
+def run_rust(exe, lanes, scc, scalars, words, memory=()):
     lines = [f"lanes {lanes}", f"scc {int(scc)}"]
     lines += [f"s {index} {value:X}" for index, value in scalars]
+    lines += [f"mem {address:X} " + " ".join(f"{value:08X}" for value in values) for address, values in memory]
     lines.append("program " + " ".join(f"{word:08X}" for word in words))
     done = subprocess.run(
         [str(exe)], input="\n".join(lines) + "\n", capture_output=True, text=True, encoding="utf-8", timeout=60
@@ -113,10 +121,10 @@ def run_rust(exe, lanes, scc, scalars, words):
     return done.stdout
 
 
-def assert_same(exe, lanes, scc, scalars, words):
-    rust = run_rust(exe, lanes, scc, scalars, words)
-    python = run_python(lanes, scc, scalars, words)
-    assert rust == python, f"lanes={lanes} scc={scc} scalars={scalars}\nprogram={[hex(w) for w in words]}\n" \
+def assert_same(exe, lanes, scc, scalars, words, memory=()):
+    rust = run_rust(exe, lanes, scc, scalars, words, memory)
+    python = run_python(lanes, scc, scalars, words, memory)
+    assert rust == python, f"lanes={lanes} scc={scc} scalars={scalars} memory={memory}\nprogram={[hex(w) for w in words]}\n" \
                            f"rust:\n{rust}\npython:\n{python}"
 
 
@@ -449,3 +457,43 @@ def test_wide_operations_match_the_python_model():
             value = rng.choice(CURATED_DOUBLE_BITS) if rng.random() < 0.7 else rng.getrandbits(64)
             scalars += [(index, value & 0xFFFF_FFFF), (index + 8, value >> 32)]
         assert_same(exe, 32, False, scalars, program(low, high))
+
+
+def smem(name, sdata, sbase, offset=0, soffset=125, glc=0):
+    """Les deux mots d'une instruction SMEM (sdata, sbase en SGPR, décalage signé 21 bits, soffset, glc)."""
+    first = 0x3D << 26 | OPCODES["SMEM", name] << 18 | glc << 16 | sdata << 6 | sbase // 2
+    return first, soffset << 25 | offset & 0x1FFFFF
+
+
+def test_scalar_memory_programs_match_the_python_model():
+    exe = binary()
+    cases = [
+        # s_load : adresse 64 bits en SGPR, décalage immédiat ou par SOFFSET, décalage négatif (zéros)
+        (32, False, [(0, 0x2000), (1, 0), (2, 12)], [(0x2000, [0, 0, 0xDEADBEEF, 0x11])],
+         program(*smem("s_load_dword", 4, 0, offset=8), *smem("s_load_dwordx2", 6, 0, offset=8),
+                 *smem("s_load_dword", 9, 0, soffset=2), *smem("s_load_dword", 10, 0, offset=-4))),
+        # s_buffer_load : V# en s4..s6 (base, pas, nombre d'octets) ; hors du buffer, zéros
+        (32, False, [(4, 0x3000), (5, 0), (6, 16)], [(0x3000, [1, 2, 3, 4])],
+         program(*smem("s_buffer_load_dwordx2", 8, 4, offset=4), *smem("s_buffer_load_dwordx2", 10, 4, offset=12))),
+        (64, False, [(4, 0x3000), (5, 0x10000), (6, 64)], [(0x3000, [5, 6, 7, 8, 9, 10, 11, 12])],
+         program(*smem("s_buffer_load_dwordx4", 12, 4, offset=8), *smem("s_buffer_load_dwordx8", 16, 4))),
+        # s_store puis s_load du même mot
+        (32, False, [(0, 0x4000), (1, 0), (2, 0x1234), (3, 0xABCD)], [],
+         program(*smem("s_store_dword", 2, 0, offset=4), *smem("s_load_dword", 9, 0, offset=4),
+                 *smem("s_store_dwordx2", 2, 0, offset=16))),
+        # atomiques SMEM : ancienne valeur rendue avec GLC, cmpswap, _x2 avec retenue, buffer
+        (32, False, [(0, 0x5000), (1, 0), (3, 5)], [(0x5000, [7])],
+         program(*smem("s_atomic_add", 3, 0, glc=1))),
+        (32, False, [(0, 0x5000), (1, 0), (6, 9), (7, 7)], [(0x5000, [7])],
+         program(*smem("s_atomic_cmpswap", 6, 0))),
+        (32, False, [(0, 0x5008), (1, 0), (4, 1), (5, 0)], [(0x5008, [0xFFFFFFFF, 0])],
+         program(*smem("s_atomic_add_x2", 4, 0, glc=1))),
+        (32, False, [(4, 0x5000), (5, 0), (6, 16), (3, 0x77)], [(0x5000, [1, 2])],
+         program(*smem("s_buffer_atomic_swap", 3, 4, offset=4, glc=1))),
+        # cache control (sans effet), s_memtime (compteur d'instructions)
+        (32, False, [(0, 0x6000)], [],
+         program(*smem("s_dcache_inv", 0, 0), sop1("s_mov_b32", 1, 128), *smem("s_memtime", 10, 0))),
+    ]
+    for lanes, scc, scalars, memory, words in cases:
+        assert run_python(lanes, scc, scalars, words, memory).startswith("steps"), "le cas doit s'exécuter"
+        assert_same(exe, lanes, scc, scalars, words, memory)

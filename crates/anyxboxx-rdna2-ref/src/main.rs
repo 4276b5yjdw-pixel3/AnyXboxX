@@ -5,9 +5,11 @@
 //!   `lanes N`          wave size, 32 (default) or 64
 //!   `scc 0|1`          SCC starts at this value (default 0)
 //!   `s I HEX`          scalar register I starts at HEX (before the program)
+//!   `mem ADDR W ...`   the 32-bit words W (hex) written at the 64-bit address ADDR (hex)
 //!   `program W ...`    the program, as 32-bit words in hexadecimal
 //! Output (stdout): `steps N`, `pc N`, `scc 0|1`, then `s I HEX` for each non-zero scalar register
-//! and `v I HEX ...` (one value per lane) for each vector register with a non-zero lane. A run that
+//! and `v I HEX ...` (one value per lane) for each vector register with a non-zero lane, then
+//! `page ADDR OFF:HEX ...` for each created 4 KiB page (its non-zero dwords, by offset). A run that
 //! refuses prints `error KIND` instead (`untranslated`, `operand` or `loop`) and nothing else.
 
 use std::io::{self, Read, Write};
@@ -26,6 +28,7 @@ struct Input {
     lanes: usize,
     scc: bool,
     scalars: Vec<(usize, u32)>,
+    memory: Vec<(u64, Vec<u32>)>,
     program: Vec<u8>,
 }
 
@@ -34,6 +37,7 @@ fn parse(text: &str) -> Result<Input, String> {
         lanes: 32,
         scc: false,
         scalars: Vec::new(),
+        memory: Vec::new(),
         program: Vec::new(),
     };
     for line in text.lines().map(str::trim).filter(|line| !line.is_empty()) {
@@ -57,6 +61,12 @@ fn parse(text: &str) -> Result<Input, String> {
                     .map_err(|_| "registre illisible")?;
                 let value = parse_hex(parts.next().ok_or("s sans valeur")?)?;
                 input.scalars.push((index, value));
+            }
+            Some("mem") => {
+                let address = parts.next().ok_or("mem sans adresse")?;
+                let address = u64::from_str_radix(address, 16).map_err(|_| "adresse illisible")?;
+                let words = parts.map(parse_hex).collect::<Result<Vec<u32>, String>>()?;
+                input.memory.push((address, words));
             }
             Some("program") => {
                 for word in parts {
@@ -87,6 +97,16 @@ fn report(wave: &Wave) -> String {
             out.push_str(&format!("v {index} {}\n", values.join(" ")));
         }
     }
+    for (address, bytes) in wave.memory.pages() {
+        out.push_str(&format!("page {address:016X}"));
+        for (index, chunk) in bytes.chunks_exact(4).enumerate() {
+            let value = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            if value != 0 {
+                out.push_str(&format!(" {:X}:{value:08X}", index * 4));
+            }
+        }
+        out.push('\n');
+    }
     out
 }
 
@@ -95,6 +115,9 @@ fn execute(input: &Input) -> Result<String, Error> {
     wave.scc = input.scc;
     for &(index, value) in &input.scalars {
         wave.write_scalar(index as u32, u64::from(value), 1)?;
+    }
+    for (address, words) in &input.memory {
+        wave.memory.write_words(*address, words);
     }
     run(&input.program, &mut wave)?;
     Ok(report(&wave))
