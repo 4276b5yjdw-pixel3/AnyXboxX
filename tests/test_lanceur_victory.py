@@ -105,6 +105,15 @@ def test_launcher_keeps_discord_off():
     assert 'v == "1"' in discord and 'v == "0"' not in discord        # la présence ne s'allume que sur demande
 
 
+def test_launcher_copies_the_ocean_height_maps_back_even_without_tuned_settings():
+    texte = _lanceur()
+    assert "$env:VICTORY_OCEAN_READBACK = '1'" in texte
+    assert texte.index("$env:VICTORY_OCEAN_READBACK = '1'") < texte.index("if (-not $NoTunedSettings)")
+    assert "VICTORY_TEXTURE_BACK_MODES" not in _variables_posees(texte)   # linear layouts only
+    texback = (VICTORY / "crates" / "victory-gpu" / "src" / "texback.rs").read_text(encoding="utf-8")
+    assert '"VICTORY_OCEAN_READBACK"' in texback and 'v == "1"' in texback   # off unless the launcher asks
+
+
 def test_launcher_leaves_out_variables_victory_does_not_read():
     poses = _variables_posees(_lanceur())
     assert not poses & set(ABSENTES)
