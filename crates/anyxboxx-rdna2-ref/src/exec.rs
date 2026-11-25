@@ -11,6 +11,7 @@ use crate::error::Error;
 use crate::ext;
 use crate::scalar;
 use crate::vector;
+use crate::vop3;
 use crate::wave::{MAX_STEPS, Wave};
 
 /// The families this module executes.
@@ -90,7 +91,8 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     };
     let vector_family = VECTOR_FAMILIES.contains(&family);
     let compare_family = family == "VOPC";
-    if !SCALAR_FAMILIES.contains(&family) && !vector_family && !compare_family {
+    let vop3_family = family == "VOP3";
+    if !SCALAR_FAMILIES.contains(&family) && !vector_family && !compare_family && !vop3_family {
         return Err(refused());
     }
     if wave.pc + size * DWORD > data.len() {
@@ -104,6 +106,16 @@ pub fn step(wave: &mut Wave, data: &[u8]) -> Result<bool, Error> {
     let literal = (size > 1).then(|| word_at(data, wave.pc + DWORD));
     let fields = scalar::fields(word);
     let next_pc = wave.pc + size * DWORD;
+    if vop3_family {
+        // The 64-bit word: the first word is the low half. The literal, when present, is the third word.
+        let wide = u64::from(word) | u64::from(word_at(data, wave.pc + DWORD)) << 32;
+        let literal3 = (size > 2).then(|| word_at(data, wave.pc + 2 * DWORD));
+        if !vop3::execute(wave, &name, wide, literal3)? {
+            return Err(refused());
+        }
+        wave.pc = next_pc;
+        return Ok(true);
+    }
     if compare_family {
         // The SDWA and DPP forms of VOPC are not modelled yet: refused, as untranslated.
         let (src0, vsrc1) = (word & 0x1FF, (word >> 9) & 0xFF);
