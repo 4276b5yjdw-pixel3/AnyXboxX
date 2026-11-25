@@ -16,7 +16,7 @@ from emu.rdna2_hlsl_ops import NULL, Untranslatable, source, source_high
 
 LITERAL, VGPR_FIRST = 255, 256
 INLINE_DOUBLES = {240: 0.5, 241: -0.5, 242: 1.0, 243: -1.0, 244: 2.0, 245: -2.0, 246: 4.0, 247: -4.0,
-                  248: 0.15915494309189535}
+                  248: 0.15915494309189532}    # 0x3FC45F306DC9C882 (ISA §6.2), comme rdna2_exec_cmp64
 
 HELPERS = """bool IsNanF64(uint lo, uint hi) {
   uint h = hi & 0x7FFFFFFFu;

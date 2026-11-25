@@ -78,6 +78,13 @@ def test_double_rounding_and_fract_edge_cases(name, bits, expected):
     assert unary_bits(name, bits) == expected
 
 
+def test_inline_one_over_two_pi_is_the_isa_double():
+    """ISA §6.2 (p. 41) : 1/(2π) en double vaut exactement 0x3FC45F306DC9C882 (pas l'arrondi de Python)."""
+    wave = rdna2_exec.run(program(*vop3("v_mul_f64", 4, 248, ONE)))
+    assert wave.v[4][0] | wave.v[5][0] << 32 == 0x3FC4_5F30_6DC9_C882
+    assert rdna2_hlsl_wide._words(248) == ("0x6DC9C882u", "0x3FC45F30u")
+
+
 @pytest.mark.parametrize("name, value, expected", [
     ("v_cvt_i32_f64", 2.9, 2), ("v_cvt_i32_f64", -2.9, -2), ("v_cvt_i32_f64", 1e10, 0x7FFF_FFFF),
     ("v_cvt_i32_f64", -math.inf, 0x8000_0000), ("v_cvt_i32_f64", math.nan, 0),
