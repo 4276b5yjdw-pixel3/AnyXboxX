@@ -7,7 +7,7 @@
 > [!NOTE]
 > **当前进展（2026-11-25）**
 >
-> 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的分支仓库 `LooperSalty/victory` 的提交 `80d58f8` (branch `anyxboxx/fork-7b0-lot9-murs`)（子模块 `third_party/victory`），通过 `tools/lancer_victory.ps1 -GameDir <游戏文件夹>` 启动：
+> 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的分支仓库 `LooperSalty/victory` 的提交 `80d58f8` (branch `anyxboxx/fork-7b0-lot9-murs`)（`third_party/victory`），通过 `tools/lancer_victory.ps1 -GameDir <游戏文件夹>` 启动：
 >
 > - ✅ GTA VI 的 Xbox Series 1.0.2.1 版本**可以在 PC 上启动**：启动、档案界面、首次运行设置、法律声明界面、加载、暂停菜单。菜单为 30 fps。
 > - ✅ 已**到达游戏世界并显示**：角色可在玩家控制下移动，3D 画面可显示，约 4 分 20 秒的测试中为 4.8 到 5.4 帧/秒，每帧约 6,550 次绘制（维护者实测，Windows 11，RTX 4070 Super，VIctory 日志）。启动动画不再闪烁（观察）。此前从未被点亮的辐照度缓存（过场动画某一帧的 PIX 捕获中调度为 0 次），现在其两个着色 shader 已能翻译，对应的管线在游戏中创建并绑定（观察）。
@@ -27,7 +27,7 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 
 ## 目标与现状
 
-AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，版本 1.0.2.1**。只翻译这款游戏需要的部分（它导入的系统函数、它使用的着色器和 Direct3D 12.x 方法）。待这部分翻译完成后，再尝试其他游戏。本项目基于面向同一版本的 [VIctory](https://github.com/Marvisak/VIctory)（Marvisak，GPL-3.0 或更高版本）：子模块 `third_party/victory` 固定在分支仓库 `fxceless/victory-fork`（GPL-3.0）的提交 `7b0f736`。感谢 Marvisak 和这些 pull request 的作者，逐一致谢见 [THIRD_PARTY.md](../../THIRD_PARTY.md)。
+AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，版本 1.0.2.1**。只翻译这款游戏需要的部分（它导入的系统函数、它使用的着色器和 Direct3D 12.x 方法）。待这部分翻译完成后，再尝试其他游戏。本项目基于面向同一版本的 [VIctory](https://github.com/Marvisak/VIctory)（Marvisak，GPL-3.0 或更高版本）：它复制在 `third_party/victory` 中，以分支仓库 `fxceless/victory-fork`（GPL-3.0）的提交 `7b0f736` 为起点。感谢 Marvisak 和这些 pull request 的作者，逐一致谢见 [THIRD_PARTY.md](../../THIRD_PARTY.md)。
 
 > [!IMPORTANT]
 > **游戏目前无法游玩。** 当前进展见本页顶部的方框。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。

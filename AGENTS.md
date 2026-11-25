@@ -42,7 +42,8 @@ cargo build --release --manifest-path rust/Cargo.toml
 
 - Tests needing the C++ runtime are skipped when it is not built, except in CI (`ANYXBOXX_REQUIRE_RUNTIME=1`).
 - GPU tests (`tests/test_rdna2_hlsl.py`) need `dxc` and `anyxboxx_gpu_run.exe`; without a GPU they use WARP (`ANYXBOXX_GPU=warp` forces it).
-- Lint used by the maintainers: `python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools`.
+- Lint used by the maintainers: `python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools` (`third_party/` is not linted).
+- VIctory's asset policy on its copy: `cargo xtask policy`, run from `third_party/victory` (CI job `politique VIctory`).
 
 ## Rules
 
@@ -53,7 +54,7 @@ cargo build --release --manifest-path rust/Cargo.toml
 5. **Tests with every change.** New behaviour comes with a test that fails without it.
 6. **README in 9 languages.** `README.md` (English) and `docs/i18n/README.*.md` must stay in sync: same table rows, same test count (rounded down to the hundred, written `800+`, checked by `tests/test_readme_sync.py`), same images. Image text is in English.
 7. **Git**: `main` is protected; work on a branch and open a pull request; CI (`.github/workflows/tests.yml`) must pass. Commit messages: `type: description` (`feat`, `fix`, `docs`, `test`, `refactor`, `chore`), written in English (older history is in French).
-8. **Code style**: small focused files (under about 400 lines), small functions, explicit error handling, no hidden mutation of shared state, constants instead of magic numbers where it helps reading.
+8. **Code style**: small focused files (under about 400 lines), small functions, explicit error handling, no hidden mutation of shared state, constants instead of magic numbers where it helps reading. `third_party/` is exempt (VIctory alone is about 123,000 lines; the other folders are copies or submodules of other projects): it keeps its own style, and neither the 400-line rule nor ruff applies to it.
 9. **Native mode runs code unsandboxed.** Only run trusted test programs with `--natif` or `anyxboxx.exe`.
 10. **Code taken from other repositories is committed as ours.** Nothing in the repository depends on another repository to build: no new submodules, no pinned forks. To take a change (a commit, a pull request, a fork's branch), commit it yourself (`git cherry-pick -Xsubtree=third_party/<project> <sha>` after fetching the repository, or a port by hand) and end the message with `Source: <repository> <PR or commit>` and `Co-authored-by: Name <email>` for its author. Add or update that repository's row in the sources table of [THIRD_PARTY.md](THIRD_PARTY.md). Its licence must be compatible (GPL-3.0 or more permissive).
 

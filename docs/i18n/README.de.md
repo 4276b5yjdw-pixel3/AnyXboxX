@@ -7,7 +7,7 @@
 > [!NOTE]
 > **Wo wir stehen (25.11.2026)**
 >
-> Gemessen auf einem i7-13700KF + RTX 4070 SUPER, Windows 11, mit dem VIctory-Fork `LooperSalty/victory` im Commit `80d58f8` (branch `anyxboxx/fork-7b0-lot9-murs`) (Submodul `third_party/victory`), gestartet mit `tools/lancer_victory.ps1 -GameDir <Spielordner>`:
+> Gemessen auf einem i7-13700KF + RTX 4070 SUPER, Windows 11, mit dem VIctory-Fork `LooperSalty/victory` im Commit `80d58f8` (branch `anyxboxx/fork-7b0-lot9-murs`) (`third_party/victory`), gestartet mit `tools/lancer_victory.ps1 -GameDir <Spielordner>`:
 >
 > - ✅ Der Xbox-Series-Build 1.0.2.1 von GTA VI **startet** auf dem PC: Boot, Profilbildschirm, Einstellungen beim ersten Start, rechtliche Bildschirme, Ladevorgang, Pausenmenü. Die Menüs laufen mit 30 fps.
 > - ✅ Es erreicht **die Welt und zeigt sie an**: Die Figur bewegt sich unter Kontrolle des Spielers und das 3D-Bild wird angezeigt, mit 4,8 bis 5,4 Bildern pro Sekunde bei etwa 6.550 Draws pro Bild (vom Maintainer gemessen, Windows 11, RTX 4070 Super, VIctory-Log, etwa 4 Min 20). Die Startanimation flackert nicht (beobachtet). Der Irradianz-Cache, bisher nie beleuchtet (0 Dispatches in einer PIX-Aufnahme eines Zwischensequenz-Bildes), hat jetzt seine beiden Shading-Shader übersetzt, mit im Spiel erzeugten und gebundenen Pipelines (beobachtet).
@@ -27,7 +27,7 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 
 ## Ziel und Stand
 
-AnyXboxX ist auf einen einzigen Build spezialisiert: **Grand Theft Auto VI für Xbox Series, Version 1.0.2.1**. Übersetzt wird nur, was dieses Spiel braucht (die importierten Systemfunktionen, die verwendeten Shader und Direct3D-12.x-Methoden). Andere Spiele werden erprobt, sobald diese Übersetzung vollständig ist. Das Projekt baut auf [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 oder neuer) auf, das denselben Build anvisiert: das Submodul `third_party/victory` ist auf den Fork `fxceless/victory-fork` (GPL-3.0) im Commit `7b0f736` festgelegt. Dank an Marvisak und an die Autoren dieser Pull Requests, einzeln aufgeführt in [THIRD_PARTY.md](../../THIRD_PARTY.md).
+AnyXboxX ist auf einen einzigen Build spezialisiert: **Grand Theft Auto VI für Xbox Series, Version 1.0.2.1**. Übersetzt wird nur, was dieses Spiel braucht (die importierten Systemfunktionen, die verwendeten Shader und Direct3D-12.x-Methoden). Andere Spiele werden erprobt, sobald diese Übersetzung vollständig ist. Das Projekt baut auf [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 oder neuer) auf, das denselben Build anvisiert: es liegt als Kopie in `third_party/victory`, ausgehend vom Fork `fxceless/victory-fork` (GPL-3.0) im Commit `7b0f736`. Dank an Marvisak und an die Autoren dieser Pull Requests, einzeln aufgeführt in [THIRD_PARTY.md](../../THIRD_PARTY.md).
 
 > [!IMPORTANT]
 > **Das Spiel ist nicht spielbar.** Den aktuellen Stand zeigt der Kasten oben auf dieser Seite. Dieses Repository enthält keine Spieldateien, Schlüssel oder ausführbaren Dateien und erklärt nicht, wie man sie erhält.
