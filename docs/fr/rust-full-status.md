@@ -99,7 +99,7 @@ Constat sur la porteuse TLS : en cdylib `no_std`, son bloc TLS contient exacteme
 
 - Le bac à sable Unicorn et ses fonctions HLE (abandonnés dans l'état final, D2).
 - `emu/modules.py`, `emu/loader.py`, `report.py`, `status_map.py`, `translation.py`, `bench.py`, `tools/jour_j.py` : ils ont un portage Rust avec parité, mais d'autres parties Python (la CLI, la fenêtre, le bac à sable) les importent encore. Ils partiront avec le bac à sable.
-- RDNA 2 (`emu/rdna2*.py`, phase 4). L'interpréteur de référence est en Rust, crate `anyxboxx-rdna2-ref` (décodeur, table de mnémoniques générée par `tools/rdna2_ref_tables.py`, état du wave, instructions scalaires, branchements, VOP1 et VOP2 avec SDWA et DPP, VOPC). Encore en Python : VOP3 et VOP3P, la mémoire (DS, tampons, FLAT, SMEM), les images, la géométrie et les autres familles. Parité avec le modèle Python : `tests/test_rdna2_ref_parity.py` (programmes fixes et 300 programmes aléatoires à graine fixe, comparés ligne à ligne). D'ici là, `anyxboxx traduction` lit la couverture RDNA 2 dans `crates/anyxboxx-report/data/rdna2-coverage.txt` ; un test échoue quand cette table s'écarte de la mesure Python, et `python tests/test_rust_traduction_parity.py` la régénère.
+- RDNA 2 (`emu/rdna2*.py`, phase 4). L'interpréteur de référence est en Rust, crate `anyxboxx-rdna2-ref` (décodeur, table de mnémoniques générée par `tools/rdna2_ref_tables.py`, état du wave, instructions scalaires, branchements, VOP1, VOP2, VOPC, et VOP3 avec sa table native, les encodages plus anciens, retenues, lignes, multiplication 64 bits, SAD, division, comparaisons 64 bits, opérations f64, movrel ; SDWA et DPP sur VOP1 et VOP2 ; produits scalaires VOP3P). Encore en Python : les opérations VOP3P autres que les produits scalaires, les formes VOP3 à sélection 16 bits des opérandes, SDWA et DPP sur VOPC, la mémoire (DS, tampons, FLAT, SMEM), les images, la géométrie et les autres familles. La division utilise `num-bigint` (Rust pur, crates.io) pour l'arrondi exact. Parité avec le modèle Python : `tests/test_rdna2_ref_parity.py` (programmes fixes et 300 programmes aléatoires à graine fixe, comparés ligne à ligne). D'ici là, `anyxboxx traduction` lit la couverture RDNA 2 dans `crates/anyxboxx-report/data/rdna2-coverage.txt` ; un test échoue quand cette table s'écarte de la mesure Python, et `python tests/test_rust_traduction_parity.py` la régénère.
 - `tools/*.py` et la suite pytest (l'oracle).
 
 ## Vérifications sur cette branche (25/11/2026, Windows 11, Rust 1.98.1, Python 3.12)
@@ -111,8 +111,8 @@ cargo test --release --workspace       → 198 passed, 0 failed
 cargo clippy --release --workspace --all-targets → 0 warnings
 cargo fmt --check                      → propre
 cargo test -p anyxboxx-xgameruntime   → 64 passed (magasin de sauvegardes, stockage local, boutique, poignées comprises)
-cargo test -p anyxboxx-rdna2-ref      → 29 passed (décodeur, wave, scalaires, vectoriel, SDWA/DPP, comparaisons, boucle d'exécution)
-python -m pytest tests/test_rdna2_ref_parity.py → 5 passed (programmes fixes et 300 aléatoires, modèle Python contre binaire Rust)
+cargo test -p anyxboxx-rdna2-ref      → 48 passed (décodeur, wave, scalaires, vectoriel, SDWA/DPP, comparaisons, VOP3, SAD, division, f64, movrel, produits scalaires, boucle d'exécution)
+python -m pytest tests/test_rdna2_ref_parity.py → 7 passed (programmes fixes, 300 aléatoires, tests dédiés à la division et aux f64 ; modèle Python contre binaire Rust)
 ```
 
 Les chiffres ci-dessus pour `xgameruntime` et `rdna2-ref` viennent des exécutions de la crate dans le worktree de développement ; les 1251 et 198 ont été mesurés avant que ces crates grossissent, et ne sont pas relancés ici.
