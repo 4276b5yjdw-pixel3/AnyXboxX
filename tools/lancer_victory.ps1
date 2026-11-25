@@ -91,6 +91,9 @@ if (-not $NoTunedSettings) {
         # Card buffer sizing: minimum and total, in MB.
         VICTORY_CARD_BUFFERS_MIN_MB     = '1'
         VICTORY_CARD_BUFFERS_MB         = '1024'
+        # DirectStorage writes into physical pages are reported to the GPU side (fork commits e49864a and
+        # bf870de by Yorivel): the first room's walls no longer read stale copies.
+        VICTORY_DSTORAGE_NOTIFY         = '1'
     }
     foreach ($name in $tuned.Keys) {
         Set-Item -Path "Env:$name" -Value $tuned[$name]

@@ -1,4 +1,4 @@
-"""Épinglage de VIctory sur la branche anyxboxx/fork-7b0-lot9-gfx de LooperSalty/victory (fork fxceless/victory-fork plus seize PR, dont la précompilation hors ligne, et la xg_xs.dll locale optionnelle comme oracle) et réglages par défaut du lanceur."""
+"""Épinglage de VIctory sur la branche anyxboxx/fork-7b0-lot9-murs de LooperSalty/victory (fork fxceless/victory-fork plus seize PR, dont la précompilation hors ligne, et la xg_xs.dll locale optionnelle comme oracle) et réglages par défaut du lanceur."""
 import configparser
 import re
 import subprocess
@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 RACINE = Path(__file__).resolve().parents[1]
-COMMIT_FORK = "130bf10e1c70278a50ea828954a0e52acde1730a"
+COMMIT_FORK = "80d58f8fe2769d6c857eb27abc159b6cf64530a3"
 REGLAGES = (
     "VICTORY_SHADER_LOOP_LIMIT", "VICTORY_LATE_WAIT", "VICTORY_WIDE_BACK",
-    "VICTORY_CARD_BUFFERS_MIN_MB", "VICTORY_CARD_BUFFERS_MB",
+    "VICTORY_CARD_BUFFERS_MIN_MB", "VICTORY_CARD_BUFFERS_MB", "VICTORY_DSTORAGE_NOTIFY",
 )
 # Absentes du code de VIctory au commit épinglé : les poser ne change rien.
 ABSENTES = (
