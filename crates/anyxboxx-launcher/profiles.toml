@@ -18,9 +18,9 @@
 # Windows + NVIDIA: the maintainer's working set (VICTORY_SHADER_LOOP_LIMIT and the five others
 # equal anyxboxx::run::TUNED, which tools/lancer_victory.ps1 also sets).
 #
-# PENDING CONFIRMATION (maintainer): the PR #199 switches below are set to "0" (off) in this
-# profile, as requested for this launcher; they are not yet confirmed on Windows. Remove them from
-# `pending` once confirmed, and change their values only with the maintainer's agreement.
+# Measured by the maintainer on 2026-11-25: 2-3 fps on main after PR #199, 5-7 fps on the fork at
+# 80d58f8. Turning PR #199's switches off (all at "0") did not change the main figure, so this
+# profile leaves them at VIctory's defaults.
 # ---------------------------------------------------------------------------------------------
 [[profile]]
 id = "windows-nvidia"
@@ -28,22 +28,7 @@ name = "Windows + NVIDIA (maintainer's working set)"
 os = "windows"
 gpu = "nvidia"
 status = "measured"
-note = "TUNED settings measured on 2026-11-24 (RTX 4070 Super); PR #199 switches off, pending confirmation."
-pending = [
-    "VICTORY_SHADER_OPT",
-    "VICTORY_PS_HALVES",
-    "VICTORY_L6_HEAP_CLAMP",
-    "VICTORY_L6_NAN_GUARD",
-    "VICTORY_L6_NULL_LIBRARY",
-    "VICTORY_L6_PLACED_UAV",
-    "VICTORY_L6_PLANE_PASS",
-    "VICTORY_L6_PSV_INTERP",
-    "VICTORY_L9_DSTORAGE_GUARDS",
-    "VICTORY_L9_GUARD_TITLE_VIEWS",
-    "VICTORY_TEXTURE_SWEEP",
-    "VICTORY_TEXTURE_GATE_S",
-    "VICTORY_PIPELINE_GATE_S",
-]
+note = "Measured: 2-3 fps on main after PR #199; 5-7 fps on fork 80d58f8 (RTX 4070 Super). PR #199 switches at VIctory defaults."
 
 [profile.env]
 # Translated shader loops stop after 256 iterations.
@@ -57,20 +42,6 @@ VICTORY_CARD_BUFFERS_MIN_MB = "1"
 VICTORY_CARD_BUFFERS_MB = "1024"
 # DirectStorage writes are reported to the GPU side (fork commits e49864a and bf870de).
 VICTORY_DSTORAGE_NOTIFY = "1"
-# PENDING CONFIRMATION (maintainer), PR #199 switches: off in this profile.
-VICTORY_SHADER_OPT = "0"
-VICTORY_PS_HALVES = "0"
-VICTORY_L6_HEAP_CLAMP = "0"
-VICTORY_L6_NAN_GUARD = "0"
-VICTORY_L6_NULL_LIBRARY = "0"
-VICTORY_L6_PLACED_UAV = "0"
-VICTORY_L6_PLANE_PASS = "0"
-VICTORY_L6_PSV_INTERP = "0"
-VICTORY_L9_DSTORAGE_GUARDS = "0"
-VICTORY_L9_GUARD_TITLE_VIEWS = "0"
-VICTORY_TEXTURE_SWEEP = "0"
-VICTORY_TEXTURE_GATE_S = "0"
-VICTORY_PIPELINE_GATE_S = "0"
 
 # ---------------------------------------------------------------------------------------------
 # Linux (Proton) + AMD: the settings of PR #199's measured Linux run (Exorion1er, Fedora 44,

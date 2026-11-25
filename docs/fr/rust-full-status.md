@@ -34,7 +34,7 @@ Il est fait avec egui via eframe 0.34 : du Rust pur, sans liaison C++ ni install
 
 Profils (`crates/anyxboxx-launcher/profiles.toml`, un test chacun) :
 
-- **Windows + NVIDIA :** ton jeu de réglages (les six valeurs `TUNED` d'`anyxboxx run`, sans DRED, sans relais). Les 13 interrupteurs de la PR #199 sont à `0` et marqués **en attente de ta confirmation** : `VICTORY_SHADER_OPT`, `PS_HALVES`, `L6_HEAP_CLAMP`, `L6_NAN_GUARD`, `L6_NULL_LIBRARY`, `L6_PLACED_UAV`, `L6_PLANE_PASS`, `L6_PSV_INTERP`, `L9_DSTORAGE_GUARDS`, `L9_GUARD_TITLE_VIEWS`, `TEXTURE_SWEEP`, `TEXTURE_GATE_S`, `PIPELINE_GATE_S`. Les 13 existent dans le code de VIctory. `VICTORY_SHADER_OPT` fait partie de la clé du cache de shaders : le changer refait le cache.
+- **Windows + NVIDIA :** ton jeu de réglages (les six valeurs `TUNED` d'`anyxboxx run`, sans DRED, sans relais). Mesuré : 2-3 i/s sur `main` après la PR #199, 5-7 i/s sur le fork à `80d58f8`. Mettre les interrupteurs de la PR #199 à `0` n'a pas changé le chiffre de `main` : le profil les laisse aux valeurs par défaut de VIctory.
 - **Linux (Proton) + AMD :** les valeurs de l'essai de la PR #199 (RX 9070 XT, RADV, GE-Proton11-12) :
   - `SHADER_LOOP_LIMIT=256`, `LATE_WAIT=0`, `WIDE_BACK=0`, `PIPELINE_WAIT_MS=50`
   - `TEXTURE_BUDGET_MB=8192` (pour une carte de 16 Go), `TEXTURE_NO_WAIT=1`

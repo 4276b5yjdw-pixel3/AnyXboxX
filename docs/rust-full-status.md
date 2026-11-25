@@ -34,7 +34,7 @@ It is built with egui through eframe 0.34: pure Rust, no C++ binding, no install
 
 Profiles (`crates/anyxboxx-launcher/profiles.toml`, one test each):
 
-- **Windows + NVIDIA:** your working set (the six `TUNED` values of `anyxboxx run`, no DRED, no relay). The 13 switches from PR #199 are set to `0` and marked **pending your confirmation**: `VICTORY_SHADER_OPT`, `PS_HALVES`, `L6_HEAP_CLAMP`, `L6_NAN_GUARD`, `L6_NULL_LIBRARY`, `L6_PLACED_UAV`, `L6_PLANE_PASS`, `L6_PSV_INTERP`, `L9_DSTORAGE_GUARDS`, `L9_GUARD_TITLE_VIEWS`, `TEXTURE_SWEEP`, `TEXTURE_GATE_S`, `PIPELINE_GATE_S`. All 13 exist in VIctory's source. `VICTORY_SHADER_OPT` is part of the shader cache key, so changing it refills the cache.
+- **Windows + NVIDIA:** your working set (the six `TUNED` values of `anyxboxx run`, no DRED, no relay). Measured: 2-3 fps on `main` after PR #199, 5-7 fps on the fork at `80d58f8`. Setting PR #199's switches to `0` did not change the `main` figure, so the profile leaves them at VIctory's defaults.
 - **Linux (Proton) + AMD:** the values of PR #199's run (RX 9070 XT, RADV, GE-Proton11-12):
   - `SHADER_LOOP_LIMIT=256`, `LATE_WAIT=0`, `WIDE_BACK=0`, `PIPELINE_WAIT_MS=50`
   - `TEXTURE_BUDGET_MB=8192` (sized for a 16 GB card), `TEXTURE_NO_WAIT=1`

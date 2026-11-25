@@ -280,28 +280,24 @@ mod tests {
     }
 
     #[test]
-    fn windows_nvidia_is_the_tuned_set_plus_the_pending_switches_off() {
+    fn windows_nvidia_is_exactly_the_tuned_set() {
         use anyxboxx::run::TUNED;
         let profile = embedded().by_id("windows-nvidia").expect("profile").clone();
-        for (key, value) in TUNED {
-            assert_eq!(
-                profile.env.get(key).map(String::as_str),
-                Some(value),
-                "{key}"
-            );
-        }
-        let rest: Vec<(&String, &String)> = profile
+        let mut expected: Vec<(String, String)> = TUNED
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+            .collect();
+        let mut actual: Vec<(String, String)> = profile
             .env
             .iter()
-            .filter(|(k, _)| !TUNED.iter().any(|(t, _)| *t == k.as_str()))
+            .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
-        assert_eq!(rest.len(), 13, "the PR #199 switches, and nothing else");
-        assert!(rest.iter().all(|(_, v)| v.as_str() == "0"));
-        let mut pending = profile.pending.clone();
-        let mut keys: Vec<String> = rest.iter().map(|(k, _)| (*k).clone()).collect();
-        pending.sort();
-        keys.sort();
-        assert_eq!(pending, keys, "every switch set to 0 is marked as pending");
+        expected.sort();
+        actual.sort();
+        // PR #199's switches at "0" made no difference on the maintainer's test: not set here.
+        assert_eq!(actual, expected);
+        assert!(profile.pending.is_empty());
+        assert_eq!(profile.status, Status::Measured);
     }
 
     #[test]
