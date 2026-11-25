@@ -1,8 +1,11 @@
 //! Integer atomic operations of the reference interpreter: port of `operation` in
-//! `emu/rdna2_exec_atomic.py`, for the integer kinds. `integer` gives the new value from the old one,
-//! the data and the compare value, masked to the width of the access (32 or 64 bits).
+//! `emu/rdna2_exec_atomic.py`, for the integer kinds. `integer` gives the new value from the old one
+//! and the two data operands `a` and `b`, masked to the width of the access (32 or 64 bits).
+//! The operands follow the Python's order: for cmpswap (vector) `a` is the written value and `b` the
+//! compared one; for cmpst (DS) `a` is the compared value and `b` the written one; for wrap, `a` is
+//! DATA0 and `b` DATA1; for mskor, `a` clears bits and `b` sets them.
 
-/// The integer kinds `integer` knows.
+/// The kinds the SMEM atomics accept (`smem.rs`). `integer` knows more: the DS atomics use the rest.
 pub const KINDS: [&str; 13] = [
     "swap", "cmpswap", "add", "sub", "smin", "umin", "smax", "umax", "and", "or", "xor", "inc",
     "dec",
@@ -22,14 +25,31 @@ fn signed(value: u64, width: u32) -> i64 {
     ((value << shift) as i64) >> shift
 }
 
-/// The new value of an integer atomic of `width` bits, or `None` for a kind not in `KINDS`.
-pub fn integer(kind: &str, width: u32, old: u64, data: u64, compare: u64) -> Option<u64> {
+/// The new value of an integer atomic of `width` bits, or `None` for a kind it does not know.
+pub fn integer(kind: &str, width: u32, old: u64, a: u64, b: u64) -> Option<u64> {
     let mask = mask(width);
-    let (old, data) = (old & mask, data & mask);
+    let (old, data, compare) = (old & mask, a & mask, b & mask);
     let value = match kind {
         "add" => old.wrapping_add(data),
         "sub" => old.wrapping_sub(data),
-        "swap" => data,
+        "rsub" => data.wrapping_sub(old),
+        "swap" | "wrxchg" => data,
+        "mskor" => (old & !data) | compare,
+        "wrap" => {
+            if old >= data {
+                old.wrapping_sub(data)
+            } else {
+                old.wrapping_add(compare)
+            }
+        }
+        "csub" => old.saturating_sub(data),
+        "cmpst" => {
+            if old == data {
+                compare
+            } else {
+                old
+            }
+        }
         "and" => old & data,
         "or" => old | data,
         "xor" => old ^ data,
@@ -52,7 +72,7 @@ pub fn integer(kind: &str, width: u32, old: u64, data: u64, compare: u64) -> Opt
             }
         }
         "cmpswap" => {
-            if old == compare & mask {
+            if old == compare {
                 data
             } else {
                 old
@@ -98,5 +118,37 @@ mod tests {
     #[test]
     fn unknown_kinds_are_none() {
         assert_eq!(integer("fadd", 32, 0, 0, 0), None);
+    }
+
+    #[test]
+    fn reverse_subtract_and_exchange() {
+        assert_eq!(integer("rsub", 32, 3, 10, 0), Some(7));
+        assert_eq!(integer("rsub", 32, 10, 3, 0), Some(0xFFFF_FFF9));
+        assert_eq!(integer("wrxchg", 64, 5, 9, 0), Some(9));
+    }
+
+    #[test]
+    fn mskor_clears_then_sets() {
+        assert_eq!(
+            integer("mskor", 32, 0xFFFF_0000, 0xFF00_FF00, 0x0000_00AB),
+            Some(0x00FF_00AB)
+        );
+    }
+
+    #[test]
+    fn wrap_subtracts_or_adds_data1() {
+        assert_eq!(integer("wrap", 32, 10, 3, 100), Some(7));
+        assert_eq!(integer("wrap", 32, 2, 3, 100), Some(102));
+    }
+
+    #[test]
+    fn cmpst_compares_data0_and_writes_data1() {
+        assert_eq!(integer("cmpst", 32, 7, 7, 9), Some(9));
+        assert_eq!(integer("cmpst", 32, 6, 7, 9), Some(6));
+    }
+
+    #[test]
+    fn compare_is_masked_to_the_width() {
+        assert_eq!(integer("cmpswap", 32, 7, 9, 0x1_0000_0007), Some(9));
     }
 }

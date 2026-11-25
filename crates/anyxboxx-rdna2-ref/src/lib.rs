@@ -12,8 +12,9 @@
 pub mod atomic;
 pub mod compare;
 pub mod decode;
-pub mod ds;
 pub mod div;
+pub mod ds;
+pub mod ds_atomic;
 pub mod error;
 pub mod exec;
 pub mod ext;
