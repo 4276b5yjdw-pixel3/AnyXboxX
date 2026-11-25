@@ -36,6 +36,8 @@ python tools/jour_j.py .. --natif --duree 120
 
 `anyxboxx.exe` exécute alors le code du jeu directement sur le processeur, avec les DLL console de TomBox (`ANYXBOXX_TOMBOX_DIR`) et la trace des appels (`ANYXBOXX_TRACE=1`).
 
+Le rapport natif présente les objets d'état de pipeline (PSO) à partir des créations et rejets échantillonnés par TomBox, ainsi que le dernier relevé des compteurs graphiques quand il est disponible. Chaque lancement de diagnostic fixe `TOMBOX_LOG` vers un nouveau fichier sous le dossier du rapport. Le rapport indique ce journal local lorsque TomBox l'écrit.
+
 **Ce mode n'isole pas le jeu.** Il est réservé à un exécutable dont la provenance est connue.
 
 ### Ce que l'hôte Windows doit fournir
