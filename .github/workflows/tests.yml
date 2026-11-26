@@ -52,7 +52,8 @@ jobs:
   pytest:
     # Garder « pytest » : c'est le nom du check exigé par la protection de main.
     name: pytest
-    needs: lint
+    # Pas de « needs: lint » : les trois jobs démarrent ensemble. lint reste exigé et bloque la
+    # fusion s'il échoue ; l'attendre ne faisait qu'ajouter son temps (runner compris) à celui-ci.
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -112,5 +113,9 @@ jobs:
         if: steps.tombox-dlls.outputs.cache-hit != 'true'
         run: python tools/build_tombox.py
       - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      # pytest-xdist, un processus par cœur : mesuré en local sur 1 421 tests, 61 s en série
+      # contre 15 s avec -n 4 (ANYXBOXX_REQUIRE_RUNTIME=1, GPU en WARP), mêmes résultats. Le cache
+      # du runtime C++ de #348 n'est pas repris : CMake copie ici les DLL Rust de target/release,
+      # il doit tourner après cargo à chaque passage.
       - name: pytest (suite complète, nombre de tests comparé aux README)
-        run: python -m pytest
+        run: python -m pytest -n auto
