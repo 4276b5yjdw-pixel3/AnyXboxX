@@ -5,12 +5,12 @@ use eframe::egui::{self, Color32, RichText};
 use crate::app::{App, Verify};
 use crate::setup::State;
 use crate::verify::{self, Problem};
-use crate::{session, ui};
+use crate::{session, theme, ui};
 use anyxboxx::run::XgMode;
 
-const OK: Color32 = Color32::from_rgb(70, 170, 90);
-const MISSING: Color32 = Color32::from_rgb(210, 70, 70);
-const UNKNOWN: Color32 = Color32::from_rgb(200, 160, 60);
+const OK: Color32 = theme::GOOD;
+const MISSING: Color32 = theme::BAD;
+const UNKNOWN: Color32 = theme::WARN;
 
 /// Page 1: the checklist, with official links only.
 pub fn setup(app: &mut App, ui: &mut egui::Ui) {
@@ -18,36 +18,39 @@ pub fn setup(app: &mut App, ui: &mut egui::Ui) {
     ui.label("Green means the launcher found the item; grey-yellow means it cannot tell.");
     ui.add_space(6.0);
     for item in &app.setup {
-        ui.group(|ui| {
-            ui.label(RichText::new(item.title).strong());
+        theme::card(ui, |ui| {
+            ui.label(RichText::new(item.title).strong().size(17.0));
             let (text, color) = match &item.state {
                 State::Ok(text) => (format!("OK: {text}"), OK),
                 State::Missing(text) => (format!("Missing: {text}"), MISSING),
                 State::Unknown(text) => (format!("Unknown: {text}"), UNKNOWN),
             };
             ui.colored_label(color, text);
-            ui.label(format!("Needed for: {}", item.needed_for));
+            ui.label(
+                RichText::new(format!("Needed for: {}", item.needed_for)).color(theme::TEXT_MUTED),
+            );
             if let Some((label, url)) = item.link {
                 ui.hyperlink_to(label, url);
             }
         });
     }
     ui.add_space(6.0);
-    ui.label(format!(
-        "Host: {:?}. GPU: {} ({}).",
-        app.host,
-        app.gpu.label(),
-        app.adapter_name.as_deref().unwrap_or("no adapter found")
-    ));
-    ui.label(format!(
-        "Profile: {} ({:?}).",
-        app.profile().name,
-        app.profile().status
-    ));
-    ui.add_space(6.0);
-    if ui.button("Check again").clicked() {
-        app.refresh_setup();
-    }
+    theme::card(ui, |ui| {
+        ui.label(format!(
+            "Host: {:?}. GPU: {} ({}).",
+            app.host,
+            app.gpu.label(),
+            app.adapter_name.as_deref().unwrap_or("no adapter found")
+        ));
+        ui.label(format!(
+            "Profile: {} ({:?}).",
+            app.profile().name,
+            app.profile().status
+        ));
+        if ui.add(theme::accent_button(true, "Check again")).clicked() {
+            app.refresh_setup();
+        }
+    });
 }
 
 /// Page 2: the game folder, its check, and the manifest.
@@ -57,7 +60,10 @@ pub fn files(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut app.settings.game_dir);
         if ui
-            .add_enabled(!app.is_busy(), egui::Button::new("Check folder"))
+            .add_enabled(
+                !app.is_busy(),
+                theme::accent_button(!app.is_busy(), "Check folder"),
+            )
             .clicked()
         {
             app.start_verify();
@@ -123,16 +129,20 @@ pub fn shaders(app: &mut App, ui: &mut egui::Ui) {
     }
     let enabled = ready && !app.is_busy();
     if ui
-        .add_enabled(enabled, egui::Button::new("Preload shaders"))
+        .add_enabled(enabled, theme::accent_button(enabled, "Preload shaders"))
         .clicked()
     {
         app.start(true);
     }
     if let Some(progress) = app.progress() {
-        ui.add(egui::ProgressBar::new(progress.fraction()).text(format!(
-            "{} of {} {} ({}%)",
-            progress.done, progress.total, progress.what, progress.percent
-        )));
+        theme::gradient_bar(
+            ui,
+            progress.fraction(),
+            &format!(
+                "{} of {} {} ({}%)",
+                progress.done, progress.total, progress.what, progress.percent
+            ),
+        );
     }
     ui::log_view(app, ui);
 }
@@ -167,7 +177,10 @@ pub fn play(app: &mut App, ui: &mut egui::Ui) {
         ui.colored_label(UNKNOWN, "Check the game folder first (page 2).");
     }
     if ui
-        .add_enabled(ready && !app.is_busy(), egui::Button::new("Launch game"))
+        .add_enabled(
+            ready && !app.is_busy(),
+            theme::accent_button(ready && !app.is_busy(), "Launch game"),
+        )
         .clicked()
     {
         app.start(false);

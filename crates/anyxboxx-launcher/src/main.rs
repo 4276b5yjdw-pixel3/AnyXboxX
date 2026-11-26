@@ -21,6 +21,8 @@ mod profile;
 mod progress;
 mod session;
 mod setup;
+mod splash;
+mod theme;
 mod ui;
 mod ui_pages;
 mod verify;
@@ -38,7 +40,8 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "AnyXboxX launcher",
         options,
-        Box::new(|_creation| {
+        Box::new(|creation| {
+            theme::apply(&creation.egui_ctx);
             let state = app::App::new()?;
             Ok(Box::new(state))
         }),

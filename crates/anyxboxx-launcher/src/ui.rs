@@ -3,10 +3,11 @@
 
 use std::time::Duration;
 
-use eframe::egui;
+use eframe::egui::{self, RichText};
 
 use crate::app::{App, Tab};
-use crate::ui_pages;
+use crate::progress::Progress;
+use crate::{splash, theme, ui_pages};
 
 /// How often the window redraws while a job or a folder check runs.
 const BUSY_REPAINT: Duration = Duration::from_millis(200);
@@ -20,42 +21,81 @@ impl eframe::App for App {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        egui::Panel::top("tabs").show_inside(ui, |ui| {
-            ui.add_space(4.0);
-            ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.tab, Tab::Setup, "1  Setup");
-                ui.selectable_value(&mut self.tab, Tab::Files, "2  Game folder");
-                ui.selectable_value(&mut self.tab, Tab::Shaders, "3  Shaders");
-                ui.selectable_value(&mut self.tab, Tab::Play, "4  Play");
-            });
-            ui.add_space(4.0);
-        });
-        if let Some(notice) = self.notice.clone() {
-            egui::Panel::bottom("notice").show_inside(ui, |ui| {
+        let ctx = ui.ctx().clone();
+        theme::paint_background(&ctx);
+        let open_frame = egui::Frame::new().inner_margin(egui::Margin::symmetric(20, 10));
+        egui::Panel::top("tabs")
+            .frame(open_frame)
+            .show_inside(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(notice);
-                    if ui.small_button("dismiss").clicked() {
-                        self.notice = None;
+                    ui.label(RichText::new("AnyXboxX").size(26.0).strong());
+                    ui.add_space(14.0);
+                    for (tab, label) in [
+                        (Tab::Setup, "Setup"),
+                        (Tab::Files, "Game folder"),
+                        (Tab::Shaders, "Shaders"),
+                        (Tab::Play, "Play"),
+                    ] {
+                        if theme::tab_pill(ui, self.tab == tab, label) {
+                            self.tab = tab;
+                        }
                     }
                 });
             });
+        if let Some(notice) = self.notice.clone() {
+            egui::Panel::bottom("notice")
+                .frame(open_frame)
+                .show_inside(ui, |ui| {
+                    theme::card(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(notice);
+                            if ui.small_button("dismiss").clicked() {
+                                self.notice = None;
+                            }
+                        });
+                    });
+                });
         }
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| match self.tab {
-                Tab::Setup => ui_pages::setup(self, ui),
-                Tab::Files => ui_pages::files(self, ui),
-                Tab::Shaders => ui_pages::shaders(self, ui),
-                Tab::Play => ui_pages::play(self, ui),
+        egui::CentralPanel::default()
+            .frame(open_frame)
+            .show_inside(ui, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| match self.tab {
+                    Tab::Setup => ui_pages::setup(self, ui),
+                    tab => theme::card(ui, |ui| match tab {
+                        Tab::Files => ui_pages::files(self, ui),
+                        Tab::Shaders => ui_pages::shaders(self, ui),
+                        _ => ui_pages::play(self, ui),
+                    }),
+                });
             });
-        });
-        ui_pages::confirm_clean(self, ui.ctx());
+        ui_pages::confirm_clean(self, &ctx);
+        self.show_splash(&ctx);
+    }
+}
+
+impl App {
+    /// The splash over the window at start-up and while a job runs.
+    fn show_splash(&mut self, ctx: &egui::Context) {
+        let busy = self.running.is_some();
+        if !self.splash.visible(busy) {
+            return;
+        }
+        let progress = self.progress().cloned();
+        let idle = if busy { "Working..." } else { "Starting..." };
+        let status =
+            splash::status_text(progress.as_ref(), self.log.back().map(String::as_str), idle);
+        let fraction = progress
+            .as_ref()
+            .map(Progress::fraction)
+            .or(busy.then_some(0.0));
+        self.splash.show(ctx, busy, &status, fraction);
     }
 }
 
 /// The log of VIctory and of the launcher's steps, newest at the bottom.
 pub fn log_view(app: &App, ui: &mut egui::Ui) {
     ui.separator();
-    ui.label("Log");
+    ui.label(RichText::new("Log").strong().size(17.0));
     egui::ScrollArea::vertical()
         .id_salt("log")
         .max_height(260.0)

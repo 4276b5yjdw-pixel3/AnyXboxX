@@ -309,6 +309,7 @@ version = "0.1.0"
 dependencies = [
  "anyxboxx",
  "eframe",
+ "image",
  "regex",
  "serde",
  "sha2",

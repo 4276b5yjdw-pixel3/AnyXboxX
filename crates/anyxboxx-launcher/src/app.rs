@@ -14,6 +14,7 @@ use crate::profile::{Profile, Profiles};
 use crate::progress::{Progress, Summary};
 use crate::session::{self, Settings};
 use crate::setup::{self, Item};
+use crate::splash::Splash;
 use crate::verify::{self, Report};
 
 /// Lines kept in the log view.
@@ -60,6 +61,7 @@ pub struct App {
     pub notice: Option<String>,
     pub confirm_clean: bool,
     pub cache_dir: Option<PathBuf>,
+    pub splash: Splash,
 }
 
 /// The checklist as the machine is now; `adapters` is what DXGI listed (None when it failed).
@@ -107,6 +109,7 @@ impl App {
             notice: None,
             confirm_clean: false,
             cache_dir: cache::current_cache_dir(),
+            splash: Splash::new(),
         })
     }
 

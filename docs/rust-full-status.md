@@ -45,6 +45,8 @@ VKD3D_CONFIG=descriptor_heap "$PROTON/files/bin/wine" target/x86_64-pc-windows-m
 
 ### Graphical launcher (`crates/anyxboxx-launcher`)
 
+Style: a dusk gradient with translucent cards (`theme.rs`, colour maths tested for WCAG AA) and a splash screen (`splash.rs`) shown for 2 s and while a job runs. The splash picture is never committed: it is read from `ANYXBOXX_LAUNCHER_SPLASH`, else `%LOCALAPPDATA%\AnyXboxX\launcher\splash.png`; without one, the gradient and the title are drawn.
+
 It is built with egui through eframe 0.34: pure Rust, no C++ binding, no installer. The window has four pages with progress bars, a log and a few dialogs, which immediate-mode egui draws in a few hundred lines. Raw Win32 would have meant hand-written message loops and layout for the same pages. The logic lives in plain modules that the window only calls, so the 80 tests never open a window.
 
 | Page | What it does | Limits |
