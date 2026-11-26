@@ -100,6 +100,9 @@ struct Card {
     chunks: Mutex<Vec<(usize, usize, crate::windowup::Chunk)>>,
     /// (Neptune) Whether `dirty` took a range since [`card_dirty`] last looked.
     flagged: std::sync::atomic::AtomicBool,
+    /// The copy this is part of, once it is registered ([`note_carded`]):
+    /// what [`Card::flag`] puts in [`FLAGGED`].
+    me: std::sync::OnceLock<std::sync::Weak<Shadow>>,
     /// The card side's bytes as they were when the submission's shaders
     /// started, in the card's memory too: made when shader writes are
     /// first declared for the copy, and compared with the card's side, on
@@ -235,6 +238,49 @@ pub(crate) fn card_room_kept() -> u64 {
 
 /// The copies in the card's memory.
 static CARDED: Mutex<Vec<std::sync::Weak<Shadow>>> = Mutex::new(Vec::new());
+
+/// The copies in the card's memory whose [`Card::flagged`] went up since
+/// [`card_dirty`] last took them, each once per time it went up.
+///
+/// [`card_dirty`] went through all of [`CARDED`] at every submission (about
+/// 59 a frame in the world) to find the few that changed: in a 30 s profile
+/// of the world that pass was 2.5 % of the submitting thread's time, though
+/// it took no lock of the copies it passed over.
+static FLAGGED: Mutex<Vec<std::sync::Weak<Shadow>>> = Mutex::new(Vec::new());
+
+/// A copy just made in the card's memory: listed in [`CARDED`], and in
+/// [`FLAGGED`] if it is made flagged (its first send takes it whole).
+/// Copies that are gone are taken off [`CARDED`] here, each time its length
+/// reaches a power of two.
+fn note_carded(shadow: &Arc<Shadow>) {
+    let Some(card) = &shadow.card else {
+        return;
+    };
+    let weak = Arc::downgrade(shadow);
+    let _ = card.me.set(weak.clone());
+    {
+        let mut carded = CARDED.lock().unwrap_or_else(|e| e.into_inner());
+        if carded.len() >= 64 && carded.len().is_power_of_two() {
+            carded.retain(|w| w.strong_count() > 0);
+        }
+        carded.push(weak.clone());
+    }
+    if card.flagged.load(Ordering::Acquire) {
+        FLAGGED.lock().unwrap_or_else(|e| e.into_inner()).push(weak);
+    }
+}
+
+impl Card {
+    /// `dirty` or `chunks` took something (after it is in them): the copy is
+    /// flagged, and goes into [`FLAGGED`] if it was not flagged already.
+    fn flag(&self) {
+        if !self.flagged.swap(true, Ordering::AcqRel)
+            && let Some(me) = self.me.get()
+        {
+            FLAGGED.lock().unwrap_or_else(|e| e.into_inner()).push(me.clone());
+        }
+    }
+}
 
 /// Since the last frame line: bytes copied to card sides and the ranges
 /// they were; pieces compared on the card, pieces fetched and their
@@ -452,23 +498,24 @@ fn window_rebar_for(size: u64) -> Option<(ID3D12Resource, *mut u8)> {
 pub(crate) fn card_dirty(sent_as: u64) -> (Vec<(Arc<Shadow>, Vec<(usize, usize)>)>, Vec<Uploads>) {
     let mut out = Vec::new();
     let mut uploads: Vec<Uploads> = Vec::new();
-    let mut carded = CARDED.lock().unwrap_or_else(|e| e.into_inner());
     let fetched = RELAY_FETCHED.load(Ordering::Acquire);
-    carded.retain(|weak| {
+    // Only the copies flagged since the last call ([`FLAGGED`]); one flagged
+    // again while this runs is in the next call's list.
+    let flagged = std::mem::take(&mut *FLAGGED.lock().unwrap_or_else(|e| e.into_inner()));
+    for weak in flagged {
         let Some(shadow) = weak.upgrade() else {
-            return false;
+            continue;
         };
-        // (Neptune) Nothing changed since it was last asked, as for nearly all of the
-        // thousands of them at any one submission: no lock taken.
+        // (Neptune) No longer flagged: nothing to take.
         if shadow.card.as_ref().is_some_and(|c| !c.flagged.swap(false, Ordering::AcqRel)) {
-            return true;
+            continue;
         }
         if shadow.transient() {
             let taken = shadow.card.as_ref().map(|c| std::mem::take(&mut *c.chunks.lock().unwrap_or_else(|e| e.into_inner())));
             if let Some(taken) = taken.filter(|t| !t.is_empty()) {
                 uploads.push((shadow, taken));
             }
-            return true;
+            continue;
         }
         let ranges = shadow
             .card
@@ -487,8 +534,7 @@ pub(crate) fn card_dirty(sent_as: u64) -> (Vec<(Arc<Shadow>, Vec<(usize, usize)>
         if !ranges.is_empty() {
             out.push((shadow, joined(ranges)));
         }
-        true
-    });
+    }
     (out, uploads)
 }
 
@@ -3559,7 +3605,7 @@ impl Shadow {
         chunks.retain(|c| !(a <= c.0 && c.1 <= b));
         chunks.push((a, b, chunk));
         drop(chunks);
-        card.flagged.store(true, Ordering::Release);
+        card.flag();
         n
     }
 
@@ -3584,7 +3630,7 @@ impl Shadow {
             _ => dirty.push((from, to)),
         }
         drop(dirty);
-        card.flagged.store(true, Ordering::Release);
+        card.flag();
     }
 
     /// (Neptune) [`Shadow::card_changed`] for `runs` (offset, bytes; in
@@ -3603,7 +3649,7 @@ impl Shadow {
             }
         }
         drop(dirty);
-        card.flagged.store(true, Ordering::Release);
+        card.flag();
     }
 
     /// Of a copy in the card's memory: the CPU's side (PC memory), the
@@ -4137,6 +4183,7 @@ fn lookup_tables(address: u64, len: u64, any: bool) -> Option<Arc<Shadow>> {
                     staging: Some(buffer),
                     chunks: Mutex::default(),
                     flagged: std::sync::atomic::AtomicBool::new(true),
+                    me: std::sync::OnceLock::new(),
                     before: Mutex::default(),
                     dirty: Mutex::default(),
                     sent: Mutex::default(),
@@ -4164,9 +4211,7 @@ fn lookup_tables(address: u64, len: u64, any: bool) -> Option<Arc<Shadow>> {
         let mut shadow = Shadow::new(buffer, data, gpu, key.0, len);
         shadow.card = card;
         let shadow = Arc::new(shadow);
-        if shadow.card.is_some() {
-            CARDED.lock().unwrap_or_else(|e| e.into_inner()).push(Arc::downgrade(&shadow));
-        }
+        note_carded(&shadow);
         entry.shadow = Some(shadow);
     }
     entry.shadow.clone()
@@ -4396,6 +4441,7 @@ fn loose(address: u64, end: u64, unsized_ask: bool, any: bool) -> Option<Arc<Sha
             staging: None,
             chunks: Mutex::default(),
             flagged: std::sync::atomic::AtomicBool::new(true),
+            me: std::sync::OnceLock::new(),
             before: Mutex::default(),
             dirty: Mutex::default(),
             sent: Mutex::default(),
@@ -4414,6 +4460,7 @@ fn loose(address: u64, end: u64, unsized_ask: bool, any: bool) -> Option<Arc<Sha
                     staging: Some(buffer),
                     chunks: Mutex::default(),
                     flagged: std::sync::atomic::AtomicBool::new(true),
+                    me: std::sync::OnceLock::new(),
                     before: Mutex::default(),
                     dirty: Mutex::default(),
                     sent: Mutex::default(),
@@ -4447,9 +4494,7 @@ fn loose(address: u64, end: u64, unsized_ask: bool, any: bool) -> Option<Arc<Sha
         TRANSIENT[0].fetch_add(1, Ordering::Relaxed);
     }
     let shadow = Arc::new(shadow);
-    if shadow.card.is_some() {
-        CARDED.lock().unwrap_or_else(|e| e.into_inner()).push(Arc::downgrade(&shadow));
-    }
+    note_carded(&shadow);
     note(&shadow);
     map.insert((start, len), shadow.clone());
     Some(shadow)
@@ -4708,6 +4753,7 @@ mod card_merge_tests {
                 staging: Some(staging.clone()),
                 chunks: Mutex::default(),
                 flagged: std::sync::atomic::AtomicBool::new(false),
+                me: std::sync::OnceLock::new(),
                 before: Mutex::new(None),
                 dirty: Mutex::default(),
                 sent: Mutex::new(vec![(title_byte, title_byte + 1, 7)]),
@@ -4733,6 +4779,75 @@ mod card_merge_tests {
         // older card byte is taken for a shader's write.
         let before = land(7);
         assert_eq!(before[title_byte], content[title_byte]);
+    }
+
+    /// `card_dirty` takes the copies flagged since its last call, from the
+    /// list they went into when flagged ([`super::FLAGGED`]), each once, and
+    /// looks at no other copy in the card's memory. (The only test that
+    /// calls it: the list is the process's.)
+    #[test]
+    fn card_dirty_takes_only_the_copies_flagged_since() {
+        use super::{card_dirty, note_carded};
+        use std::sync::Arc;
+        use std::sync::atomic::Ordering;
+        let (Some(buffer), Some(staging)) = (warp_buffer(), warp_buffer()) else {
+            return;
+        };
+        const LEN: usize = 64 << 10;
+        let title = vec![0u8; LEN];
+        let (mut side_a, mut side_b, mut side_c) = (vec![0u8; LEN], vec![0u8; LEN], vec![0u8; LEN]);
+        let make = |side: &mut Vec<u8>, flagged: bool| {
+            let mut shadow = Shadow::new(buffer.clone(), side.as_mut_ptr(), 0, title.as_ptr() as u64, LEN as u64);
+            shadow.card = Some(Card {
+                staging: Some(staging.clone()),
+                chunks: Mutex::default(),
+                flagged: std::sync::atomic::AtomicBool::new(flagged),
+                me: std::sync::OnceLock::new(),
+                before: Mutex::new(None),
+                dirty: Mutex::default(),
+                sent: Mutex::default(),
+                // 0: no card bytes counted (`Drop` takes them off again).
+                size: 0,
+            });
+            let shadow = Arc::new(shadow);
+            note_carded(&shadow);
+            shadow
+        };
+        let taken = |out: &[(Arc<Shadow>, Vec<(usize, usize)>)]| -> Vec<(*const Shadow, Vec<(usize, usize)>)> {
+            out.iter().map(|(s, r)| (Arc::as_ptr(s), r.clone())).collect()
+        };
+        // Made flagged, as copies are: its first call takes it (nothing in
+        // `dirty` yet, so nothing to send).
+        let a = make(&mut side_a, true);
+        let b = make(&mut side_b, false);
+        let c = make(&mut side_c, false);
+        let (out, uploads) = card_dirty(1);
+        assert!(out.is_empty() && uploads.is_empty());
+        assert!(!a.card.as_ref().unwrap().flagged.load(Ordering::Acquire), "the copy made flagged was not taken");
+        // b changes. c holds a range and the flag without having been put
+        // in the list: only the listed copies are looked at.
+        b.card_changed(0, 16);
+        if let Some(card) = &c.card {
+            card.dirty.lock().unwrap().push((0, 8));
+            card.flagged.store(true, Ordering::Release);
+        }
+        let (out, _) = card_dirty(2);
+        assert_eq!(taken(&out), vec![(Arc::as_ptr(&b), vec![(0, 16)])]);
+        drop(out);
+        // Nothing changed since: nothing taken.
+        assert!(card_dirty(3).0.is_empty());
+        // Changed twice before the next call: taken once, both ranges.
+        b.card_changed(16, 32);
+        b.card_changed(64, 80);
+        let (out, _) = card_dirty(4);
+        assert_eq!(taken(&out), vec![(Arc::as_ptr(&b), vec![(16, 32), (64, 80)])]);
+        drop(out);
+        // A copy let go before the call is passed over (the list holds it
+        // weakly).
+        b.card_changed(0, 4);
+        drop(b);
+        assert!(card_dirty(5).0.is_empty());
+        drop((a, c));
     }
 }
 
