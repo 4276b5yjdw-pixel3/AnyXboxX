@@ -792,9 +792,6 @@ pub(crate) fn device_removed() -> Option<String> {
 pub(crate) static PLACED_TEXTURE_SLOTS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 pub(crate) static OBJECT_TEXTURE_SLOTS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
-/// Bytes per element of a buffer view, as the console's descriptor holds
-/// them for indexed reads (structured: the stride; raw: 1, the index is the
-/// byte; typed: the format's); `None` if `view` is not a buffer view.
 /// Format-kind flag for a typed buffer view in the [`SLOT_STRIDES`] table:
 /// `SLOT_TYPED_UINT` for `*_UINT` formats, `SLOT_TYPED_SINT` for `*_SINT`
 /// formats, and `0` for float/normalized/other formats.
@@ -811,6 +808,9 @@ fn typed_int_flag(format: DXGI_FORMAT) -> u32 {
     }
 }
 
+/// Bytes per element of a buffer view, as the console's descriptor holds
+/// them for indexed reads (structured: the stride; raw: 1, the index is the
+/// byte; typed: the format's); `None` if `view` is not a buffer view.
 fn view_stride(view: &View) -> Option<u32> {
     const BUFFER: u32 = 1;
     let (words, unordered): (&[u32; 10], bool) = match view {
