@@ -1925,6 +1925,14 @@ impl State {
         if !room {
             HEAP_TEXTURES_FULL.fetch_add(1, Ordering::Relaxed);
             once!("textures picked by index: the card has no room for more; they wait");
+            // (Neptune) What slots go on showing while their newer texture waits is given up,
+            // so that the sweep can let it go and make room (`VICTORY_KEPT_VIEWS_YIELD=1`).
+            if crate::descriptor::host::kept_views_yield() {
+                host.yield_kept_views();
+            }
+        }
+        if crate::descriptor::host::kept_views_yield() {
+            crate::descriptor::host::KEEPING_NOW.store(host.keeping_now() as u64, Ordering::Relaxed);
         }
         let mut refused = 0;
         // Room again: the slots held back while the card was full are due

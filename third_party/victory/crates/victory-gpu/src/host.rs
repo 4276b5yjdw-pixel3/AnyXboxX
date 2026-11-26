@@ -9330,9 +9330,13 @@ impl Meter {
             crate::ramline::log();
             tracing::info!(
                 "placed texture views: {} writes of another view of the texture a slot showed (it kept the old view until the new was made); \
-                 {} writes of a view of another texture (it kept showing the old texture until then, VICTORY_KEEP_OTHER_VIEWS=0: null at once)",
+                 {} writes of a view of another texture (it kept showing the old texture until then, VICTORY_KEEP_OTHER_VIEWS=0: null at once); \
+                 slots showing an older texture now {}, made null for want of room so far {} (VICTORY_KEPT_VIEWS_YIELD=1: {})",
                 crate::descriptor::host::KEPT_VIEWS.load(Ordering::Relaxed),
-                crate::descriptor::host::KEPT_OTHER_VIEWS.load(Ordering::Relaxed)
+                crate::descriptor::host::KEPT_OTHER_VIEWS.load(Ordering::Relaxed),
+                crate::descriptor::host::KEEPING_NOW.load(Ordering::Relaxed),
+                crate::descriptor::host::KEPT_YIELDED.load(Ordering::Relaxed),
+                if crate::descriptor::host::kept_views_yield() { "on" } else { "off" }
             );
             crate::tiles::status();
             {
