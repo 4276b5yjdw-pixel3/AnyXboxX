@@ -206,3 +206,17 @@ def test_package_user_locale_and_buffer_size(runtime_dir):
     output = ctypes.create_string_buffer(len(expected) + 1)
     assert locale(len(expected), output) == E_INSUFFICIENT_BUFFER
     assert locale(len(output), output) == S_OK and output.value == expected
+
+
+def test_package_installation_subscriptions(runtime_dir):
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    register = api.method(9, ctypes.c_uint32, P, P, P, ctypes.POINTER(ctypes.c_uint64))
+    token = ctypes.c_uint64()
+    assert register(None, None, None, None) == E_INVALIDARG
+    assert register(None, None, None, ctypes.byref(token)) == S_OK and token.value
+    assert api.method(10, ctypes.c_bool, P, ctypes.c_uint64, ctypes.c_bool)(None, token, False)
+    package_token = ctypes.c_uint64()
+    assert api.method(40, ctypes.c_uint32, P, P, P, ctypes.POINTER(ctypes.c_uint64))(
+        None, None, None, ctypes.byref(package_token)) == S_OK
+    assert package_token.value and package_token.value != token.value
+    assert api.method(22, ctypes.c_bool, ctypes.c_uint64, ctypes.c_bool)(package_token, False)

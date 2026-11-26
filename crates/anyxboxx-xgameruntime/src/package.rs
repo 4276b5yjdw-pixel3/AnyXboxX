@@ -163,6 +163,11 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (6, crate::package_monitor::close as *const c_void),
         (7, crate::package_monitor::progress as *const c_void),
         (8, crate::package_monitor::update as *const c_void),
+        (9, crate::package_monitor::register as *const c_void),
+        (
+            10,
+            crate::package_monitor::unregister_progress as *const c_void,
+        ),
         (11, user_locale as *const c_void),
         (12, chunk_availability as *const c_void),
         (13, enumerate_chunks as *const c_void),
@@ -170,6 +175,10 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (16, crate::package_monitor::install_async as *const c_void),
         (17, crate::package_monitor::install_result as *const c_void),
         (18, estimate_download as *const c_void),
+        (
+            22,
+            crate::package_monitor::unregister_package as *const c_void,
+        ),
         (24, crate::package_mount::path_size as *const c_void),
         (25, crate::package_mount::path as *const c_void),
         (26, crate::package_mount::close as *const c_void),
@@ -178,6 +187,7 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (37, crate::package_mount::mount_async as *const c_void),
         (38, crate::package_mount::mount_result as *const c_void),
         (39, crate::package_enumerate::enumerate as *const c_void),
+        (40, crate::package_monitor::register as *const c_void),
         (41, package_kind as *const c_void),
     ]
 }

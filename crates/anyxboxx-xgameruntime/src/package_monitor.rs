@@ -4,10 +4,46 @@ use crate::save_async::{self, Completion};
 use std::collections::HashSet;
 use std::ffi::{c_char, c_void};
 use std::mem::size_of;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use victory_hle::modules::xasync::AsyncBlock;
 
 static INSTALL_IDENTITY: [u8; 1] = [11];
+static NEXT_TOKEN: AtomicU64 = AtomicU64::new(0);
+
+pub unsafe extern "system" fn register(
+    _this: *mut c_void,
+    _owner: *mut c_void,
+    _context: *mut c_void,
+    _callback: *mut c_void,
+    token: *mut u64,
+) -> HResult {
+    if token.is_null() {
+        return E_INVALIDARG;
+    }
+    // SAFETY: the caller supplies a writable token.
+    unsafe {
+        *token = NEXT_TOKEN.fetch_add(1, Ordering::Relaxed).wrapping_add(1);
+    }
+    S_OK
+}
+
+pub unsafe extern "system" fn unregister_progress(
+    _this: *mut c_void,
+    _monitor: *mut c_void,
+    _token: u64,
+    _wait: bool,
+) -> bool {
+    true
+}
+
+pub unsafe extern "system" fn unregister_package(
+    _this: *mut c_void,
+    _token: u64,
+    _wait: bool,
+) -> bool {
+    true
+}
 
 fn identity() -> *const c_void {
     INSTALL_IDENTITY.as_ptr().cast()
