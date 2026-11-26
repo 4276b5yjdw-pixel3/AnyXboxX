@@ -220,3 +220,11 @@ def test_package_installation_subscriptions(runtime_dir):
         None, None, None, ctypes.byref(package_token)) == S_OK
     assert package_token.value and package_token.value != token.value
     assert api.method(22, ctypes.c_bool, ctypes.c_uint64, ctypes.c_bool)(package_token, False)
+
+
+def test_package_install_order_and_uninstall_refusals(runtime_dir):
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    assert api.method(14, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_uint32, P)(None, 0, None) == S_OK
+    assert api.method(19, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_uint32, P)(None, 0, None) == 0x80004001
+    assert api.method(32, ctypes.c_uint32, ctypes.c_char_p)(None) == 0x80004001
+    assert api.method(34, ctypes.c_bool, ctypes.c_char_p)(None) is False

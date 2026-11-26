@@ -105,6 +105,22 @@ unsafe extern "system" fn enumerate_chunks(
     S_OK
 }
 
+unsafe extern "system" fn change_install_order(
+    _this: *mut c_void,
+    _id: *const c_char,
+    _count: u32,
+    _selectors: *mut c_void,
+) -> HResult {
+    S_OK
+}
+
+unsafe extern "system" fn uninstall_package(_this: *mut c_void, _id: *const c_char) -> bool {
+    crate::log::write(format_args!(
+        "[runtime] XPackageUninstallPackage: not implemented"
+    ));
+    false
+}
+
 unsafe extern "system" fn enumerate_features(
     _this: *mut c_void,
     _id: *const c_char,
@@ -171,6 +187,7 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (11, user_locale as *const c_void),
         (12, chunk_availability as *const c_void),
         (13, enumerate_chunks as *const c_void),
+        (14, change_install_order as *const c_void),
         (15, crate::package_monitor::install as *const c_void),
         (16, crate::package_monitor::install_async as *const c_void),
         (17, crate::package_monitor::install_result as *const c_void),
@@ -184,6 +201,7 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (26, crate::package_mount::close as *const c_void),
         (30, write_stats as *const c_void),
         (33, enumerate_features as *const c_void),
+        (34, uninstall_package as *const c_void),
         (37, crate::package_mount::mount_async as *const c_void),
         (38, crate::package_mount::mount_result as *const c_void),
         (39, crate::package_enumerate::enumerate as *const c_void),
