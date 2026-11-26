@@ -6,11 +6,10 @@
 // VirtualMemoryConfiguration) : flags, page_table_pages, frame_buffer_preserve_bytes, reserved
 // (quatre mots de 32 bits), output0 et output1 (deux mots de 64 bits).
 //
-// Sur l'exécutable réel, le titre ne remplit que le mot à +4 (page_table_pages) et ne teste que
-// le résultat ; les pointeurs passés dans le cadre de pile de l'appelant ne garantissent pas
-// 32 octets. Mesure de Leonida (runtime/shims/d3d12_xs.cpp, lignes 221-223, GitHub Leonida
-// #6750) : leur shim n'écrit rien et rend S_OK. Ici aussi : on ne lit que flags et
-// page_table_pages (tracés), on n'écrit aucune sortie. Un pointeur nul est refusé.
+// Ce que le titre remplit et lit dans cette structure n'est pas mesuré par AnyXboxX : on suppose
+// que le pointeur reçu ne couvre pas forcément les 32 octets (il peut viser le cadre de pile de
+// l'appelant). Choix prudent : on ne lit que flags et page_table_pages (tracés), on n'écrit
+// aucune sortie et on rend S_OK. Un pointeur nul est refusé.
 #include <windows.h>
 
 #include <cstdint>

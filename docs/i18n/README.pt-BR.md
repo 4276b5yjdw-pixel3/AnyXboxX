@@ -113,7 +113,7 @@ Os dois jogos de teste rodam sem sincronização vertical: cerca de 11 700 q/s n
 | Desmontador de GPU RDNA 2: 1.490 mnemônicos e operandos na sintaxe do LLVM (escalares, VOP1/VOP2/VOPC/VOP3/VOP3P/SDWA/DPP/SMEM/DS/EXP/MUBUF/MTBUF/MIMG/FLAT com modificadores), verificado em 38.999 codificações públicas do LLVM: `scarlett.py --rdna2 <shader.bin> [--liste]` | 🟡 em andamento |
 | Operandos do desmontador RDNA 2 idênticos ao texto do LLVM: escalares e VOP1/VOPC 100%, DS 100%, EXP 100%, SMEM 96,5% (o máximo: o LLVM escreve as demais codificações de duas formas) | ✅ feito |
 | Primeiros vertex e pixel shaders RDNA 2 desenhados com D3D12 (`anyxboxx_gpu_run.exe --draw`): cada vértice e cada pixel idênticos ao interpretador de referência, na GPU e com WARP | ✅ feito |
-| Texturas nos shaders RDNA 2 recompilados: descritores T#/S# e `image_sample` (2D, texel mais próximo, wrap ou clamp-to-edge, 8_8_8_8_UNORM e 32_32_32_32_FLOAT), idênticos ao interpretador de referência na GPU e com WARP, incluindo um pixel shader com textura; layout dos descritores do Leonida e do Mesa | ✅ feito |
+| Texturas nos shaders RDNA 2 recompilados: descritores T#/S# e `image_sample` (2D, texel mais próximo, wrap ou clamp-to-edge, 8_8_8_8_UNORM e 32_32_32_32_FLOAT), idênticos ao interpretador de referência na GPU e com WARP, incluindo um pixel shader com textura; layout dos descritores segundo a ISA RDNA 2 da AMD e o Mesa | ✅ feito |
 | TomBox atualizado para a versão mais recente (D3D12.X: 194 de 200 métodos pela contagem deles) e mais 4 bibliotecas do console compiladas e servidas a partir de `ANYXBOXX_TOMBOX_DIR`: `d3d12_x` (ESRAM), `XAudio2_9` (vozes XMA), `xapu`, `xgs12`; `tools/build_tombox.py d3d12_xs xg_xs xmem d3d12_x xaudio2_9 xapu xgs12` | 🟡 em andamento |
 | Conversão do DXIL do console em DXIL do PC (`dxil-ms-xb2` → `dxil-ms-dx`, sem passar por HLSL): a ferramenta do Xbox2Windows (MIT), copiada sem alterações com seu teste em `third_party/xbox2windows/`; `python third_party/xbox2windows/tools/dxil_retarget.py <entrada> <saída>` ou `--pe <jogo.exe>` | ✅ feito |
 | Verificações das pull requests: lint e os 9 README sincronizados (linhas, imagens, número de testes) em cada pull request | ✅ feito |
@@ -227,7 +227,7 @@ def XSystemGetDeviceType(c):
 - [Notas de engenharia reversa do pacote Scarlett estudado](../research/package/README.md) (escritas pelo Codex): tabelas RDS5/ETPF, cabeçalhos RPF, organização do pacote.
 - [TomBox e sua continuação](../research/tombox.md): DLLs de console em Rust, Direct3D 12.x, tradutor de shaders RDNA 2, o que o AnyXboxX reaproveita (MIT, citado).
 - [Xbox2Windows](../research/xbox2windows.md): pesquisa sobre recompilação estática; BC7 e tiling GFX10 reaproveitados pelo AnyXboxX (MIT, citado).
-- [Primeira inicialização do executável 1.0.2.1](../research/first-boot-1021.md): paradas medidas no `gta6rt` do Leonida em ordem, os pull requests do Leonida que as tratam, lista de trabalho do AnyXboxX.
+- [Primeira inicialização do executável 1.0.2.1](../research/first-boot-1021.md): paradas medidas em ordem num runtime de terceiros (já removido), lista de trabalho do AnyXboxX.
 
 ## Testes
 
