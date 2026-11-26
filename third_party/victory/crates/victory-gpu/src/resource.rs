@@ -3158,6 +3158,14 @@ pub(crate) fn texture_at(address: u64, desc: &[u32; 14]) -> Option<This> {
     Some(out)
 }
 
+#[cfg(all(test, windows))]
+pub(crate) fn release_test_placed_texture(address: u64, desc: [u32; 14]) {
+    let resource = PLACED_TEXTURES.lock().unwrap().remove(&(address, loose_key(desc)));
+    if let Some(resource) = resource {
+        resource_release(resource as This);
+    }
+}
+
 pub(crate) extern "system" fn create_placed(
     _: This,
     heap: This,
