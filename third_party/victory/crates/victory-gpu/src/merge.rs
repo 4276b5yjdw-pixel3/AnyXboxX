@@ -39,7 +39,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// 4. the next submission cannot be prepared after the held ones without a
 ///    change of what it or they see ([`Plan::refuses`]): it reads title memory
 ///    the held ones' shaders may write, it copies over title memory a held one
-///    brings to the card, or it runs code of ours on title memory;
+///    brings to the card, or it runs code of ours on title memory; or it would
+///    wait for flights in the air on its own, and the held ones with it;
 /// 5. the held submissions reach [`most`] lists or submissions;
 /// 6. the first of them was held [`window`] ago (a thread of ours sends them):
 ///    a title that polls a value in memory without a fence sees it at most
@@ -107,7 +108,9 @@ pub(crate) enum Why {
     Settle,
     /// The title's page mappings on a queue.
     Mappings,
-    /// The next submission reads title memory the held ones' shaders may write.
+    /// The next submission reads title memory the held ones' shaders may
+    /// write, or flights' in the air (on its own it would wait for those, and
+    /// the held ones would wait with it).
     Reads,
     /// The next submission copies over title memory a held one brings to the card.
     CopyOver,
@@ -167,7 +170,7 @@ pub(crate) fn line(frames: f64) {
         "title submissions merged per frame (VICTORY_MERGE_SUBMISSIONS={}): {:.1} title submissions went to the card in {:.1} \
          host submissions ({:.2} each); sent for: a fence signal {:.1}, a fence asked about {:.1}, a wait for a memory value {:.1}, \
          a present {:.1}, a synchronous submission of ours {:.1}, a settle {:.1}, page mappings {:.1}, a submission that reads \
-         what held shaders write {:.1}, a copy over what a held submission brings {:.1}, a step of ours on title memory {:.1}, \
+         what held or flying shaders write {:.1}, a copy over what a held submission brings {:.1}, a step of ours on title memory {:.1}, \
          {} lists or {} submissions held {:.1}, the timer ({} us) {:.1}, bottom-of-pipe writes told at once {:.1}; \
          {:.1} waits for memory values met by a held write, {:.1} fence signals carried behind held submissions",
         level(),
