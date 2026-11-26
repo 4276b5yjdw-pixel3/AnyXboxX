@@ -198,6 +198,16 @@ def test_a_literal_operand_is_the_second_word_in_both_models():
     assert_same(exe, 32, False, [], words)
 
 
+def test_inline_double_constants_match_the_python_model():
+    exe = binary()
+    for lanes in (32, 64):
+        for source in range(240, 249):
+            for instruction in (sop1("s_mov_b64", 4, source), sop1("s_not_b64", 4, source),
+                                sop2("s_xor_b64", 4, source, 193)):
+                assert_same(exe, lanes, False, [], program(instruction))
+            assert_same(exe, lanes, False, [], program(vopc("v_cmp_eq_f64", source, 0)))
+
+
 # Float literals the model treats specially: NaN, infinities, signed zeros, subnormals, the largest finite
 # value, one. Half the literals come from this list, the rest are random 32-bit patterns.
 SPECIAL_LITERALS = (

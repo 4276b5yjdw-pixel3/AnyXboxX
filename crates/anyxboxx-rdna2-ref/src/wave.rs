@@ -129,7 +129,12 @@ impl Wave {
                     value
                 })
             }
-            _ => float::inline_constant(code).ok_or_else(|| {
+            _ => (if width == 2 {
+                float::inline_double(code)
+            } else {
+                float::inline_constant(code)
+            })
+            .ok_or_else(|| {
                 Error::Untranslated(format!("opérande scalaire {code} non pris en charge"))
             }),
         }

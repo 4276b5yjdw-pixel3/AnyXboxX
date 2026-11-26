@@ -176,20 +176,8 @@ pub fn read64(wave: &Wave, code: u32, lane: usize, is_float: bool) -> Result<u64
     if code < 128 || (128..=208).contains(&code) {
         return Ok(wave.read_scalar(code, None, 2)? & MASK64);
     }
-    let inline_double = match code {
-        240 => Some(0.5),
-        241 => Some(-0.5),
-        242 => Some(1.0),
-        243 => Some(-1.0),
-        244 => Some(2.0),
-        245 => Some(-2.0),
-        246 => Some(4.0),
-        247 => Some(-4.0),
-        248 => Some(std::f64::consts::FRAC_1_PI / 2.0),
-        _ => None,
-    };
-    match inline_double {
-        Some(value) if is_float => Ok(value.to_bits()),
+    match crate::float::inline_double(code) {
+        Some(value) if is_float => Ok(value),
         _ => Err(Error::Untranslated(format!(
             "opérande 64 bits {code} non pris en charge"
         ))),
