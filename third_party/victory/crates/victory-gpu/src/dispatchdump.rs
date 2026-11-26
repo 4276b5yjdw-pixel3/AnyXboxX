@@ -40,7 +40,17 @@ const LATER: u64 = 8;
 
 fn folder() -> Option<&'static std::path::PathBuf> {
     static FOLDER: OnceLock<Option<std::path::PathBuf>> = OnceLock::new();
-    FOLDER.get_or_init(|| std::env::var_os("VICTORY_DISPATCH_DUMP").map(Into::into)).as_ref()
+    FOLDER
+        .get_or_init(|| {
+            let folder: std::path::PathBuf = std::env::var_os("VICTORY_DISPATCH_DUMP")?.into();
+            // What is dumped is the title's data: never inside a source tree (docs/asset-policy.md).
+            if let Err(e) = victory_core::ensure_outside_repo(&folder) {
+                tracing::error!(%e, "VICTORY_DISPATCH_DUMP refused: nothing is dumped");
+                return None;
+            }
+            Some(folder)
+        })
+        .as_ref()
 }
 
 fn names() -> &'static [String] {

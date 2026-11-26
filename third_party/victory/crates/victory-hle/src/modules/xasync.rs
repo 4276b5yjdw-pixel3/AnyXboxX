@@ -10,6 +10,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
+use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
@@ -496,6 +497,7 @@ struct Call {
     context: usize,
     identity: usize,
     done: Mutex<bool>,
+    cleaning: AtomicBool,
     finished: Condvar,
 }
 
@@ -553,7 +555,12 @@ fn zeroed(block: *mut AsyncBlock) -> bool {
 
 fn release(block: *mut AsyncBlock) {
     // Unlocked before the provider runs: it may call back into us.
-    let removed = lock(&CALLS).remove(&(block as usize));
+    let mut calls = lock(&CALLS);
+    if calls.get(&(block as usize)).is_some_and(|call| call.cleaning.load(Ordering::Acquire)) {
+        return;
+    }
+    let removed = calls.remove(&(block as usize));
+    drop(calls);
     if let Some(call) = removed {
         call.provider(OP_CLEANUP, block, 0, std::ptr::null_mut());
     }
@@ -594,6 +601,7 @@ pub fn XAsyncBegin(
         context: context as usize,
         identity: identity as usize,
         done: Mutex::new(false),
+        cleaning: AtomicBool::new(false),
         finished: Condvar::new(),
     });
     lock(&CALLS).insert(block as usize, call.clone());
@@ -679,11 +687,21 @@ fn complete_call(call: &Call, block: *mut AsyncBlock, result: HRESULT, required_
     // SAFETY: a block in flight is valid.
     let (handle, routine) = unsafe { ((*block).queue, (*block).callback) };
     let (status, size) = words(block);
-    if result < 0 || required_size == 0 {
-        release(block);
+    let release_on_completion = result < 0 || required_size == 0;
+    if release_on_completion {
+        // Keep the call discoverable while cleanup runs: a waiting GetStatus must
+        // not observe a missing call with its status still E_PENDING.
+        call.cleaning.store(true, Ordering::Release);
+        call.provider(OP_CLEANUP, block, 0, std::ptr::null_mut());
     }
+    // Removal and publication are atomic with respect to call().
+    let mut calls = lock(&CALLS);
     size.store(required_size, Ordering::Release);
     status.store(result as u32 as usize, Ordering::Release);
+    if release_on_completion {
+        calls.remove(&(block as usize));
+    }
+    drop(calls);
     *done = true;
     call.finished.notify_all();
     drop(done);
@@ -1067,6 +1085,33 @@ extern "system" fn m_set_process_queue(_: This, q: *const Queue) {
 /// which every runtime call in a title makes first.
 extern "system" fn m_check_thread(_: This) {}
 
+// XThread: the time-sensitivity mark is per thread (the C++ runtime keeps it in a thread_local).
+const E_FAIL: HRESULT = 0x8000_4005_u32 as i32;
+
+thread_local! {
+    static TIME_SENSITIVE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// XThreadSetTimeSensitive: marks the calling thread.
+extern "system" fn m_set_time_sensitive(_: This, value: bool) -> HRESULT {
+    TIME_SENSITIVE.with(|flag| flag.set(value));
+    S_OK
+}
+
+/// XThreadVerifyNotTimeSensitive: `E_FAIL` on a time-sensitive thread.
+extern "system" fn m_verify_not_time_sensitive(_: This) -> HRESULT {
+    if TIME_SENSITIVE.with(Cell::get) {
+        E_FAIL
+    } else {
+        S_OK
+    }
+}
+
+/// XThreadIsTimeSensitive.
+extern "system" fn m_is_time_sensitive(_: This) -> bool {
+    TIME_SENSITIVE.with(Cell::get)
+}
+
 static VTABLE: Methods<31> = Methods([
     missing::<0> as *const (),         // 0x00 QueryInterface
     add_ref as *const (),              // 0x08 AddRef
@@ -1095,10 +1140,11 @@ static VTABLE: Methods<31> = Methods([
     m_unregister_monitor as *const (), // 0xc0
     m_get_process_queue as *const (),  // 0xc8
     m_set_process_queue as *const (),  // 0xd0
-    missing::<27> as *const (),        // 0xd8 thread time-sensitivity
-    missing::<28> as *const (),        // 0xe0
-    m_check_thread as *const (),       // 0xe8
-    missing::<30> as *const (),        // 0xf0
+    // 0xd8 XThreadSetTimeSensitive, 0xe0 XThreadVerifyNotTimeSensitive, 0xf0 XThreadIsTimeSensitive
+    m_set_time_sensitive as *const (),
+    m_verify_not_time_sensitive as *const (),
+    m_check_thread as *const (), // 0xe8
+    m_is_time_sensitive as *const (),
 ]);
 
 #[cfg(test)]
@@ -1108,6 +1154,26 @@ mod tests {
 
     fn slot<F: Copy>(offset: usize) -> F {
         crate::modules::xgameruntime::method(&OBJECT, offset)
+    }
+
+    #[test]
+    fn time_sensitivity_is_marked_per_thread() {
+        type Set = extern "system" fn(*const Object, bool) -> HRESULT;
+        type Verify = extern "system" fn(*const Object) -> HRESULT;
+        type Is = extern "system" fn(*const Object) -> bool;
+        let (set, verify, is): (Set, Verify, Is) = (slot(0xd8), slot(0xe0), slot(0xf0));
+        let this = &OBJECT as *const Object;
+        assert_eq!(verify(this), S_OK);
+        assert_eq!(set(this, true), S_OK);
+        assert!(is(this));
+        assert_eq!(verify(this), E_FAIL);
+        let address = this as usize;
+        let other = std::thread::spawn(move || is(address as *const Object))
+            .join()
+            .unwrap();
+        assert!(!other, "the mark belongs to the thread that set it");
+        assert_eq!(set(this, false), S_OK);
+        assert!(!is(this));
     }
 
     static RAN: AtomicU32 = AtomicU32::new(0);
