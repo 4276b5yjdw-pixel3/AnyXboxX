@@ -208,6 +208,17 @@ def test_inline_double_constants_match_the_python_model():
             assert_same(exe, lanes, False, [], program(vopc("v_cmp_eq_f64", source, 0)))
 
 
+def test_scalar_packs_match_the_python_model():
+    exe = binary()
+    for name in ("s_pack_ll_b32_b16", "s_pack_lh_b32_b16", "s_pack_hh_b32_b16"):
+        for scc in (False, True):
+            for a, b in ((0, 1), (240, 248), (193, 192), (LITERAL, 1), (0, LITERAL)):
+                words = [sop2(name, 3, a, b)]
+                if LITERAL in (a, b):
+                    words.append(0xAAAA_BBBB)
+                assert_same(exe, 32, scc, [(0, 0x12345678), (1, 0x9abcdef0)], program(*words))
+
+
 # Float literals the model treats specially: NaN, infinities, signed zeros, subnormals, the largest finite
 # value, one. Half the literals come from this list, the rest are random 32-bit patterns.
 SPECIAL_LITERALS = (
