@@ -5371,6 +5371,7 @@ mod card_merge_tests {
             shadow.card = Some(Card {
                 staging: Some(staging.clone()),
                 chunks: Mutex::default(),
+                prints: Mutex::default(),
                 flagged: std::sync::atomic::AtomicBool::new(flagged),
                 me: std::sync::OnceLock::new(),
                 before: Mutex::new(None),
