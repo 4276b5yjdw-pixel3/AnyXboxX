@@ -30,7 +30,6 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         let now = ctx.input(|i| i.time);
-        self.splash.poll(&ctx);
         self.handle_drops(&ctx);
         self.refresh_chips(now);
         if let Some(notice) = self.notice.take() {

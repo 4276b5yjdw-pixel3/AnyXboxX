@@ -4,8 +4,6 @@
 
 use eframe::egui::{Rect, Vec2, pos2, vec2};
 
-/// Seconds of one slow zoom in and out of the launch screen.
-pub const KEN_BURNS_PERIOD: f64 = 36.0;
 /// Extra zoom at the top of the drift (8 %).
 pub const KEN_BURNS_DEPTH: f32 = 0.08;
 
@@ -31,9 +29,20 @@ pub fn cover_uv(image: Vec2, frame: Vec2, zoom: f32, pan: Vec2) -> Rect {
     Rect::from_center_size(pos2(center.x, center.y), size)
 }
 
-/// The zoom of the slow drift at `time`: from 1 up to `1 + KEN_BURNS_DEPTH` and back.
-pub fn ken_burns_zoom(time: f64) -> f32 {
-    1.0 + KEN_BURNS_DEPTH * crate::anim::pulse(time, KEN_BURNS_PERIOD)
+/// Zoom and pan of the slideshow picture number `index` at `progress` (0..1 of its life): even
+/// pictures zoom in, odd ones zoom out, and the drift direction turns with the index. `depth`
+/// scales the zoom range (1 = full). The 0.04 base leaves room for the pointer parallax.
+pub fn slide_view(index: usize, progress: f32, depth: f32) -> (f32, Vec2) {
+    let p = progress.clamp(0.0, 1.0);
+    let t = if index.is_multiple_of(2) { p } else { 1.0 - p };
+    let zoom = 1.04 + KEN_BURNS_DEPTH * depth * t;
+    let dir = [
+        vec2(1.0, 0.0),
+        vec2(-1.0, 0.0),
+        vec2(0.0, 1.0),
+        vec2(0.0, -1.0),
+    ][index % 4];
+    (zoom, dir * (p - 0.5) * 0.6)
 }
 
 /// The parallax shift for a pointer at `pointer` over `frame`: the picture leans away from the
@@ -58,6 +67,19 @@ mod tests {
 
     fn close(a: f32, b: f32) -> bool {
         (a - b).abs() < 1e-5
+    }
+
+    #[test]
+    fn slides_alternate_zoom_direction_and_pan() {
+        let (z0, _) = slide_view(0, 0.0, 1.0);
+        let (z1, _) = slide_view(0, 1.0, 1.0);
+        assert!(z1 > z0);
+        let (o0, _) = slide_view(1, 0.0, 1.0);
+        let (o1, _) = slide_view(1, 1.0, 1.0);
+        assert!(o1 < o0);
+        let (_, pan_a) = slide_view(0, 1.0, 1.0);
+        let (_, pan_b) = slide_view(1, 1.0, 1.0);
+        assert!(pan_a.x > 0.0 && pan_b.x < 0.0);
     }
 
     #[test]
@@ -103,15 +125,6 @@ mod tests {
     fn zoom_below_one_never_uncovers_the_frame() {
         let uv = cover_uv(vec2(100.0, 100.0), vec2(100.0, 100.0), 0.3, Vec2::ZERO);
         assert!(close(uv.width(), 1.0));
-    }
-
-    #[test]
-    fn the_drift_stays_between_its_bounds() {
-        for i in 0..400 {
-            let z = ken_burns_zoom(f64::from(i) * 0.37);
-            assert!((1.0..=1.0 + KEN_BURNS_DEPTH + 1e-6).contains(&z));
-        }
-        assert!(close(ken_burns_zoom(0.0), 1.0));
     }
 
     #[test]

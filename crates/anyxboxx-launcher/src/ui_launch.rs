@@ -3,9 +3,7 @@
 //! VIctory's progress lines, the elapsed time and the time left, and Cancel. At start-up the same
 //! picture shows for a moment with the name alone.
 
-use eframe::egui::{
-    self, Align2, Color32, FontId, Rect, Stroke, TextureHandle, Ui, epaint::Mesh, pos2, vec2,
-};
+use eframe::egui::{self, Align2, Color32, FontId, Rect, Stroke, Ui, epaint::Mesh, pos2, vec2};
 
 use crate::app::App;
 use crate::launch_progress::{self, Stage, Tracker};
@@ -37,7 +35,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
     if !app.splash.visible(busy) && !preview {
         return;
     }
-    let texture = app.splash.texture().cloned();
+    let layers = app.splash.layers(ctx);
     let now = app.now_secs();
     let screen = ctx.content_rect();
     let mut cancel = false;
@@ -48,7 +46,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .show(ctx, |ui| {
             ui.set_clip_rect(screen);
             let (rect, response) = ui.allocate_exact_size(screen.size(), egui::Sense::click());
-            paint_picture(ui, rect, texture.as_ref());
+            paint_picture(ui, rect, &layers);
             if !busy && !preview {
                 startup(ui, rect);
                 if response.clicked() {
@@ -99,24 +97,16 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
 }
 
 /// The picture covering `rect`, drifting and leaning with the pointer, under the dark overlay.
-fn paint_picture(ui: &Ui, rect: Rect, texture: Option<&TextureHandle>) {
+fn paint_picture(ui: &Ui, rect: Rect, layers: &[splash::Layer]) {
     let painter = ui.painter();
     painter.add(egui::Shape::mesh(theme::gradient_mesh(rect)));
-    if let Some(texture) = texture {
-        let time = ui.input(|i| i.time);
-        let pointer = ui.input(|i| i.pointer.hover_pos());
-        let drift = vec2(
-            (time * 0.021).sin() as f32 * 0.5,
-            (time * 0.017).cos() as f32 * 0.35,
-        );
-        let pan = drift + cover::parallax(pointer, rect, 0.15);
-        let uv = cover::cover_uv(
-            texture.size_vec2(),
-            rect.size(),
-            cover::ken_burns_zoom(time) + 0.04,
-            pan,
-        );
-        painter.image(texture.id(), rect, uv, Color32::WHITE);
+    let pointer = ui.input(|i| i.pointer.hover_pos());
+    let lean = cover::parallax(pointer, rect, 0.15);
+    for layer in layers {
+        let (zoom, drift) = cover::slide_view(layer.index, layer.progress, 1.0);
+        let uv = cover::cover_uv(layer.texture.size_vec2(), rect.size(), zoom, drift + lean);
+        let tint = Color32::WHITE.gamma_multiply(layer.alpha);
+        painter.image(layer.texture.id(), rect, uv, tint);
     }
     painter.rect_filled(rect, 0.0, Color32::from_rgba_unmultiplied(12, 4, 24, 60));
     let solid_from = (rect.bottom() - BLOCK_HEIGHT).max(rect.top());

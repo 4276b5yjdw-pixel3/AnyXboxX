@@ -1,13 +1,13 @@
 //! The landing page: the picture across a wide hero with a slow zoom and a gentle lean toward the
 //! pointer, a dark gradient on its left carrying the name, the status chips and the big PLAY.
 
-use eframe::egui::{self, Color32, Rect, Stroke, TextureHandle, Ui, pos2, vec2};
+use eframe::egui::{self, Color32, Rect, Stroke, Ui, pos2, vec2};
 
 use crate::app::{App, Tab, Verify};
 use crate::home::{self, Readiness};
 use crate::host::GpuVendor;
 use crate::widgets::{self, Status};
-use crate::{cover, shade, theme, tokens, ui_states};
+use crate::{cover, shade, splash, theme, tokens, ui_states};
 
 /// Height of the hero: a share of the page, between these bounds.
 const HERO_MIN: f32 = 420.0;
@@ -26,12 +26,12 @@ const CLEAR_ALPHA: u8 = 36;
 pub fn home(app: &mut App, ui: &mut Ui) {
     ui_states::banner(app, ui);
     let readiness = home::folder_readiness(app.settings.game_path().is_some(), &app.verify);
-    let texture = app.splash.texture().cloned();
+    let layers = app.splash.layers(ui.ctx());
     let height = (ui.available_height() * HERO_SHARE).clamp(HERO_MIN, HERO_MAX);
     let (hero, _) =
         ui.allocate_exact_size(vec2(ui.available_width(), height), egui::Sense::hover());
     let column = text_column(hero);
-    paint_hero(ui, hero, column, texture.as_ref());
+    paint_hero(ui, hero, column, &layers);
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(column));
     hero_text(app, &mut child, readiness);
 }
@@ -49,32 +49,31 @@ fn text_column(hero: Rect) -> Rect {
 }
 
 /// The picture (or the gradient when there is none), drifting, under a left-to-right shade.
-fn paint_hero(ui: &Ui, hero: Rect, column: Rect, texture: Option<&TextureHandle>) {
+fn paint_hero(ui: &Ui, hero: Rect, column: Rect, layers: &[splash::Layer]) {
     let radius = tokens::radius(tokens::R_HERO);
-    match texture {
-        Some(texture) => {
-            let time = ui.input(|i| i.time);
-            let pointer = ui
-                .input(|i| i.pointer.hover_pos())
-                .filter(|p| hero.contains(*p));
-            let lean = cover::parallax(pointer, hero, PARALLAX);
-            let ctx = ui.ctx();
-            let pan = vec2(
-                ctx.animate_value_with_time(egui::Id::new("hero_pan_x"), lean.x, 0.45),
-                ctx.animate_value_with_time(egui::Id::new("hero_pan_y"), lean.y, 0.45),
-            );
-            let zoom = 1.04 + 0.5 * (cover::ken_burns_zoom(time) - 1.0);
-            let uv = cover::cover_uv(texture.size_vec2(), hero.size(), zoom, pan);
-            egui::Image::new(texture)
+    if layers.is_empty() {
+        ui.painter()
+            .add(egui::Shape::mesh(theme::gradient_mesh(hero)));
+    } else {
+        let pointer = ui
+            .input(|i| i.pointer.hover_pos())
+            .filter(|p| hero.contains(*p));
+        let lean = cover::parallax(pointer, hero, PARALLAX);
+        let ctx = ui.ctx();
+        let lean = vec2(
+            ctx.animate_value_with_time(egui::Id::new("hero_pan_x"), lean.x, 0.45),
+            ctx.animate_value_with_time(egui::Id::new("hero_pan_y"), lean.y, 0.45),
+        );
+        for layer in layers {
+            let (zoom, drift) = cover::slide_view(layer.index, layer.progress, 0.5);
+            let uv = cover::cover_uv(layer.texture.size_vec2(), hero.size(), zoom, drift + lean);
+            egui::Image::new(&layer.texture)
                 .uv(uv)
                 .corner_radius(radius)
+                .tint(Color32::WHITE.gamma_multiply(layer.alpha))
                 .paint_at(ui, hero);
-            ctx.request_repaint_after(std::time::Duration::from_millis(50));
         }
-        None => {
-            ui.painter()
-                .add(egui::Shape::mesh(theme::gradient_mesh(hero)));
-        }
+        ctx.request_repaint_after(std::time::Duration::from_millis(50));
     }
     let solid = (column.right() + tokens::L - hero.left()) / hero.width();
     let clear = (solid + 0.38).min(1.0);
