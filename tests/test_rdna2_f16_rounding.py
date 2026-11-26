@@ -7,9 +7,12 @@ written by hand.
 """
 import pytest
 
-from emu import rdna2_exec, rdna2_hlsl
+from emu import rdna2_exec, rdna2_gpu, rdna2_hlsl
 from test_rdna2_exec import LITERAL, ONE, V, program, vop1, vop3
+from test_rdna2_hlsl import compare, with_lane_offset
+from test_rdna2_hlsl_f16 import LOADS, image, into_v10
 
+gpu = pytest.mark.skipif(not rdna2_gpu.available(), reason="dxc or anyxboxx_gpu_run.exe missing")
 NAMES = ("v_floor_f16", "v_ceil_f16", "v_trunc_f16", "v_rndne_f16")
 OLD = 0x1234_0000               # destination's high half, which a low-half write keeps
 # S0 → (floor, ceil, trunc, rndne)
@@ -81,7 +84,27 @@ def test_constants_are_binary16():
     assert (wave.v[3][0], wave.v[4][0]) == (OLD | 0x3C00, OLD | 0x4000)
 
 
-@pytest.mark.parametrize("name", NAMES)
-def test_hlsl_still_refuses_them(name):
-    with pytest.raises(rdna2_hlsl.Untranslatable):
-        rdna2_hlsl.translate(program(vop1(name, 3, V + 1)))
+@pytest.mark.parametrize("name, function", zip(NAMES[:3], ("floor", "ceil", "trunc")))
+def test_hlsl_rounds_in_f32_and_returns_to_f16(name, function):
+    hlsl = rdna2_hlsl.translate(program(vop1(name, 3, V + 1)))
+    assert f"F32ToF16(asuint({function}(asfloat(F16ToF32((v[1] & 0xFFFFu))))))" in hlsl
+    assert name in rdna2_hlsl.coverage_names()
+
+
+def test_hlsl_rndne_is_integer_only():
+    """No DXIL Round_ne: the NVIDIA 621.xx driver folds Round_ne(2.5) to 3.0 (#227)."""
+    hlsl = rdna2_hlsl.translate(program(vop1("v_rndne_f16", 3, V + 1)))
+    body = hlsl.split("[numthreads", 1)[1]
+    assert "F16Rndne((v[1] & 0xFFFFu))" in body and "round(" not in body
+    assert "v_rndne_f16" in rdna2_hlsl.coverage_names()
+
+
+@gpu
+def test_rounding_matches_the_interpreter_on_gpu():
+    operations = [(vop1(name, 10, V + register),) for name in NAMES for register in (1, 2, 4)]
+    operations += [vop3(name, 10, V + 2, op_sel=0b1001) for name in NAMES]
+    operations += [vop3(name, 10, V + 1, neg=0b001) for name in NAMES]
+    operations += [vop3(name, 10, V + 4, abs_=0b001, clamp=1) for name in NAMES]
+    operations += [(vop1(name, 10, LITERAL), 0xDEAD_4100) for name in NAMES]
+    expected, actual = compare(with_lane_offset(*LOADS, *into_v10(*operations)), memory=image())
+    assert actual == expected
