@@ -3,7 +3,7 @@
 Sans cet export, le titre s'arrête sur « UNIMPLEMENTED d3d12_xs.dll!D3D12ConfigureVirtualMemoryX » (note de
 premier démarrage, section 4, arrêt 1). Un pointeur nul est refusé ; un pointeur valide rend S_OK. La fonction
 ne lit que flags et page_table_pages, et n'écrit aucune sortie : rien ne garantit que le titre fournisse
-32 octets (supposé, voir runtime/d3d12_xs/virtual_memory.cpp). Le test vérifie que des sentinelles placées
+32 octets (supposé, voir crates/anyxboxx-d3d12-xs/src/lib.rs). Le test vérifie que des sentinelles placées
 après ces champs restent intactes.
 """
 import ctypes
