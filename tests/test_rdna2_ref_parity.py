@@ -21,6 +21,7 @@ from emu import rdna2_exec, rdna2_image
 from emu.rdna2_exec import VOP2_CARRY, Wave
 from emu.rdna2_exec_cmp64 import COMPARE64
 from emu.rdna2_exec_dot import OPERATIONS as DOT_OPERATIONS
+from emu.rdna2_exec_int16 import PACKED
 from emu.rdna2_exec_memory import PAGE
 from emu.rdna2_exec_movrel import SCALAR as MOVREL_SCALAR, VECTOR as MOVREL_VECTOR
 from emu.rdna2_exec_wide import OPERATIONS as WIDE_OPERATIONS
@@ -1196,8 +1197,12 @@ def vop3p_cases():
     """(programme, exécuté) : les VOP3P hors produits scalaires et les produits scalaires avec op_sel,
     neg ou clamp, que le modèle Python refuse, et un produit scalaire sans modificateur."""
     sources = (V0 + 1, V0 + 2, V0 + 1)
-    cases = [(vop3p(name, 9, sources), False)
+    cases = [(vop3p(name, 9, sources), name in PACKED)
              for (family, name) in sorted(OPCODES) if family == "VOP3P" and name not in DOT_OPERATIONS]
+    cases += [(vop3p(name, 9, sources, **flags), runs)
+              for name in PACKED for flags, runs in (({"op_sel": 5, "op_sel_hi": 2}, True),
+                                                      ({"neg_lo": 1}, False),
+                                                      ({"clamp": 1}, not any(x in name for x in ("mul", "shr", "shl"))))]
     cases += [(vop3p("v_dot4_u32_u8", 9, sources, **flags), False)
               for flags in ({"op_sel": 1}, {"op_sel_hi": 0b011}, {"neg_lo": 2}, {"neg_hi": 4}, {"clamp": 1})]
     return cases + [(vop3p("v_dot2_i32_i16", 9, sources), True)]
