@@ -10014,8 +10014,10 @@ mod window_mode_tests {
         assert!(super::is_borderless(" Borderless "));
         assert!(!super::is_borderless("windowed"));
         assert!(!super::is_borderless(""));
+    }
 }
 
+#[cfg(test)]
 mod merge_glue {
     /// (Neptune) What merging title submissions needs of a list is read from
     /// its submission-time steps ([`super::touches_of`]): both ends of a
