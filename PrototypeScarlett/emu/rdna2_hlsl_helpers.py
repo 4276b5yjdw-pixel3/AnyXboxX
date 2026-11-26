@@ -18,9 +18,9 @@ uint MulHiI32(uint a, uint b) {
 uint BfeI32(uint v, uint off, uint w) {
   w &= 31u;
   if (w == 0u) return 0u;
-  uint field = (v >> (off & 31u)) & ((1u << w) - 1u);
+  int field = asint(v) >> (off & 31u);
   uint shift = 32u - w;
-  return asuint((asint(field) << shift) >> shift);
+  return asuint((field << shift) >> shift);
 }
 uint SatF32ToI32(uint a) {
   float x = asfloat(a);
