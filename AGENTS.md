@@ -14,11 +14,10 @@ AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett
 | `PrototypeScarlett/emu/` | Python: PE loader, Unicorn machine, HLE handlers (`hle/`), native mode (`native/`), reports |
 | `PrototypeScarlett/emu/rdna2*.py` | RDNA 2: decoder, operands, reference interpreter (`rdna2_exec*`), HLSL recompiler (`rdna2_hlsl*`), GPU runner glue (`rdna2_gpu.py`) |
 | `PrototypeScarlett/emu/rdna2_ops.py`, `rdna2_shapes.py` | **Generated** from LLVM's public encoding tests by `tools/rdna2_mnemonics.py` and `tools/rdna2_shapes.py`. Never edit by hand. |
-| `runtime/` | C++ runtime DLLs (`xgameruntime`, `xmem`, `d3d12_xs`, `kernelx`, `anyxboxx_tls`), native launcher `anyxboxx.exe`, GPU runner `anyxboxx_gpu_run.exe`. `runtime/third_party/libhttpclient-task/` is Microsoft's MIT `Task` module, kept as is. |
-| `rust/` | Rust workspace. `anyxboxx-rdna2` bridges to TomBox's RDNA 2 decoder; `anyxboxx-texture` decodes BC7 and GFX10 `SW_4K_S` tiles (ported from Xbox2Windows); `anyxboxx-audio` decodes XMA2 with TomBox's FFmpeg port. |
+| `runtime/` | What is still C++: `xgameruntime` (being ported to `crates/anyxboxx-xgameruntime`) with Microsoft's MIT `Task` module in `runtime/third_party/libhttpclient-task/` (kept as is), and the C++ oracles `anyxboxx_cpp.exe` and `anyxboxx_gpu_run_cpp.exe` used by the parity tests. `rust_dlls.cmake` copies the DLLs and executables built from `crates/` (`xmem`, `d3d12_xs`, `kernelx`, `anyxboxx_tls`, `XCRDAPI`, native launcher `anyxboxx.exe`, GPU runner `anyxboxx_gpu_run.exe`) into `runtime/build/bin`. |
+| `crates/` | Root Cargo workspace (`Cargo.toml`, plan in [docs/architecture-rust.md](docs/architecture-rust.md), state in [docs/rust-full-status.md](docs/rust-full-status.md)): CLI `anyxboxx` (`run` replaces `tools/lancer_victory.ps1`), graphical launcher `anyxboxx-launcher` ([docs/launcher.md](docs/launcher.md)), runtime DLLs, native launcher, GPU runner, RDNA 2 reference interpreter `anyxboxx-rdna2-ref`, PE loader and reports. `anyxboxx-rdna2` bridges to TomBox's RDNA 2 decoder; `anyxboxx-texture` decodes BC7 and GFX10 `SW_4K_S` tiles (ported from Xbox2Windows); `anyxboxx-audio` decodes XMA2 with TomBox's FFmpeg port. |
 | `third_party/tombox/` | Git submodule: [omonkeyz/xbox-emulator](https://github.com/omonkeyz/xbox-emulator) (TomBox continuation, GPL-3.0-or-later since its commit `51f5319`, MIT OR Apache-2.0 before), pinned commit. Do not edit; propose changes upstream. |
 | `third_party/victory/` | Copy of [VIctory](https://github.com/Marvisak/VIctory) (GPL-3.0-or-later) on the Neptune (VIctory Edit.) 2026-11-25c base, as assembled for GTA VI (see [THIRD_PARTY.md](THIRD_PARTY.md)), built and launched by `anyxboxx run`. Its own Cargo workspace; its `docs/asset-policy.md` applies too. Our own code now, with no upstream: nothing is synced or pinned, and it builds even if every repository it came from is gone. See rule 10 for taking changes from elsewhere. |
-| `third_party/leonida/` | Unchanged frozen copies of Leonida's translators, called by `PrototypeScarlett`. The Leonida project was deleted on 2026-11-24 and its submodule removed; nothing tracks it any more. |
 | `third_party/xbox2windows/` | Unchanged copies of [R0Y00/Xbox2Windows](https://github.com/R0Y00/Xbox2Windows) tools (MIT, DXIL retarget), commit in its README; refreshed by `tools/sync_voisins.py`. |
 | `tools/` | Generators (GDK interface table, kernelx exports, RDNA 2 tables), comparison and measurement tools (TomBox, FSSM, Xbox compiler probe, GPU check), `jour_j.py`, the VIctory launcher `anyxboxx run` (replaces `lancer_victory.ps1`), neighbour watch (`sync_voisins.py`, `veille.py`) |
 | `site/` | GitHub Pages site, published as is by `.github/workflows/pages.yml` |
@@ -34,9 +33,9 @@ git submodule update --init
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
 .\.venv\Scripts\python.exe tools\build_tombox.py   # DLL console de TomBox dans runtime\build\tombox (lues par défaut)
+cargo build --release --workspace                  # first: CMake copies the Rust DLLs from target\release
 cmake -S runtime -B runtime/build -A x64
 cmake --build runtime/build --config Release
-cargo build --release
 .\.venv\Scripts\python.exe -m pytest
 ```
 
