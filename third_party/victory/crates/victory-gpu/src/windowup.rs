@@ -1,6 +1,8 @@
 //! (Neptune) Pooled upload memory for transient windows (`VICTORY_CARD_WINDOW_UPLOAD=1`,
 //! `crate::shadow::window_upload`): a window with a card side keeps no CPU side; the pages
-//! that changed are copied into a [`Chunk`] here and sent from it to the card side.
+//! that changed are copied into a [`Chunk`] here and sent from it to the card side. (With
+//! `VICTORY_WINDOW_SKIP_SAME=1` not those that hold what their window last sent:
+//! `crate::shadow::window_skip_same`.)
 //!
 //! A chunk keeps its slab busy until it is dropped. A chunk is dropped when the copy sends it
 //! and its plan is let go (`Host::card_done`, after the submission that copied it has run on
