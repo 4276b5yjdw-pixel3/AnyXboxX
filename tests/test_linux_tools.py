@@ -91,7 +91,7 @@ def test_play_runs_the_linux_profile_with_the_patched_driver(tmp_path):
     assert "game_scarlett_master" not in call   # the game folder, not the game, is passed
     assert f"VK_DRIVER_FILES={icd}" in lines
     assert "VKD3D_CONFIG=descriptor_heap" in lines
-    assert any(line.startswith("WINEDLLOVERRIDES=d3dcompiler_47=n,b") for line in lines)
+    assert any(line.startswith("WINEDLLOVERRIDES=d3d12,d3d12core,dxgi,d3d11,d3d10core,d3dcompiler_47=n,b") for line in lines)
     # The script's own variables do not reach VIctory (no VICTORY_ prefix, and unset before Wine).
     assert {"VICTORY=<unset>", "GAME_DIR=<unset>", "ANYXBOXX=<unset>"} <= set(lines)
     assert "LD_PRELOAD=<unset>" in lines   # ANONLESS=0

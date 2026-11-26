@@ -59,7 +59,9 @@ if [ "${MESA:-local}" != system ]; then
 fi
 
 export VKD3D_CONFIG=${VKD3D_CONFIG:-descriptor_heap}
-export WINEDLLOVERRIDES="d3dcompiler_47=n,b${WINEDLLOVERRIDES:+;$WINEDLLOVERRIDES}"
+# Proton's `wine` run directly (not its `proton` script) prefers Wine's own d3d12/dxgi: the prefix's
+# vkd3d-proton and DXVK must be asked for, or VIctory gets no host D3D12 device (white window).
+export WINEDLLOVERRIDES="d3d12,d3d12core,dxgi,d3d11,d3d10core,d3dcompiler_47=n,b${WINEDLLOVERRIDES:+;$WINEDLLOVERRIDES}"
 echo "play.sh: shim=${ANONLESS:-1} driver=${VK_DRIVER_FILES:-system} VKD3D_CONFIG=$VKD3D_CONFIG" >&2
 victory=$(winpath "$VICTORY") game=$(winpath "$GAME_DIR") anyxboxx=$ANYXBOXX
 unset VICTORY ANYXBOXX GAME_DIR
