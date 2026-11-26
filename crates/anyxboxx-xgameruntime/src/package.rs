@@ -84,7 +84,12 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
     vec![
         (3, identifier as *const c_void),
         (4, packaged as *const c_void),
+        (5, crate::package_monitor::create as *const c_void),
+        (6, crate::package_monitor::close as *const c_void),
+        (7, crate::package_monitor::progress as *const c_void),
+        (8, crate::package_monitor::update as *const c_void),
         (12, chunk_availability as *const c_void),
+        (15, crate::package_monitor::install as *const c_void),
         (30, write_stats as *const c_void),
         (41, package_kind as *const c_void),
     ]

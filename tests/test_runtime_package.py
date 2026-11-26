@@ -42,3 +42,37 @@ def test_package_identity_falls_back_when_missing(runtime_dir, tmp_path, monkeyp
     identifier = api.method(3, ctypes.c_uint32, ctypes.c_size_t, P)
     buf = ctypes.create_string_buffer(33)
     assert identifier(len(buf), buf) == S_OK and buf.value == b"AnyXboxX.Game"
+
+
+class InstallationProgress(ctypes.Structure):
+    _fields_ = [("total", ctypes.c_uint64), ("installed", ctypes.c_uint64),
+                ("launch", ctypes.c_uint64), ("launchable", ctypes.c_bool), ("completed", ctypes.c_bool)]
+
+
+def test_installed_package_monitor(runtime_dir):
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    create = api.method(5, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_uint32, P, ctypes.c_uint32, P,
+                        ctypes.POINTER(P))
+    assert create(None, 0, None, 0, None, None) == E_INVALIDARG
+    monitor = P()
+    assert create(None, 0, None, 0, None, ctypes.byref(monitor)) == S_OK and monitor.value
+    try:
+        progress = InstallationProgress()
+        api.method(7, None, P, ctypes.POINTER(InstallationProgress))(monitor, ctypes.byref(progress))
+        assert (progress.total, progress.installed, progress.launch, progress.launchable, progress.completed) == (
+            1, 1, 1, True, True)
+        assert api.method(8, ctypes.c_bool, P)(monitor) is False
+    finally:
+        api.method(6, None, P)(monitor)
+
+
+def test_install_chunks_returns_completed_monitor(runtime_dir):
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    install = api.method(15, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_uint32, P, ctypes.c_uint32,
+                         ctypes.c_bool, P, ctypes.POINTER(P))
+    monitor = P()
+    assert install(None, 0, None, 0, False, None, ctypes.byref(monitor)) == S_OK and monitor.value
+    progress = InstallationProgress()
+    api.method(7, None, P, ctypes.POINTER(InstallationProgress))(monitor, ctypes.byref(progress))
+    assert progress.completed and progress.launchable
+    api.method(6, None, P)(monitor)

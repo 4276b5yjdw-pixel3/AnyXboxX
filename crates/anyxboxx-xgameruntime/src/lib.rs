@@ -27,6 +27,7 @@ mod log;
 mod networking;
 mod object;
 mod package;
+mod package_monitor;
 mod registry;
 mod save_async;
 mod save_blobs;
