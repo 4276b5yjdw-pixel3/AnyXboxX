@@ -16,6 +16,7 @@ mod anim;
 mod app;
 mod app_check;
 mod cache;
+mod detached;
 mod env;
 mod format;
 mod home;
@@ -43,6 +44,7 @@ mod ui_manifest;
 mod ui_options;
 mod ui_pages;
 mod verify;
+mod warm_state;
 
 use eframe::egui;
 

@@ -69,6 +69,8 @@ pub struct App {
     pub log: VecDeque<String>,
     pub summary: Summary,
     pub notice: Option<String>,
+    /// Set when the game is up and the launcher may close (see `keep_open_after_launch`).
+    pub close_requested: bool,
     pub confirm_clean: bool,
     pub cache_dir: Option<PathBuf>,
     pub splash: Splash,
@@ -142,6 +144,7 @@ impl App {
             log: VecDeque::new(),
             summary: Summary::default(),
             notice: None,
+            close_requested: false,
             confirm_clean: false,
             cache_dir: cache::current_cache_dir(),
             splash: Splash::new(),
@@ -348,6 +351,13 @@ impl App {
             match &event {
                 Event::Finished(code) => outcome = Some(finish_message(*code, shaders_only)),
                 Event::Failed(error) => outcome = Some(format!("Could not run: {error}")),
+                Event::Detached { pid, log } => {
+                    outcome = Some(format!(
+                        "VIctory is running (process {pid}). Its log: {}",
+                        log.display()
+                    ));
+                    self.close_requested = !self.settings.keep_open_after_launch;
+                }
                 Event::Started(_) | Event::Line(_) => {}
             }
             self.record(event);
@@ -393,6 +403,10 @@ impl App {
             }
             Event::Finished(code) => format!("== finished, exit code {code} =="),
             Event::Failed(error) => format!("!! {error}"),
+            Event::Detached { pid, log } => format!(
+                "== VIctory is running (process {pid}), log: {} ==",
+                log.display()
+            ),
         };
         self.log.push_back(line);
         while self.log.len() > LOG_CAPACITY {

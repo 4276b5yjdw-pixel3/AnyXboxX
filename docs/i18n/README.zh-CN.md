@@ -7,7 +7,7 @@
 > [!NOTE]
 > **当前进展（2026-11-25）**
 >
-> 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的分支仓库 `LooperSalty/victory` 的提交 `80d58f8` (branch `anyxboxx/fork-7b0-lot9-murs`)（`third_party/victory`），通过 `tools/lancer_victory.ps1 -GameDir <游戏文件夹>` 启动：
+> 在 i7-13700KF + RTX 4070 SUPER、Windows 11 上实测，使用 VIctory 的分支仓库 `LooperSalty/victory` 的提交 `80d58f8` (branch `anyxboxx/fork-7b0-lot9-murs`)（`third_party/victory`），通过 `anyxboxx run --game-dir <游戏文件夹>` 启动：
 >
 > - 🆕 **世界中约 14 fps（Series X，RTX 4070 SUPER，2026-11-25 测得）**：`third_party/victory` 以 Neptune (VIctory Edit.) 2026-11-25c 为基础，并采用当天测得的一组设置（中位数 13.8 fps，最后一分钟 15.6–17 fps，每帧 72.5 ms；此前在 `main` 的启动器设置下中位数为 10.9 fps，均为 Series X 上的自动 13 分钟运行，无崩溃）。下面的数字是用旧基础 `80d58f8` 测得的。
 > - 🆕 **画质优先模式（维护者于 2026-11-25 实测）**：`tools\lancer_victory.ps1 -Quality`（每帧重新读取窗口副本，使用更小的池）光照和纹理明显更好，约 7-9 fps，纹理拒绝次数大幅减少（51-93，对比约 300）。默认仍是快速配置（约 14-17 fps，使用 PR #272 在世界中 7 分钟的中位数为 13.7）。通过 `-Override @{ VICTORY_X = '...' }`，任何人都可以在不修改启动器的情况下尝试某项设置。
@@ -23,7 +23,7 @@
 > - 👁 11 月 24 日的历程（维护者实测或观察，VIctory 日志）：`d279e69` 约 4 fps，在监狱 13 分钟后丢失设备 → `7b0f736` + `VICTORY_RELAY=2` 约 4.5 fps → PR #172 的启动器设置（无 DRED）约 5.5 fps → 第 4 批（3 个 pull request）使用 `VICTORY_RELAY=2` 约 6.6 fps，启动闪烁已修复 → 本批次（7 个 pull request，无 `VICTORY_RELAY`）约 5.4 fps，但每帧 6,449 次绘制，画面为迄今最佳 → 批次 8（批次 5 加一个拉取请求 #11）约 4.8 到 5.4 fps，每帧约 6,550 次绘制，辐照度缓存的 shader 现已可翻译。
 > - 🆕 VIctory 现已复制到本仓库中（`third_party/victory`，不再是子模块），作为我们自己的代码，不再同步或固定：`80d58f8` 加上面向 Proton（Wine）和 AMD 显卡的 57 个提交，来自分支仓库 `fxceless/victory-fork`、VIctory、klbf-lab、JoshuuDev 和 myokex 的 `victory-amd`，以及我们自己（作者见 THIRD_PARTY.md）。仅在 Linux 上实测（Fedora 44、RX 9070 XT、RADV、带社区 wineserver 补丁的 GE-Proton11-12，一次约 23 分钟运行的 VIctory 日志）：约 3.7 fps（游戏世界帧中位数 266 ms），无崩溃、无设备丢失；面部、皮肤和几何体完整（观察）；室内和阴影区域为黑色，光线追踪未运行。尚未在 Windows 上实测；启动脚本的设置不变。已有的克隆须在 pull 之前运行 `git submodule deinit -f third_party/victory`，并删除 `third_party/victory` 和 `.git/modules/third_party/victory`（见指南）。
 > - 📌 自分支 `anyxboxx/fork-7b0-lot9-murs` 的提交 `80d58f8` 起固定：第 8 批加上我们的 3 个 `xg:` 提交（`xg_xs.dll` 的布局现在与 Microsoft 的库完全一致：父模式下带位置的尾部 mip、按子资源索引的 64 KiB 平铺；测试将 54 个描述与真实 DLL 比较，维护者在游戏中实测差异为 0，因此 `-XgDll` 现在只是校验基准）、着色器与管线的离线预编译（移植自分支仓库 `fxceless/victory-fork` 的拉取请求 #282，t4l03）：`victory translate --cache --pipelines`，启动器开关 `-Precompile`（实测：约 4.5 分钟翻译 25,689 个着色器，296 个被拒绝，缓存 13 GB），以及该分支仓库的另外 7 个拉取请求（#349、#355、#396、#386、#358、#353、#374）。维护者实测（VIctory 日志，11 月 24 日至 25 日夜间）：4.8 至 5.1 fps，每帧约 12.7% 的 draw 被丢弃（此前为 11% 至 14%）；过场动画被评为更好（观察）。另加来自该分支 Yorivel 的两个提交（`e49864a`、`bf870de`）：DirectStorage 对物理页的写入现在会通知 GPU 端（`VICTORY_DSTORAGE_NOTIFY=1`，由启动脚本设置），GPU 端不再保留第一个房间墙壁的过期副本。维护者实测（VIctory 日志，11 月 25 日约 02:41 至 02:50）：从新存档进入世界约 9 分钟，5.3 至 6.9 fps，每帧 4,200 至 6,300 次绘制，无设备丢失；过场动画完整播放，被评为“难以置信”（观察）；部分地方仍缺少画面。大部分被丢弃的绘制来自已关闭的光线追踪结构构建器（某份日志中 15,444 次里有 14,943 次），而不是 NVIDIA 拒绝的 15 个 wave64 计算管线（约 300 次绘制）。
-> - 📌 自分支 `anyxboxx/fork-7b0-lot8-xg` 的提交 `19feca8` 起固定：第 8 批加上我们的一个提交，把纹理布局交给 Microsoft 自己的库：`tools/lancer_victory.ps1 -GameDir <游戏文件夹> -XgDll <xg_xs.dll 的路径>`，其中 `xg_xs.dll` 是你自己的 GDK 中的离线 PC 版本（绝不放入本仓库）。不加 `-XgDll` 则一切不变。维护者实测（VIctory 日志，11 月 25 日）：该库的回答与 VIctory 在 84 个纹理描述上不同（64 KiB 纹理的尾部 mip、纹理数组的 64 KiB 平铺；大小和偏移一致）；使用该库时，世界中运行 5.4 至 7.1 fps（不使用时 5.1 至 5.6），本次运行被评为迄今最佳（观察）。`-XgMode compare` 保留 VIctory 的布局并记录每处差异。
+> - 📌 自分支 `anyxboxx/fork-7b0-lot8-xg` 的提交 `19feca8` 起固定：第 8 批加上我们的一个提交，把纹理布局交给 Microsoft 自己的库：`anyxboxx run --game-dir <游戏文件夹> -XgDll <xg_xs.dll 的路径>`，其中 `xg_xs.dll` 是你自己的 GDK 中的离线 PC 版本（绝不放入本仓库）。不加 `-XgDll` 则一切不变。维护者实测（VIctory 日志，11 月 25 日）：该库的回答与 VIctory 在 84 个纹理描述上不同（64 KiB 纹理的尾部 mip、纹理数组的 64 KiB 平铺；大小和偏移一致）；使用该库时，世界中运行 5.4 至 7.1 fps（不使用时 5.1 至 5.6），本次运行被评为迄今最佳（观察）。`-XgMode compare` 保留 VIctory 的布局并记录每处差异。
 > - 📌 自我们的 VIctory 分支仓库 `LooperSalty/victory` 的分支 `anyxboxx/fork-7b0-lot8` 的提交 `d138351` 起固定：批次 5（分支仓库 `fxceless/victory-fork` 的 `7b0f736` 加其七个拉取请求，见指南）再加一个用 `cherry-pick -x` 引入的拉取请求：#11（cxchhh，恢复相隔几条指令的已停放 lane 掩码对，相对 VGPR 读取保留已停放的 lane；辐照度缓存的两个着色 shader 现已可翻译）。维护者实测（VIctory 日志、PIX 捕获、`main` 的启动器设置）：4.8 到 5.4 fps，每帧约 6,550 次绘制，6 个 shader 未翻译（批次 5 为 9 个），驱动拒绝 16 条管线（与批次 5 相同），约 4 分 20 秒内无设备丢失。已有的副本须运行 `git submodule sync third_party/victory`，再运行 `git submodule update --init third_party/victory`：子模块的 URL 随 PR #178 变更。
 > - 要求：你自己的游戏副本、支持 SM 6.6 和 mesh shader 的 NVIDIA 或 AMD GPU、Rust。本仓库不包含任何游戏文件。
 > - 运行方法：[docs/running-gta6.md](../running-gta6.md)。
@@ -95,7 +95,7 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 396 个 GDK 函数的表：接口和方法编号，提取自 `xgameruntime.lib`（`tools/gdk_interfaces.py`） | ✅ 已完成 |
 | `XTaskQueue`、`XAsync`、`XThread` 由 AnyXboxX 提供：testgdk 无需 Windows 的运行时即可运行 | ✅ 已完成 |
 | 其他 GDK 接口：委托给 Windows 的 GDK 运行时，由跟踪列出名称 | 🟡 进行中 |
-| 1600+ 个自动化测试 | ✅ 已完成 |
+| 1700+ 个自动化测试 | ✅ 已完成 |
 | D3D12.X：`D3D12XboxCreateDevice`、主机的 `ID3D12*` 接口和 `DXGIXPresentArray`，由 TomBox 的 Rust 版 `d3d12_xs.dll` 提供（MIT，48 个已实现导出，用 `tools/build_tombox.py d3d12_xs` 构建，通过 `ANYXBOXX_D3D12_XS=<路径>` 加载）；没有主机可执行文件，此处无法测试 | 🟡 进行中 |
 | 用 TomBox（Rust，GPL-3.0）的主机库补足 AnyXboxX 缺少的部分：`xg_xs`（纹理布局，23 个导出）和完整的 `xmem`（38 个导出），通过 `ANYXBOXX_TOMBOX_DIR=<文件夹>` 使用；由 `tools/build_tombox.py xg_xs xmem` 构建 | 🟡 进行中 |
 | 离线 `XUser`：始终已登录的本地档案、可设置的游戏玩家标签（`ANYXBOXX_GAMERTAG`）、testgdk 登录成功 | ✅ 已完成 |

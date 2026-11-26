@@ -119,7 +119,7 @@ pub fn shaders(app: &mut App, ui: &mut egui::Ui) {
         ui.colored_label(UNKNOWN, "Check the game folder first (page 2).");
     }
     let enabled = ready && !app.is_busy();
-    if theme::glow_button(ui, enabled, "Preload shaders", vec2(0.0, 36.0), false).clicked() {
+    if theme::glow_button(ui, enabled, "Warm now", vec2(0.0, 36.0), false).clicked() {
         app.start(true);
     }
     if let Some(progress) = app.progress() {
