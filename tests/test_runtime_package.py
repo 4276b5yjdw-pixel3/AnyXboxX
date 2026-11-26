@@ -76,3 +76,28 @@ def test_install_chunks_returns_completed_monitor(runtime_dir):
     api.method(7, None, P, ctypes.POINTER(InstallationProgress))(monitor, ctypes.byref(progress))
     assert progress.completed and progress.launchable
     api.method(6, None, P)(monitor)
+
+
+def test_install_chunks_async_returns_monitor(runtime_dir):
+    from test_runtime_cpp import AsyncBlock, TaskQueueApi, THREAD_POOL
+    tasks = TaskQueueApi(runtime_dir)
+    queue = P()
+    assert tasks.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(P))(
+        THREAD_POOL, THREAD_POOL, ctypes.byref(queue)) == S_OK
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    block = AsyncBlock(queue=queue)
+    begin = api.method(16, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_uint32, P, ctypes.c_uint32,
+                       ctypes.c_bool, ctypes.POINTER(AsyncBlock))
+    try:
+        assert begin(None, 0, None, 0, False, ctypes.byref(block)) == S_OK
+        assert tasks.method(3, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.c_bool)(
+            ctypes.byref(block), True) == S_OK
+        monitor = P()
+        assert api.method(17, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.POINTER(P))(
+            ctypes.byref(block), ctypes.byref(monitor)) == S_OK and monitor.value
+        progress = InstallationProgress()
+        api.method(7, None, P, ctypes.POINTER(InstallationProgress))(monitor, ctypes.byref(progress))
+        assert progress.completed
+        api.method(6, None, P)(monitor)
+    finally:
+        tasks.method(17, None, P)(queue)

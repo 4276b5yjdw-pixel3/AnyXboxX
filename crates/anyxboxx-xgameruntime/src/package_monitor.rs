@@ -1,8 +1,17 @@
 //! Monitors for the package that is already installed locally.
 use crate::object::{E_INVALIDARG, HResult, S_OK};
+use crate::save_async::{self, Completion};
 use std::collections::HashSet;
 use std::ffi::{c_char, c_void};
+use std::mem::size_of;
 use std::sync::{Mutex, OnceLock};
+use victory_hle::modules::xasync::AsyncBlock;
+
+static INSTALL_IDENTITY: [u8; 1] = [11];
+
+fn identity() -> *const c_void {
+    INSTALL_IDENTITY.as_ptr().cast()
+}
 
 fn monitors() -> &'static Mutex<HashSet<usize>> {
     static MONITORS: OnceLock<Mutex<HashSet<usize>>> = OnceLock::new();
@@ -40,6 +49,44 @@ pub unsafe extern "system" fn install(
 ) -> HResult {
     // SAFETY: arguments follow create's contract.
     unsafe { create(this, id, count, selectors, interval, queue, output) }
+}
+
+pub unsafe extern "system" fn install_async(
+    _this: *mut c_void,
+    _id: *const c_char,
+    _count: u32,
+    _selectors: *mut c_void,
+    _interval: u32,
+    _suppress_ui: bool,
+    block: *mut AsyncBlock,
+) -> HResult {
+    let mut monitor = std::ptr::null_mut();
+    // SAFETY: monitor is a writable local output, and other inputs are ignored.
+    unsafe {
+        create(
+            std::ptr::null_mut(),
+            std::ptr::null(),
+            0,
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            &mut monitor,
+        )
+    };
+    let mut completion = Completion::value(S_OK, monitor);
+    completion.discard = Some(Box::new(move || {
+        // SAFETY: the undelivered monitor is still owned by this completion.
+        unsafe { close(std::ptr::null_mut(), monitor) };
+    }));
+    save_async::begin(block, identity(), completion)
+}
+
+pub unsafe extern "system" fn install_result(
+    _this: *mut c_void,
+    block: *mut AsyncBlock,
+    output: *mut *mut c_void,
+) -> HResult {
+    save_async::result(block, identity(), size_of::<*mut c_void>(), output.cast())
 }
 pub unsafe extern "system" fn close(_this: *mut c_void, monitor: *mut c_void) {
     if monitors().lock().unwrap().remove(&(monitor as usize)) {
