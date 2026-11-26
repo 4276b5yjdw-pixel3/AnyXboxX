@@ -146,6 +146,19 @@ fn performance_card(app: &mut App, ui: &mut Ui) {
             .color(theme::TEXT_MUTED)
             .size(tokens::CAPTION),
         );
+        ui.add_space(tokens::S);
+        toggle_row(
+            ui,
+            "Multi-core: submissions on a thread of their own, copy-back merges on several",
+            &mut settings.options.multi_core,
+        );
+        ui.label(
+            RichText::new(
+                "On by default. Measured 4.8 to 7.0 fps on an RTX 5060 8 GB with an i5-12400F.",
+            )
+            .color(theme::TEXT_MUTED)
+            .size(tokens::CAPTION),
+        );
     });
 }
 

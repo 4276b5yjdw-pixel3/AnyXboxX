@@ -20,10 +20,24 @@ pub const OVERLAY: &str = "VICTORY_OVERLAY";
 pub const AUTO_A: &str = "VICTORY_AUTO_A";
 /// One row a second into the cache folder's frametime.csv.
 pub const FRAMETIME_DUMP: &str = "VICTORY_FRAMETIME_DUMP";
+/// "Multi-core" (on by default): two switches of VIctory, each off by default there, that move
+/// work off the render and relay threads. `ASYNC_SUBMIT`: a submission is prepared and sent by a
+/// thread of its own and the title's call returns at once (the present follows it, as
+/// `VICTORY_ASYNC_PRESENT` is on by default with it). `RELAY_WIDE_MERGE`: the relay's merges of
+/// what the card wrote run on up to eight threads instead of one. Measured on an RTX 5060 8 GB and
+/// an i5-12400F (Series X, 1080p, "8 GB card" with 1024 MB of buffer copies): 4.8 fps median
+/// without, 6.6 and 7.0 with; the
+/// relay's landing time per flight went from 7.5 ms to 3.8-4.3 ms. `VICTORY_WIDE_BACK` is left
+/// alone (already on by default) and `VICTORY_TEXTURE_PREPARE_THREADS` too (four threads made no
+/// texture ready in those runs).
+pub const MULTI_CORE: &[(&str, &str)] = &[
+    ("VICTORY_ASYNC_SUBMIT", "1"),
+    ("VICTORY_RELAY_WIDE_MERGE", "1"),
+];
 /// Every variable an option may set (the preset's own are in `Preset::overrides`); the tests
 /// check them against VIctory's sources.
 #[cfg(test)]
-pub const ENV_NAMES: [&str; 7] = [
+pub const ENV_NAMES: [&str; 9] = [
     DISPLAY_MODE,
     WINDOW_MODE,
     KEYBOARD,
@@ -31,6 +45,8 @@ pub const ENV_NAMES: [&str; 7] = [
     OVERLAY,
     AUTO_A,
     FRAMETIME_DUMP,
+    "VICTORY_ASYNC_SUBMIT",
+    "VICTORY_RELAY_WIDE_MERGE",
 ];
 
 /// VIctory accepts a display size inside these bounds and falls back to 4K outside them.
@@ -300,6 +316,8 @@ pub struct LaunchOptions {
     /// NVIDIA Smooth Motion (driver frame generation) for victory.exe: written into the driver's
     /// profile before each launch (`smooth_motion`), not into VIctory's environment.
     pub smooth_motion: bool,
+    /// The [`MULTI_CORE`] switches.
+    pub multi_core: bool,
 }
 
 impl Default for LaunchOptions {
@@ -317,6 +335,7 @@ impl Default for LaunchOptions {
             auto_a: false,
             frametime_dump: false,
             smooth_motion: false,
+            multi_core: true,
         }
     }
 }
@@ -375,6 +394,13 @@ impl LaunchOptions {
         if self.frametime_dump {
             pairs.push((FRAMETIME_DUMP.to_string(), "1".to_string()));
         }
+        if self.multi_core {
+            pairs.extend(
+                MULTI_CORE
+                    .iter()
+                    .map(|(k, v)| ((*k).to_string(), (*v).to_string())),
+            );
+        }
         pairs
     }
 }
@@ -385,8 +411,17 @@ mod tests {
     use std::path::Path;
 
     #[test]
-    fn the_defaults_set_nothing() {
-        assert!(LaunchOptions::default().env_pairs().is_empty());
+    fn the_defaults_set_only_the_multi_core_switches() {
+        let pairs = LaunchOptions::default().env_pairs();
+        assert_eq!(pairs.len(), MULTI_CORE.len());
+        for (name, value) in MULTI_CORE {
+            assert!(pairs.iter().any(|(n, v)| n == name && v == value));
+        }
+        let off = LaunchOptions {
+            multi_core: false,
+            ..LaunchOptions::default()
+        };
+        assert!(off.env_pairs().is_empty());
     }
 
     #[test]
@@ -520,6 +555,7 @@ mod tests {
             resolution: Resolution::Custom,
             custom_width: 1366,
             custom_height: 768,
+            multi_core: false,
             ..LaunchOptions::default()
         };
         assert_eq!(options.size(), Some((1366, 768)));
