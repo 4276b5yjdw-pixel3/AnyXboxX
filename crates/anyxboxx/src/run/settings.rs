@@ -5,7 +5,7 @@
 use std::ffi::OsString;
 use std::path::Path;
 
-use super::RunArgs;
+use super::{Profile, RunArgs};
 
 /// Neptune (VIctory Edit.) 2026-11-25c's play.ps1 for the Series X path, with the measured changes
 /// of 2026-11-25 on top. Applied unless `--no-tuned-settings`, in this order.
@@ -53,6 +53,26 @@ pub const TUNED: &[(&str, &str)] = &[
     ("VICTORY_WINDOW_SKIP_SAME", "1"),
     ("VICTORY_MERGE_SUBMISSIONS", "1"),
     ("VICTORY_PAGE_WRITES", "5"),
+    // PR #383 (fxceless/victory-gta6 ports), measured 2026-11-26 in one run alternating every 20 s (RTX 4070 SUPER, Series X): 12.7 -> 14.8 fps median, +17 %.
+    ("VICTORY_STEP_INDEX", "1"),
+    ("VICTORY_CARD_SYNC_BATCH", "1"),
+    ("VICTORY_PARALLEL_REFRESH", "1"),
+    // The full scan of kept heap slots every 16 passes instead of every pass, measured 2026-11-26 in one run alternating every 20 s (RTX 4070 SUPER, Series X): 14.2 -> 15.2 fps median, frames over 100 ms 4 -> 1.
+    ("VICTORY_HEAP_SCAN_ALT", "1"),
+];
+
+/// Linux (Proton) + AMD measured set (PR #199, RX 9070 XT / RADV / vkd3d-proton).
+/// Kept in sync with `crates/anyxboxx-launcher/profiles.toml` (`linux-amd`).
+pub const LINUX_AMD: &[(&str, &str)] = &[
+    ("VICTORY_SHADER_LOOP_LIMIT", "256"),
+    ("VICTORY_LATE_WAIT", "0"),
+    ("VICTORY_WIDE_BACK", "0"),
+    ("VICTORY_PIPELINE_WAIT_MS", "50"),
+    ("VICTORY_TEXTURE_BUDGET_MB", "8192"),
+    ("VICTORY_TEXTURE_NO_WAIT", "1"),
+    ("VICTORY_CARD_BUFFERS_MIN_MB", "1"),
+    ("VICTORY_CARD_BUFFERS_MB", "1024"),
+    ("VKD3D_CONFIG", "descriptor_heap"),
 ];
 
 /// Picture first (`--quality`): applied after the tuned set, before `--override`.
@@ -90,7 +110,11 @@ pub fn base(args: &RunArgs) -> Vec<(String, OsString)> {
     let mut env = vec![(GAME_DIR.to_string(), args.game_dir.clone().into_os_string())];
     env.extend(pairs(ALWAYS));
     if !args.no_tuned_settings {
-        env.extend(pairs(TUNED));
+        match args.profile {
+            Profile::WindowsNvidia => env.extend(pairs(TUNED)),
+            Profile::LinuxAmd => env.extend(pairs(LINUX_AMD)),
+            Profile::Defaults => {}
+        }
     }
     if args.quality {
         env.extend(pairs(QUALITY));

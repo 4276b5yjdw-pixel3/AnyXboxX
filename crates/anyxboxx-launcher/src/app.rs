@@ -58,6 +58,8 @@ pub struct Running {
 
 pub struct App {
     pub repo: Option<PathBuf>,
+    /// Prebuilt `victory.exe` passed via `--victory-exe`: skips the cargo build and needs no repo.
+    pub victory_exe: Option<PathBuf>,
     pub profiles: Profiles,
     pub host: Host,
     pub gpu: GpuVendor,
@@ -141,6 +143,7 @@ impl App {
             .map(|a| a.name.clone());
         let mut app = App {
             repo: anyxboxx::run::find_repo(None),
+            victory_exe: None,
             profiles,
             host,
             gpu,
@@ -304,19 +307,43 @@ impl App {
             return;
         }
         let profile = self.profile().clone();
-        let Some(repo) = self.repo.clone() else {
-            self.notice = Some(
-                "AnyXboxX folder not found: run the launcher from the repository (target\\release).".to_string(),
-            );
-            return;
+        let repo = match (&self.repo, &self.victory_exe) {
+            (Some(repo), _) => repo.clone(),
+            (None, Some(_)) => PathBuf::new(),
+            (None, None) => {
+                self.notice = Some(
+                    "AnyXboxX folder not found: run the launcher from the repository (target\\release) or pass --victory-exe <path>."
+                        .to_string(),
+                );
+                return;
+            }
         };
-        let plan = match session::make_plan(&self.settings, &repo, &profile) {
+        let plan = match session::make_plan(
+            &self.settings,
+            &repo,
+            self.victory_exe.as_deref(),
+            &profile,
+        ) {
             Ok(plan) => plan,
             Err(error) => {
                 self.notice = Some(error.to_string());
                 return;
             }
         };
+        if !precompile_only {
+            // NVIDIA Smooth Motion lives in the driver's profile, not in VIctory's environment:
+            // written now, so the game starts with the switch as the Play page shows it. A failure
+            // is reported and the game starts all the same.
+            let on = self.settings.options.smooth_motion;
+            match crate::smooth_motion::sync(on) {
+                Ok(Some(done)) => self.log_line(format!("== {done} ==")),
+                Ok(None) => {}
+                Err(error) if on => {
+                    self.notice = Some(format!("Smooth Motion could not be turned on: {error}"));
+                }
+                Err(_) => {}
+            }
+        }
         let steps: Result<Vec<Step>, anyxboxx::run::RunError> = if precompile_only {
             launch::precompile_steps(&plan)
         } else {
