@@ -8252,6 +8252,7 @@ impl Meter {
             );
         }
         crate::shadow::exact_line(frames);
+        crate::shadow::window_same_line(frames);
         crate::descriptor::sync_line(frames);
             crate::resource::room_line();
         {
