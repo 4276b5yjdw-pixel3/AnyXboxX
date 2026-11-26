@@ -276,7 +276,7 @@ def random_program(rng):
         if family == "VOP3" and (
             (name in VECTOR3 and opcode >= 0x200)
             or name in SAD_NAMES
-            or (name in VECTOR and name not in LITERAL_OPERATION_NAMES and (0x100 <= opcode < 0x140 or 0x180 <= opcode < 0x200))
+            or (name in VECTOR and (0x100 <= opcode < 0x140 or 0x180 <= opcode < 0x200))
             or (name in VECTOR_COMPARE and opcode < 0x100)
             or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE + DIV_NAMES
             or name in COMPARE64
@@ -368,8 +368,8 @@ def instruction(rng, names):
 # for the Python model (which indexes SGPRs and register pairs directly).
 # Operations whose constant is a literal: the VOP3 form has no literal word unless a source is the literal code.
 LITERAL_OPERATION_NAMES = ("v_madmk_f32", "v_madak_f32", "v_fmamk_f32", "v_fmaak_f32")
-# The 64-bit operations; v_fma_f64 is left to its own test, where its operands cannot overflow the Python.
-WIDE_GENERIC = tuple(name for name in WIDE_OPERATIONS if name != "v_fma_f64")
+# The 64-bit operations (including v_fma_f64 now that overflow returns ±infinity in both models).
+WIDE_GENERIC = tuple(WIDE_OPERATIONS)
 DIV_NAMES = (
     "v_div_scale_f32", "v_div_scale_f64", "v_div_fmas_f32", "v_div_fmas_f64", "v_div_fixup_f32", "v_div_fixup_f64",
 )
@@ -443,6 +443,20 @@ def test_random_scalar_programs_match_the_python_model():
         assert_same(exe, lanes, scc, scalars, words)
 
 
+def test_vop3_literal_operations_match_the_python_model():
+    """VOP3 v_madmk/madak/fmamk/fmaak_f32: refused without a literal, matching with a literal operand."""
+    exe = binary()
+    for name in LITERAL_OPERATION_NAMES:
+        opcode = OPCODES["VOP3", name]
+        low = 0x35 << 26 | opcode << 16 | 3
+        without_literal = program(low, 256 | (257 << 9))
+        assert run_python(32, False, [], without_literal) == "error untranslated\n"
+        assert_same(exe, 32, False, [], without_literal)
+        with_literal = program(low, LITERAL | (257 << 9), 0x4000_0000)
+        assert run_python(32, False, [], with_literal).startswith("steps")
+        assert_same(exe, 32, False, [], with_literal)
+
+
 # Operand bit patterns the division helpers treat specially: zeros, infinities, NaNs, subnormals, the
 # largest and smallest normal values, and values near the scale thresholds.
 DIVISION_SPECIAL_WORDS = (
@@ -495,6 +509,29 @@ def test_wide_operations_match_the_python_model():
         for index in range(8):
             value = rng.choice(CURATED_DOUBLE_BITS) if rng.random() < 0.7 else rng.getrandbits(64)
             scalars += [(index, value & 0xFFFF_FFFF), (index + 8, value >> 32)]
+        assert_same(exe, 32, False, scalars, program(low, high))
+
+
+def test_fma_f64_overflow_and_signed_zero_match_the_python_model():
+    """v_fma_f64 overflow (±infinity), product-overflow cancellation, and ±0.0 signs match Rust f64::mul_add."""
+    exe = binary()
+    opcode = OPCODES["VOP3", "v_fma_f64"]
+    low = 0x35 << 26 | opcode << 16
+    high = 0 | 2 << 9 | 4 << 18
+    cases = [
+        (0x7FEF_FFFF_FFFF_FFFF, 0x4000_0000_0000_0000, 0x0000_0000_0000_0000),  # +MAX * 2 + 0 -> +inf
+        (0xFFEF_FFFF_FFFF_FFFF, 0x4000_0000_0000_0000, 0x0000_0000_0000_0000),  # -MAX * 2 + 0 -> -inf
+        (0x7FEF_FFFF_FFFF_FFFF, 0x4000_0000_0000_0000, 0xFFEF_FFFF_FFFF_FFFF),  # +MAX * 2 - MAX -> +MAX
+        (0x8000_0000_0000_0000, 0x3FF0_0000_0000_0000, 0x8000_0000_0000_0000),  # -0 * 1 + -0 -> -0
+        (0x8000_0000_0000_0000, 0x3FF0_0000_0000_0000, 0x0000_0000_0000_0000),  # -0 * 1 + +0 -> +0
+        (0xBFF0_0000_0000_0000, 0x3FF0_0000_0000_0000, 0x3FF0_0000_0000_0000),  # -1 * 1 + 1 -> +0
+    ]
+    for a, b, c in cases:
+        scalars = [
+            (0, a & 0xFFFF_FFFF), (1, a >> 32),
+            (2, b & 0xFFFF_FFFF), (3, b >> 32),
+            (4, c & 0xFFFF_FFFF), (5, c >> 32),
+        ]
         assert_same(exe, 32, False, scalars, program(low, high))
 
 
@@ -1660,3 +1697,76 @@ def test_buffer_cache_controls_match_the_python_model():
                                 low | noise & 0xFFFF_FFFF, high | noise >> 32,
                                 *mubuf("buffer_load_dword", vdata=3, vaddr=0, srsrc=1, offen=1))
                 assert_same(exe, lanes, False, scalars, words)
+
+
+def test_image_atomic_programs_match_the_python_model():
+    """Parité Rust/Python pour les 16 image_atomic_* (32 et 64 bits, glc=0/1, OOB, NSA,
+    contention, flottants NaN/±0, formats entiers 32/64 bits et refus de dmask/format)."""
+    exe = binary()
+    glc_bit = 1 << 13
+    init32 = [0x0000_0000, 0x8000_0000, 0x7FC0_0000, 0xFFFF_FFFF,
+              0xFFFF_FFFB, 5, 42, 0x3F80_0000] * 2
+    init64 = [0xFFFF_FFFF, 0x0000_0001, 0x0000_0000, 0x8000_0000,
+              0x0000_0000, 0x7FF8_0000, 0x3333_4444, 0x1111_2222] * 4
+    mem32 = [(IMAGE_ADDRESS, init32)]
+    mem64 = [(IMAGE_ADDRESS, init64)]
+
+    # 1) Tous les 16 image_atomic_* en 32 bits (glc=0 et glc=1, wave32 et wave64, avec OOB + contention)
+    for fmt in (rdna2_image.FORMAT_32_UINT, rdna2_image.FORMAT_32_SINT, rdna2_image.FORMAT_32_FLOAT):
+        t_words = rdna2_image.encode_image(IMAGE_ADDRESS, fmt, 4, 4)
+        scalars = [(16 + i, v) for i, v in enumerate(t_words) if v]
+        insts = [
+            vop2("v_and_b32", 1, 128 + 3, 0),            # x = lane & 3
+            vop2("v_lshrrev_b32", 2, 128 + 2, 0),        # y = lane >> 2 (>= 4 est OOB)
+        ]
+        for idx, name in enumerate(sorted(rdna2_image.ATOMIC_OPS)):
+            dmask = 0x3 if name in rdna2_image.ATOMIC_CMPSWAP_OPS else 0x1
+            insts += [
+                vop1("v_mov_b32", 4, LITERAL), 0xFFFF_FFFB if "s" in name else 0x4000_0000,
+                vop1("v_mov_b32", 5, LITERAL), 0x0000_0000 if "f" in name else 42,
+                *words(mimg(name, vdata=4, vaddr=1, dmask=dmask, first_flags=glc_bit if idx & 1 else 0)),
+            ]
+        # Contention multi-lignes + NSA + chevauchement vdata == vaddr
+        insts += [
+            vop1("v_mov_b32", 10, 129),
+            vop1("v_mov_b32", 14, 129),
+            *words(mimg("image_atomic_add", vdata=10, dmask=0x1, first_flags=glc_bit, nsa=(10, 14))),
+        ]
+        for lanes in (32, 64):
+            assert_same(exe, lanes, False, scalars, program(*insts), mem32)
+
+    # 2) Tous les 16 image_atomic_* en 64 bits (dmask=0x3 / 0xF) + load/store formats entiers 32/64 bits
+    for fmt in (rdna2_image.FORMAT_32_32_UINT, rdna2_image.FORMAT_32_32_SINT, rdna2_image.FORMAT_32_32_FLOAT):
+        t_words = rdna2_image.encode_image(IMAGE_ADDRESS, fmt, 4, 4)
+        scalars = [(16 + i, v) for i, v in enumerate(t_words) if v]
+        insts = [
+            vop2("v_and_b32", 1, 128 + 3, 0),
+            vop2("v_lshrrev_b32", 2, 128 + 2, 0),
+            *words(mimg("image_load", vdata=8, vaddr=1, dmask=0xF)),
+            *words(mimg("image_store", vdata=8, vaddr=1, dmask=0x3)),
+        ]
+        for idx, name in enumerate(sorted(rdna2_image.ATOMIC_OPS)):
+            dmask = 0xF if name in rdna2_image.ATOMIC_CMPSWAP_OPS else 0x3
+            insts += [
+                vop1("v_mov_b32", 4, LITERAL), 0x0000_0002,
+                vop1("v_mov_b32", 5, LITERAL), 0x4008_0000,
+                vop1("v_mov_b32", 6, LITERAL), 0x0000_0000,
+                vop1("v_mov_b32", 7, LITERAL), 0x0000_0000,
+                *words(mimg(name, vdata=4, vaddr=1, dmask=dmask, first_flags=glc_bit if idx & 1 else 0)),
+            ]
+        assert_same(exe, 32, False, scalars, program(*insts), mem64)
+
+    # 3) Refus partagés (dmask invalide et format incompatible avec la largeur)
+    bad_cases = [
+        (rdna2_image.FORMAT_32_UINT, mimg("image_atomic_add", vdata=4, vaddr=1, dmask=0x5)),
+        (rdna2_image.FORMAT_32_UINT, mimg("image_atomic_cmpswap", vdata=4, vaddr=1, dmask=0x1)),
+        (rdna2_image.FORMAT_8_8_8_8_UNORM, mimg("image_atomic_add", vdata=4, vaddr=1, dmask=0x1)),
+        (rdna2_image.FORMAT_32_UINT, mimg("image_atomic_add", vdata=4, vaddr=1, dmask=0x3)),
+        (rdna2_image.FORMAT_32_32_UINT, mimg("image_atomic_add", vdata=4, vaddr=1, dmask=0x1)),
+    ]
+    for fmt, inst in bad_cases:
+        t_words = rdna2_image.encode_image(IMAGE_ADDRESS, fmt, 4, 4)
+        scalars = [(16 + i, v) for i, v in enumerate(t_words) if v]
+        pw = words(inst)
+        assert run_python(32, False, scalars, pw) == "error untranslated\n"
+        assert_same(exe, 32, False, scalars, pw)

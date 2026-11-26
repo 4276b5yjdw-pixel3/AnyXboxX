@@ -58,7 +58,7 @@ fn tuned_settings_are_set_by_default_and_can_be_turned_off() {
 #[test]
 fn the_tuned_set_is_neptune_s_measured_set() {
     // Golden copy: tests/fixtures/lancer_victory_neptune.ps1 (checked in tests/test_anyxboxx_run.py).
-    assert_eq!(TUNED.len(), 42);
+    assert_eq!(TUNED.len(), 46);
     assert!(TUNED.contains(&("VICTORY_HEAP_PASS_DIRTY", "1")));
     assert!(TUNED.contains(&("VICTORY_CARD_WINDOWS_MB", "1536")));
     assert!(TUNED.contains(&("VICTORY_RELAY", "2")));
@@ -295,4 +295,34 @@ fn a_prebuilt_victory_does_not_need_the_repository() {
 fn without_a_prebuilt_victory_the_repository_is_required() {
     let args = parse(&["--game-dir", "G"]);
     assert!(matches!(run(&args, None), Err(RunError::NoRepo)));
+}
+
+#[test]
+fn linux_amd_profile_sets_its_variables_instead_of_windows_tuned() {
+    let env = settings::base(&parse(&["--game-dir", "G", "--profile", "linux-amd"]));
+    assert_eq!(env.len(), HEAD.len() + LINUX_AMD.len());
+    assert!(
+        LINUX_AMD
+            .iter()
+            .all(|(k, v)| value(&env, k) == Some(OsString::from(v)))
+    );
+    assert_eq!(
+        value(&env, "VKD3D_CONFIG"),
+        Some(OsString::from("descriptor_heap"))
+    );
+    assert_eq!(value(&env, "VICTORY_RELAY"), None);
+}
+
+#[test]
+fn defaults_profile_and_no_tuned_settings_leave_only_base_variables() {
+    let defaults = settings::base(&parse(&["--game-dir", "G", "--Profile", "defaults"]));
+    assert_eq!(names(&defaults), HEAD);
+    let disabled = settings::base(&parse(&[
+        "--game-dir",
+        "G",
+        "--profile",
+        "linux-amd",
+        "--no-tuned-settings",
+    ]));
+    assert_eq!(names(&disabled), HEAD);
 }
