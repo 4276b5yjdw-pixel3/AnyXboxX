@@ -36,6 +36,26 @@ def _is_nan(bits):
     return bits & 0x7FFF > HALF_INFINITY
 
 
+ALMOST_ONE = 0x3BFF                          # plus grand f16 sous 1.0
+
+
+def half_fract(bits):
+    """v_fract_f16 : S0 + -floor(S0) (ISA), au plus 0x3BFF comme v_fract_f32 ; NaN pour ±infini et NaN."""
+    if _is_nan(bits) or bits & 0x7FFF == HALF_INFINITY:
+        return HALF_NAN
+    value = bits_half(bits)
+    return half_bits(min(value - math.copysign(math.floor(value), value), bits_half(ALMOST_ONE)))
+
+
+def half_frexp(bits):
+    """(mantisse f16, exposant) de S0 = m × 2^e, 0.5 ≤ |m| < 1 (dénormaux normalisés) ; ±0, ±infini et NaN :
+    S0 tel quel et exposant 0, comme v_frexp_*_f32."""
+    if bits & 0x7FFF == 0 or bits & 0x7FFF >= HALF_INFINITY:
+        return bits, 0
+    mantissa, exponent = math.frexp(bits_half(bits))
+    return half_bits(mantissa), exponent
+
+
 def _order(bits):
     """Clé qui croît avec la valeur (NaN exclus), -0 juste sous +0."""
     return ~bits & 0xFFFF if bits & 0x8000 else bits | 0x8000
@@ -101,11 +121,17 @@ OPERATIONS = {
     "v_rndne_f16": ("h", lambda a, b, c, d, k: half_round(a, round)),
     "v_cvt_f16_f32": ("w", lambda a, b, c, d, k: half_bits(bits_float(a))),
     "v_cvt_f32_f16": ("h", lambda a, b, c, d, k: FLOAT_NAN if _is_nan(a) else float_bits(H(a))),
+    # ISA RDNA 2, §12.8, opcodes VOP1 89, 90 et 95 (p. 147-148) ; exposant d'un dénormal normalisé comme
+    # le repli constant de LLVM (AMDGPUInstCombineIntrinsic.cpp, amdgcn_frexp_exp : frexp d'APFloat).
+    "v_frexp_mant_f16": ("h", lambda a, b, c, d, k: half_frexp(a)[0]),
+    "v_frexp_exp_i16_f16": ("h", lambda a, b, c, d, k: half_frexp(a)[1] & 0xFFFF),
+    "v_fract_f16": ("h", lambda a, b, c, d, k: half_fract(a)),
 }
 # Résultat sur 32 bits (le VGPR entier) ; les autres écrivent une moitié et gardent l'autre.
 WORD_RESULT = frozenset({"v_cvt_f32_f16"})
 VGPR_FIRST = 256
 EXTENSIONS = frozenset({0xE9, 0xEA, 0xF9, 0xFA})        # src0 de DPP8, DPP8_FI, SDWA, DPP16
+INTEGER_RESULT = frozenset({"v_frexp_exp_i16_f16"})    # entier de 16 bits : le clamp f16 n'a pas de sens
 
 
 def _refuse(message):
@@ -152,6 +178,8 @@ def _check_vop3(name, kinds, fields, literal):
         _refuse(f"{name} : clamp ou omod sur un résultat f32 non pris en charge")
     if fields.omod:
         _refuse(f"{name} : omod sur un résultat f16 non pris en charge")
+    if fields.clamp and name in INTEGER_RESULT:
+        _refuse(f"{name} : clamp sur un résultat entier non mesuré")
     if fields.op_sel and name == "v_fmac_f16":
         _refuse(f"{name} : op_sel non pris en charge en VOP3")
     if fields.op_sel >> 3 & 1 and name in WORD_RESULT:
