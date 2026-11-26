@@ -1757,8 +1757,8 @@ struct CardWork {
     /// Where the pieces that differ are fetched to: PC memory, mapped.
     fetched: Option<(ID3D12Resource, usize, u64)>,
     /// The dwords of `differs` taken by plans whose results were not read
-    /// yet.
-    taken: u32,
+    /// yet ([`crate::resultring`]).
+    taken: crate::resultring::ResultRing,
     /// Plans made and not done with (`Host::card_done`).
     out: u32,
     /// (Neptune) With [`relay_own_queue`]: the compare that keeps the
@@ -2382,6 +2382,8 @@ struct CardRange {
 /// What a submission does for copies in the card's memory.
 struct CardPlan {
     ranges: Vec<CardRange>,
+    /// Its stretch of the compare's results (start and dwords; [`crate::resultring`]).
+    results: (u32, u32),
     /// The compare, run after the submission's lists.
     check: Option<ID3D12CommandList>,
     /// The copies whose card side was brought up to date, alive until the
@@ -3457,6 +3459,15 @@ fn late_threads() {
     });
 }
 
+/// Whether the compare's result area is a ring whose stretches come back as
+/// their plans land (`VICTORY_RESULT_RING=0`: the area is reused only when no
+/// plan is in the air, and the submitting thread drains every flight when it
+/// is half taken, as before; on by default). See [`crate::resultring`].
+fn result_ring() -> bool {
+    static ON: OnceLock<bool> = OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("VICTORY_RESULT_RING").is_none_or(|v| v != "0"))
+}
+
 /// With [`relay`]: waits until `done` says so of the line, looked at each
 /// time flights have landed. Counted as a settle for `why`, and its time
 /// as waiting for the card. The caller may hold the submission lock: the
@@ -4387,7 +4398,7 @@ impl Host {
                 pso,
                 differs: (differs, data as usize, RESULTS),
                 fetched: None,
-                taken: 0,
+                taken: crate::resultring::ResultRing::new((RESULTS / 4) as u32, result_ring()),
                 out: 0,
                 snap,
                 patch,
@@ -4806,6 +4817,7 @@ impl Host {
         drop(order);
         let mut plan = CardPlan {
             ranges: Vec::new(),
+            results: (0, 0),
             check: None,
             _synced: dirty
                 .into_iter()
@@ -4821,8 +4833,9 @@ impl Host {
             inflight_landed: 0,
         };
         // Each byte once, as the copy-back joins the declared ranges. The
-        // results go behind those of plans still in the air.
-        let mut at = work.taken;
+        // results go behind those of plans still in the air, in one stretch
+        // of the area for the plan ([`crate::resultring`]).
+        let mut spans_of = Vec::new();
         for (shadow, ranges) in &declared {
             let mut sorted = ranges.clone();
             sorted.sort_unstable();
@@ -4838,20 +4851,26 @@ impl Host {
                 let Some(span) = shadow.card_span(from, to) else {
                     continue;
                 };
-                let compared = twin && u64::from(at + span.pieces) * 4 <= work.differs.2;
-                plan.ranges.push(CardRange {
-                    shadow: shadow.clone(),
-                    declared: (from, to),
-                    span,
-                    at,
-                    compared,
-                });
-                if compared {
-                    at += span.pieces;
-                }
+                spans_of.push((shadow, (from, to), span, twin));
             }
         }
-        work.taken = at;
+        let need = spans_of.iter().filter(|s| s.3).map(|s| s.2.pieces).fold(0u32, u32::saturating_add);
+        let (start, granted) = work.taken.take(need);
+        plan.results = (start, granted);
+        let mut at = start;
+        for (shadow, declared, span, twin) in spans_of {
+            let compared = twin && at + span.pieces <= start + granted;
+            plan.ranges.push(CardRange {
+                shadow: shadow.clone(),
+                declared,
+                span,
+                at,
+                compared,
+            });
+            if compared {
+                at += span.pieces;
+            }
+        }
         if plan.ranges.iter().any(|r| r.compared) {
             let Some(check) = work.check.pop().or_else(|| self.make_prelude()) else {
                 fail(format_args!("no host list for the compare of host copies in the card's memory"));
@@ -4957,15 +4976,20 @@ impl Host {
         Some(plan)
     }
 
-    /// With [`relay`]: whether the compare's result area is half taken by
-    /// plans in the air. It starts from the beginning only when no plan is
-    /// out, so the caller lets the flights land first.
+    /// With [`relay`]: whether the compare's result area is too taken by
+    /// plans in the air for the next one, so the caller lets the flights
+    /// land first. Without [`result_ring`] the area starts from the beginning
+    /// only when no plan is out, and this is half of it; with it the plans
+    /// that landed give their stretches back as they land, and the area is
+    /// let drain only when three quarters of it are taken by plans still in
+    /// the air, or when its free dwords lie in no stretch as long as plans
+    /// asked for lately (split between its end and its start): a plan that
+    /// is compared in part has its whole landing fetched the slow way.
     fn card_results_low(&self) -> bool {
-        CARD_WORK
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .as_ref()
-            .is_some_and(|work| u64::from(work.taken) * 8 > work.differs.2)
+        CARD_WORK.lock().unwrap_or_else(|e| e.into_inner()).as_ref().is_some_and(|work| {
+            let (used, size) = (u64::from(work.taken.used()), u64::from(work.taken.size()));
+            if result_ring() { used * 4 > size * 3 || work.taken.short_for_next() } else { used * 2 > size }
+        })
     }
 
     /// The plan's submission has run and its results were read
@@ -4982,10 +5006,12 @@ impl Host {
         }
         work.masks.extend(plan.masks);
         work.out = work.out.saturating_sub(1);
-        // With the relay other plans may be on the card, their results
-        // not read yet: the area starts again only when none is out.
+        // With the relay other plans may be on the card, their results not
+        // read yet: the plan gives its own stretch back ([`result_ring`]), and
+        // the area starts again from the beginning when none is out.
+        work.taken.give(plan.results.0, plan.results.1);
         if !relay() || work.out == 0 {
-            work.taken = 0;
+            work.taken.clear();
         }
     }
 
