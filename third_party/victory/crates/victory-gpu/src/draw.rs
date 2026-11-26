@@ -1177,6 +1177,17 @@ impl State {
             } else {
                 None
             };
+            // The format flags of typed buffer views (`SLOT_TYPED`): a shader that reads them
+            // cannot run without them, as without the directory of title memory above.
+            let typed = if t.host.root_srvs.contains(&victory_shader::emit::SLOT_TYPED) {
+                let Some(gpu) = self.heap_typed_table(list) else {
+                    once!("a shader uses typed buffers with no view heap set: the draw is dropped");
+                    return false;
+                };
+                Some(gpu)
+            } else {
+                None
+            };
             if let Some((param, dwords)) = stage.user_data {
                 let mut values = vec![0u32; dwords as usize];
                 for u in &t.host.user_data {
@@ -1214,6 +1225,23 @@ impl State {
                                     l.SetComputeRootShaderResourceView(param, m.directory);
                                 } else {
                                     l.SetGraphicsRootShaderResourceView(param, m.directory);
+                                }
+                            }
+                        }
+                        continue;
+                    }
+                    if srv && slot == victory_shader::emit::SLOT_TYPED {
+                        // Ours, not the title's: typed buffer format flags in the
+                        // view heap's strides table, without scanning the whole heap.
+                        // Found above (the draw is dropped without it).
+                        if let Some(gpu) = typed {
+                            // SAFETY: an open list; the table lives as long
+                            // as the heap the list holds.
+                            unsafe {
+                                if compute {
+                                    l.SetComputeRootShaderResourceView(param, gpu);
+                                } else {
+                                    l.SetGraphicsRootShaderResourceView(param, gpu);
                                 }
                             }
                         }
@@ -1512,6 +1540,26 @@ impl State {
             }
         }
         true
+    }
+
+    /// The GPU address of the view heap's stride/typed-format metadata table
+    /// (`SLOT_TYPED`), without triggering the full-heap buffer-view scan.
+    fn heap_typed_table(&self, list: &HostList) -> Option<u64> {
+        let heap = self
+            .heaps
+            .iter()
+            .filter(|&&h| h != 0)
+            .map(|&h| crate::descriptor::heap(h as This))
+            .find(|h| !h.samplers())?;
+        let host = heap.host()?;
+        let gpu = host.strides_gpu()?;
+        const ONCE: usize = usize::MAX - 0x5d;
+        if list.first_use(ONCE)
+            && let Some(buffer) = host.strides_buffer()
+        {
+            list.keep(buffer);
+        }
+        Some(gpu)
     }
 
     /// For a shader that picks buffers from the view heap by an index it
