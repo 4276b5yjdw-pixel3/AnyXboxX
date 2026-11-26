@@ -19,8 +19,9 @@ from emu.rdna2_exec_cmp16 import check_vop3
 from emu.rdna2_exec_cmpf16 import COMPAREF16
 from emu.rdna2_exec_memory import ADD_TID, LDS_ADD_TID
 from emu.rdna2_exec_vop3 import Fields, float_inputs
+from emu.rdna2_hlsl_clamp import CARRY, carry_write, refuse_integer_clamp
 from emu.rdna2_hlsl_memory import memory_statements
-from emu.rdna2_hlsl import CARRY, SCALAR_FAMILIES, _fields, _literal, _words, modified
+from emu.rdna2_hlsl import SCALAR_FAMILIES, _fields, _literal, _words, modified
 from emu.rdna2_hlsl_ops import (BRANCHES, HELPERS as ALU_HELPERS, NULL, Untranslatable, compare_condition,
                                 is_compare, scalar_target, source, source_high)
 
@@ -110,12 +111,12 @@ def _compare(name, a, b, code):
     return [_ballot(target, f"({ACTIVE}) && ({compare_condition(name, a, b)})")]
 
 
-def _carry(name, a, b, carry_in, vdst, carry_out):
+def _carry(name, a, b, carry_in, vdst, carry_out, clamp=0):
     result, carry = CARRY[name]
     k = f"({_bit(carry_in)} ? 1u : 0u)" if name.endswith("_ci_u32") else "0u"
     low, high = _pair(carry_out)
     return [f"{{ uint x = {a}, y = {b}, k = {k}, r = 0u; bool o = false; "
-            f"if ({ACTIVE}) {{ r = {result}; o = {carry}; v[{vdst}] = r; }} "
+            f"if ({ACTIVE}) {{ r = {result}; o = {carry}; v[{vdst}] = {carry_write(name, clamp)}; }} "
             f"uint2 m = Ballot64(lane, o); {low} = m.x; {high} = m.y; }}"]
 
 
@@ -132,6 +133,7 @@ def _mad64(name, a, b, fields):
     code = fields.sources[2]
     if code == 255:
         raise Untranslatable(f"non traduite en HLSL : {name} avec littéral 64 bits")
+    refuse_integer_clamp(name, fields.clamp)
     if name == "v_mad_i64_i32" and fields.sdst != NULL:
         raise Untranslatable("v_mad_i64_i32 : retenue signée dans SDST non vérifiée")
     high_product = "MulHiI32(x, y)" if name == "v_mad_i64_i32" else "MulHiU32(x, y)"
@@ -172,7 +174,7 @@ def _vop3(name, opcode, fields, literal):
         check_vop3(name, fields.op_sel, Untranslatable)
         return _compare(name, a, b, fields.vdst)
     if name in CARRY:
-        return _carry(name, a, b, fields.sources[2], fields.vdst, fields.sdst)
+        return _carry(name, a, b, fields.sources[2], fields.vdst, fields.sdst, fields.clamp)
     if name in ("v_mad_u64_u32", "v_mad_i64_i32"):
         return _mad64(name, a, b, fields)
     if name == "v_readlane_b32":
@@ -184,6 +186,7 @@ def _vop3(name, opcode, fields, literal):
     if name in ("v_mbcnt_lo_u32_b32", "v_mbcnt_hi_u32_b32"):
         return _mbcnt(name, a, b, fields.vdst)
     if name == "v_cndmask_b32":
+        refuse_integer_clamp(name, fields.clamp)
         if (fields.abs | fields.neg) >> 2 & 1:
             raise Untranslatable("non traduite en HLSL (wave64) : v_cndmask_b32 avec modificateur sur le masque")
         return [f"if ({ACTIVE}) v[{fields.vdst}] = {_bit(fields.sources[2])} ? {b} : {a};"]
