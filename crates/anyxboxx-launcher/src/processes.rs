@@ -19,9 +19,9 @@ pub struct Tasklist;
 
 impl ProcessSource for Tasklist {
     fn image_names(&self) -> io::Result<Vec<String>> {
-        let output = Command::new("tasklist")
-            .args(["/FO", "CSV", "/NH"])
-            .output()?;
+        let mut command = Command::new("tasklist");
+        command.args(["/FO", "CSV", "/NH"]);
+        let output = crate::noconsole::hide_console(&mut command).output()?;
         if !output.status.success() {
             return Err(io::Error::other(format!(
                 "tasklist exited with {}",

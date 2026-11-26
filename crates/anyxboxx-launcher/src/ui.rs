@@ -1,16 +1,23 @@
-//! The window: the tab bar, the shared log view and the `eframe` hooks. The pages are in
-//! `ui_pages`; every decision lives in the other modules.
+//! The window: the navigation, the page on screen, the console drawer, the toasts and the splash.
+//! The pages are in `ui_home`, `ui_pages` and `ui_options`; every decision lives in the other
+//! modules.
 
 use std::time::Duration;
 
-use eframe::egui::{self, RichText};
+use eframe::egui;
 
 use crate::app::{App, Tab};
 use crate::progress::Progress;
-use crate::{splash, theme, ui_pages};
+use crate::{anim, home, splash, theme, toast, ui_chrome, ui_home, ui_pages};
 
 /// How often the window redraws while a job or a folder check runs.
 const BUSY_REPAINT: Duration = Duration::from_millis(200);
+/// Length of the fade and slide between pages, in seconds.
+const PAGE_TRANSITION: f64 = 0.28;
+/// Distance a page slides up while it fades in.
+const PAGE_SLIDE: f32 = 18.0;
+/// Seconds between two looks at the shader cache folder.
+const CACHE_CHECK_EVERY: f64 = 2.0;
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -22,88 +29,92 @@ impl eframe::App for App {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        theme::paint_background(&ctx);
-        let open_frame = egui::Frame::new().inner_margin(egui::Margin::symmetric(20, 10));
-        egui::Panel::top("tabs")
-            .frame(open_frame)
-            .show_inside(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("AnyXboxX").size(26.0).strong());
-                    ui.add_space(14.0);
-                    for (tab, label) in [
-                        (Tab::Setup, "Setup"),
-                        (Tab::Files, "Game folder"),
-                        (Tab::Shaders, "Shaders"),
-                        (Tab::Play, "Play"),
-                    ] {
-                        if theme::tab_pill(ui, self.tab == tab, label) {
-                            self.tab = tab;
-                        }
-                    }
-                });
-            });
-        if let Some(notice) = self.notice.clone() {
-            egui::Panel::bottom("notice")
-                .frame(open_frame)
-                .show_inside(ui, |ui| {
-                    theme::card(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.label(notice);
-                            if ui.small_button("dismiss").clicked() {
-                                self.notice = None;
-                            }
-                        });
-                    });
-                });
+        let now = ctx.input(|i| i.time);
+        self.splash.poll(&ctx);
+        self.handle_drops(&ctx);
+        self.refresh_chips(now);
+        if let Some(notice) = self.notice.take() {
+            let kind = toast::classify(&notice);
+            self.toasts.push(notice, kind, now);
         }
+        theme::paint_background(&ctx);
+        let open_frame = egui::Frame::new().inner_margin(egui::Margin::symmetric(20, 12));
+        egui::Panel::left("nav")
+            .frame(open_frame)
+            .exact_size(ui_chrome::SIDEBAR_WIDTH)
+            .resizable(false)
+            .show_separator_line(false)
+            .show_inside(ui, |ui| ui_chrome::sidebar(self, ui));
+        egui::Panel::bottom("console_head")
+            .frame(egui::Frame::new().inner_margin(egui::Margin::symmetric(20, 8)))
+            .show_inside(ui, |ui| ui_chrome::console_header(self, ui));
+        let drawer = egui::Panel::bottom("console_body")
+            .frame(egui::Frame::new().inner_margin(egui::Margin::symmetric(20, 0)))
+            .exact_size(ui_chrome::console_height())
+            .resizable(false);
+        let open = self.drawer_open;
+        drawer.show_animated_inside(ui, open, |ui| ui_chrome::console_body(self, ui));
         egui::CentralPanel::default()
             .frame(open_frame)
-            .show_inside(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| match self.tab {
-                    Tab::Setup => ui_pages::setup(self, ui),
-                    tab => theme::card(ui, |ui| match tab {
-                        Tab::Files => ui_pages::files(self, ui),
-                        Tab::Shaders => ui_pages::shaders(self, ui),
-                        _ => ui_pages::play(self, ui),
-                    }),
-                });
-            });
+            .show_inside(ui, |ui| self.show_page(ui, now));
         ui_pages::confirm_clean(self, &ctx);
+        ui_chrome::toasts(self, &ctx);
         self.show_splash(&ctx);
+        self.save_settings_if_changed();
     }
 }
 
 impl App {
-    /// The splash over the window at start-up and while a job runs.
+    /// The page, fading and sliding in when it was just switched to.
+    fn show_page(&mut self, ui: &mut egui::Ui, now: f64) {
+        if self.tab != self.shown_tab {
+            self.shown_tab = self.tab;
+            self.tab_changed_at = now;
+        }
+        let progress = anim::eased_progress(now, self.tab_changed_at, PAGE_TRANSITION);
+        if progress < 1.0 {
+            ui.ctx().request_repaint();
+            ui.set_opacity(progress);
+            ui.add_space((1.0 - progress) * PAGE_SLIDE);
+        }
+        egui::ScrollArea::vertical()
+            .id_salt(("page", self.tab as u8))
+            .auto_shrink([false, false])
+            .show(ui, |ui| match self.tab {
+                Tab::Home => ui_home::home(self, ui),
+                Tab::Setup => ui_pages::setup(self, ui),
+                Tab::Play => ui_pages::play(self, ui),
+                Tab::Files => theme::card(ui, |ui| ui_pages::files(self, ui)),
+                Tab::Shaders => theme::card(ui, |ui| ui_pages::shaders(self, ui)),
+            });
+    }
+
+    /// Looks at the shader cache folder now and then, for the Home page's chip.
+    fn refresh_chips(&mut self, now: f64) {
+        if now - self.cache_checked_at >= CACHE_CHECK_EVERY || self.cache_checked_at == 0.0 {
+            self.cache_checked_at = now.max(f64::MIN_POSITIVE);
+            self.cache_ready = home::cache_filled(self.cache_dir.as_deref());
+        }
+    }
+
+    /// The launch screen: the splash over the window at start-up and while a job runs.
     fn show_splash(&mut self, ctx: &egui::Context) {
         let busy = self.running.is_some();
         if !self.splash.visible(busy) {
             return;
         }
         let progress = self.progress().cloned();
-        let idle = if busy { "Working..." } else { "Starting..." };
+        let (title, idle) = if busy {
+            (
+                self.step.clone().unwrap_or_else(|| "Working".to_string()),
+                "Working...",
+            )
+        } else {
+            ("AnyXboxX".to_string(), "Starting...")
+        };
         let status =
             splash::status_text(progress.as_ref(), self.log.back().map(String::as_str), idle);
-        let fraction = progress
-            .as_ref()
-            .map(Progress::fraction)
-            .or(busy.then_some(0.0));
-        self.splash.show(ctx, busy, &status, fraction);
+        let fraction = progress.as_ref().map(Progress::fraction);
+        self.splash.show(ctx, busy, &title, &status, fraction);
     }
-}
-
-/// The log of VIctory and of the launcher's steps, newest at the bottom.
-pub fn log_view(app: &App, ui: &mut egui::Ui) {
-    ui.separator();
-    ui.label(RichText::new("Log").strong().size(17.0));
-    egui::ScrollArea::vertical()
-        .id_salt("log")
-        .max_height(260.0)
-        .stick_to_bottom(true)
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
-            for line in &app.log {
-                ui.monospace(line);
-            }
-        });
 }

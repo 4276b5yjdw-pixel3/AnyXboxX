@@ -1,11 +1,11 @@
 //! The four pages of the window: setup checklist, game folder, shader preloading, play.
 
-use eframe::egui::{self, Color32, RichText};
+use eframe::egui::{self, Color32, RichText, vec2};
 
 use crate::app::{App, Verify};
 use crate::setup::State;
 use crate::verify::{self, Problem};
-use crate::{session, theme, ui};
+use crate::{session, theme, ui_options};
 use anyxboxx::run::XgMode;
 
 const OK: Color32 = theme::GOOD;
@@ -47,7 +47,7 @@ pub fn setup(app: &mut App, ui: &mut egui::Ui) {
             app.profile().name,
             app.profile().status
         ));
-        if ui.add(theme::accent_button(true, "Check again")).clicked() {
+        if theme::glow_button(ui, true, "Check again", vec2(0.0, 36.0), false).clicked() {
             app.refresh_setup();
         }
     });
@@ -56,16 +56,14 @@ pub fn setup(app: &mut App, ui: &mut egui::Ui) {
 /// Page 2: the game folder, its check, and the manifest.
 pub fn files(app: &mut App, ui: &mut egui::Ui) {
     ui.heading("Game folder");
-    ui.label("The folder holding game_scarlett_master.exe, outside this repository. Only its own files are read.");
+    ui.label("The folder holding game_scarlett_master.exe, outside this repository. Browse, or drop the folder on this window. Only its own files are read.");
     ui.horizontal(|ui| {
         ui.text_edit_singleline(&mut app.settings.game_dir);
-        if ui
-            .add_enabled(
-                !app.is_busy(),
-                theme::accent_button(!app.is_busy(), "Check folder"),
-            )
-            .clicked()
-        {
+        if theme::glow_button(ui, true, "Browse...", vec2(0.0, 36.0), false).clicked() {
+            app.pick_game_folder();
+        }
+        let idle = !app.is_busy();
+        if theme::glow_button(ui, idle, "Check folder", vec2(0.0, 36.0), false).clicked() {
             app.start_verify();
         }
     });
@@ -128,28 +126,30 @@ pub fn shaders(app: &mut App, ui: &mut egui::Ui) {
         ui.colored_label(UNKNOWN, "Check the game folder first (page 2).");
     }
     let enabled = ready && !app.is_busy();
-    if ui
-        .add_enabled(enabled, theme::accent_button(enabled, "Preload shaders"))
-        .clicked()
-    {
+    if theme::glow_button(ui, enabled, "Preload shaders", vec2(0.0, 36.0), false).clicked() {
         app.start(true);
     }
     if let Some(progress) = app.progress() {
         theme::gradient_bar(
             ui,
-            progress.fraction(),
+            Some(progress.fraction()),
             &format!(
                 "{} of {} {} ({}%)",
                 progress.done, progress.total, progress.what, progress.percent
             ),
         );
     }
-    ui::log_view(app, ui);
 }
 
 /// Page 4: the launch, the profile, the XG library, the advanced panel and the cache.
 pub fn play(app: &mut App, ui: &mut egui::Ui) {
-    ui.heading("Play");
+    ui_options::cards(app, ui);
+    ui.add_space(theme::SP_M);
+    theme::card(ui, |ui| play_controls(app, ui));
+}
+
+fn play_controls(app: &mut App, ui: &mut egui::Ui) {
+    ui.label(RichText::new("Launch").size(22.0).strong());
     let profile = app.profile().clone();
     ui.label(RichText::new(format!("Profile: {}", profile.name)).strong());
     ui.label(format!("Status: {:?}. {}", profile.status, profile.note));
@@ -166,6 +166,9 @@ pub fn play(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         ui.label("XG library (your own xg_xs.dll, optional):");
         ui.text_edit_singleline(&mut app.settings.xg_dll);
+        if theme::glow_button(ui, true, "Browse...", vec2(0.0, 36.0), false).clicked() {
+            app.pick_xg_library();
+        }
     });
     ui.horizontal(|ui| {
         ui.radio_value(&mut app.settings.xg_mode, XgMode::Real, "real");
@@ -176,12 +179,15 @@ pub fn play(app: &mut App, ui: &mut egui::Ui) {
     if !ready {
         ui.colored_label(UNKNOWN, "Check the game folder first (page 2).");
     }
-    if ui
-        .add_enabled(
-            ready && !app.is_busy(),
-            theme::accent_button(ready && !app.is_busy(), "Launch game"),
-        )
-        .clicked()
+    let can_launch = ready && !app.is_busy();
+    if theme::glow_button(
+        ui,
+        can_launch,
+        "Launch game",
+        vec2(0.0, 40.0),
+        app.is_busy(),
+    )
+    .clicked()
     {
         app.start(false);
     }
@@ -203,7 +209,6 @@ pub fn play(app: &mut App, ui: &mut egui::Ui) {
             app.confirm_clean = true;
         }
     });
-    ui::log_view(app, ui);
 }
 
 /// The advanced panel: overrides, the guard, and the environment the launch will use.

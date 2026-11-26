@@ -9,21 +9,35 @@
 //! pages, for no gain in what the launcher does. The logic stays in plain modules that the window
 //! only calls, so the tests never need a window.
 
+// No console window in release builds: the children's output goes to the log drawer.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod anim;
 mod app;
 mod cache;
 mod env;
 mod format;
+mod home;
 mod host;
 mod job;
 mod launch;
+mod loglevel;
+mod noconsole;
+mod options;
+mod picker;
 mod processes;
 mod profile;
 mod progress;
 mod session;
 mod setup;
 mod splash;
+mod store;
 mod theme;
+mod toast;
 mod ui;
+mod ui_chrome;
+mod ui_home;
+mod ui_options;
 mod ui_pages;
 mod verify;
 
@@ -33,8 +47,8 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("AnyXboxX launcher")
-            .with_inner_size([980.0, 720.0])
-            .with_min_inner_size([640.0, 480.0]),
+            .with_inner_size([1180.0, 780.0])
+            .with_min_inner_size([860.0, 560.0]),
         ..eframe::NativeOptions::default()
     };
     eframe::run_native(

@@ -62,7 +62,8 @@ const HISTORY: usize = 32;
 const POLL: Duration = Duration::from_millis(8);
 
 /// The keyboard's stand-in gamepad (virtual key, button); README lists it.
-/// Sticks: W/A/S/D left, I/J/K/L right; triggers Z and C.
+/// Sticks: W/A/S/D left, I/J/K/L right; triggers Z and C. Letters are positions on a QWERTY keyboard:
+/// `VICTORY_KEYBOARD` (see `keymap`) says which key each one is on yours; ZQSD works on AZERTY.
 const FALLBACK_BUTTONS: [(u8, u32); 14] = [
     (0x1B, MENU), // Esc
     (0x09, VIEW), // Tab
@@ -116,7 +117,9 @@ trait Source: Send {
 }
 
 fn fallback(keys: &[KeyState]) -> PadState {
-    let on = |vk: u8| {
+    // The controls are written for QWERTY; `keymap` says which key each one is on this keyboard.
+    let on = |logical: u8| {
+        let vk = super::keymap::resolve(logical);
         if keys.iter().any(|k| k.virtual_key == vk) {
             1.0
         } else {

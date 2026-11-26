@@ -6891,6 +6891,16 @@ extern "system" fn window_proc(
     unsafe { DefWindowProcW(hwnd, message, wparam, lparam) }
 }
 
+/// `VICTORY_WINDOW_MODE=borderless` makes the window a frameless one over the whole screen;
+/// anything else (or nothing) is the usual framed window.
+fn is_borderless(mode: &str) -> bool {
+    mode.trim().eq_ignore_ascii_case("borderless")
+}
+
+fn borderless_window() -> bool {
+    std::env::var("VICTORY_WINDOW_MODE").is_ok_and(|v| is_borderless(&v))
+}
+
 fn make_window(width: u32, height: u32) -> windows::core::Result<HWND> {
     const CLASS: PCWSTR = w!("VIctory");
     // SAFETY: registers our class once and creates a window of it.
@@ -6911,6 +6921,23 @@ fn make_window(width: u32, height: u32) -> windows::core::Result<HWND> {
             right: width as i32,
             bottom: height as i32,
         };
+        if borderless_window() {
+            // Covers the whole screen without a frame; the client size is the screen's.
+            return CreateWindowExW(
+                WINDOW_EX_STYLE(0),
+                CLASS,
+                w!("VIctory"),
+                WS_POPUP | WS_VISIBLE,
+                0,
+                0,
+                GetSystemMetrics(SM_CXSCREEN),
+                GetSystemMetrics(SM_CYSCREEN),
+                None,
+                None,
+                Some(instance.into()),
+                None,
+            );
+        }
         AdjustWindowRect(&mut rect, WS_OVERLAPPEDWINDOW, false)?;
         CreateWindowExW(
             WINDOW_EX_STYLE(0),
@@ -6937,6 +6964,17 @@ fn pump() {
             let _ = TranslateMessage(&message);
             DispatchMessageW(&message);
         }
+    }
+}
+
+#[cfg(test)]
+mod window_mode {
+    #[test]
+    fn only_borderless_is_borderless() {
+        assert!(super::is_borderless("borderless"));
+        assert!(super::is_borderless(" Borderless "));
+        assert!(!super::is_borderless("windowed"));
+        assert!(!super::is_borderless(""));
     }
 }
 

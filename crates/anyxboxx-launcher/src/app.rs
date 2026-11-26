@@ -9,12 +9,15 @@ use crate::cache;
 use crate::host::{self, Adapter, GpuVendor, Host};
 use crate::job::{self, Event, Step};
 use crate::launch;
+use crate::picker::{self, Pick};
 use crate::processes::Tasklist;
 use crate::profile::{Profile, Profiles};
 use crate::progress::{Progress, Summary};
 use crate::session::{self, Settings};
 use crate::setup::{self, Item};
 use crate::splash::Splash;
+use crate::store::{self, Stored};
+use crate::toast::Toasts;
 use crate::verify::{self, Report};
 
 /// Lines kept in the log view.
@@ -22,6 +25,7 @@ const LOG_CAPACITY: usize = 2000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
+    Home,
     Setup,
     Files,
     Shaders,
@@ -62,6 +66,21 @@ pub struct App {
     pub confirm_clean: bool,
     pub cache_dir: Option<PathBuf>,
     pub splash: Splash,
+    pub toasts: Toasts,
+    /// The step the running job is on (`Building VIctory`, `Running the game`...).
+    pub step: Option<String>,
+    pub drawer_open: bool,
+    /// Whether the shader cache folder holds something (looked at every couple of seconds).
+    pub cache_ready: bool,
+    pub cache_checked_at: f64,
+    /// When the page on screen was switched to, in egui seconds (for the page transition).
+    pub tab_changed_at: f64,
+    pub shown_tab: Tab,
+    /// Start the game as soon as the folder check passes (PLAY pressed before it ended).
+    pub launch_when_ready: bool,
+    pick_rx: Option<Receiver<(Pick, Option<PathBuf>)>>,
+    settings_path: Option<PathBuf>,
+    last_saved: Stored,
 }
 
 /// The checklist as the machine is now; `adapters` is what DXGI listed (None when it failed).
@@ -82,6 +101,13 @@ impl App {
     /// The window's first state: the setup checklist, the GPU and the host are read now.
     pub fn new() -> Result<Self, String> {
         let profiles = Profiles::embedded().map_err(|e| e.to_string())?;
+        let settings_path = store::current_path();
+        let settings = settings_path
+            .as_deref()
+            .and_then(store::load)
+            .map(Stored::into_settings)
+            .unwrap_or_default();
+        let settings_copy = settings.clone();
         let host = host::detect_host();
         let adapters = host::enumerate_adapters().ok();
         let gpu = adapters
@@ -91,7 +117,7 @@ impl App {
             .as_deref()
             .and_then(host::main_adapter)
             .map(|a| a.name.clone());
-        Ok(App {
+        let mut app = App {
             repo: anyxboxx::run::find_repo(None),
             profiles,
             host,
@@ -99,8 +125,8 @@ impl App {
             adapter_name,
             setup: read_setup(adapters.as_deref()),
             adapters,
-            settings: Settings::default(),
-            tab: Tab::Setup,
+            settings,
+            tab: Tab::Home,
             verify: Verify::NotRun,
             verify_rx: None,
             running: None,
@@ -110,7 +136,95 @@ impl App {
             confirm_clean: false,
             cache_dir: cache::current_cache_dir(),
             splash: Splash::new(),
-        })
+            toasts: Toasts::default(),
+            step: None,
+            drawer_open: false,
+            cache_ready: false,
+            cache_checked_at: 0.0,
+            tab_changed_at: 0.0,
+            shown_tab: Tab::Home,
+            last_saved: Stored::from_settings(&settings_copy),
+            launch_when_ready: false,
+            pick_rx: None,
+            settings_path,
+        };
+        app.find_game_folder();
+        if app.settings.game_path().is_some() {
+            app.start_verify();
+        }
+        Ok(app)
+    }
+
+    /// Keeps the saved game folder when it still holds the game, else looks for one next to the
+    /// launcher and in its parents.
+    fn find_game_folder(&mut self) {
+        let last = self.settings.game_path();
+        let launcher = picker::launcher_dir();
+        let found = picker::detect(launcher.as_deref(), last.as_deref());
+        if let Some(dir) = found {
+            self.settings.game_dir = dir.display().to_string();
+        }
+    }
+
+    /// Opens the folder dialog on its own thread.
+    pub fn pick_game_folder(&mut self) {
+        self.open_dialog(Pick::GameFolder);
+    }
+
+    /// Opens the file dialog for the xg_xs.dll.
+    pub fn pick_xg_library(&mut self) {
+        self.open_dialog(Pick::XgLibrary);
+    }
+
+    fn open_dialog(&mut self, kind: Pick) {
+        if self.pick_rx.is_some() {
+            return;
+        }
+        let start = match kind {
+            Pick::GameFolder => self.settings.game_path(),
+            Pick::XgLibrary => PathBuf::from(self.settings.xg_dll.trim())
+                .parent()
+                .map(PathBuf::from),
+        };
+        self.pick_rx = Some(picker::open(kind, start));
+    }
+
+    /// Uses `dir` as the game folder when it is one (error toast otherwise), then checks it.
+    pub fn set_game_folder(&mut self, dir: &std::path::Path) {
+        match picker::validate_game_folder(dir) {
+            Ok(()) => {
+                self.settings.game_dir = dir.display().to_string();
+                self.notice = Some(format!("Game folder saved: {}", dir.display()));
+                self.start_verify();
+            }
+            Err(reason) => self.notice = Some(format!("Cannot use this folder: {reason}")),
+        }
+    }
+
+    /// Takes the answer of a dialog, if one came.
+    fn poll_dialog(&mut self) {
+        let Some(rx) = &self.pick_rx else {
+            return;
+        };
+        let Ok((kind, chosen)) = rx.try_recv() else {
+            return;
+        };
+        self.pick_rx = None;
+        let Some(path) = chosen else {
+            return;
+        };
+        match kind {
+            Pick::GameFolder => self.set_game_folder(&path),
+            Pick::XgLibrary => self.settings.xg_dll = path.display().to_string(),
+        }
+    }
+
+    /// A folder (or a file of it) dropped on the window becomes the game folder.
+    pub fn handle_drops(&mut self, ctx: &eframe::egui::Context) {
+        let dropped = ctx.input(|i| i.raw.dropped_files.first().and_then(|f| f.path.clone()));
+        if let Some(path) = dropped {
+            self.set_game_folder(&picker::folder_of_drop(&path));
+        }
     }
 
     /// The profile for this host and GPU.
@@ -190,7 +304,7 @@ impl App {
         let steps: Result<Vec<Step>, anyxboxx::run::RunError> = if precompile_only {
             launch::precompile_steps(&plan)
         } else {
-            launch::play_steps(&plan, false)
+            launch::play_steps(&plan, self.settings.options.warm_first)
         };
         match steps {
             Ok(steps) => self.spawn_steps(steps, precompile_only),
@@ -205,6 +319,7 @@ impl App {
             events: rx,
             shaders_only,
         });
+        self.step = None;
         self.summary = Summary::default();
         self.notice = None;
     }
@@ -225,6 +340,7 @@ impl App {
 
     /// Drains the results of the threads started earlier.
     pub fn poll(&mut self) {
+        self.poll_dialog();
         self.poll_verify();
         let Some(running) = &self.running else {
             return;
@@ -242,8 +358,23 @@ impl App {
         }
         if let Some(message) = outcome {
             self.running = None;
+            self.step = None;
             self.notice = Some(message);
         }
+    }
+
+    /// Writes the settings file when something changed since the last write.
+    pub fn save_settings_if_changed(&mut self) {
+        let now = Stored::from_settings(&self.settings);
+        if now == self.last_saved {
+            return;
+        }
+        if let Some(path) = &self.settings_path
+            && let Err(error) = store::save(path, &now)
+        {
+            self.notice = Some(format!("Could not save the settings: {error}"));
+        }
+        self.last_saved = now;
     }
 
     fn poll_verify(&mut self) {
@@ -256,12 +387,20 @@ impl App {
                 Err(error) => Verify::Failed(error),
             };
             self.verify_rx = None;
+            let launch = std::mem::take(&mut self.launch_when_ready);
+            if launch && matches!(&self.verify, Verify::Done(report) if report.is_ok()) {
+                self.start(false);
+            }
         }
     }
 
     fn record(&mut self, event: Event) {
         let line = match event {
-            Event::Started(label) => format!("== {label} =="),
+            Event::Started(label) => {
+                let line = format!("== {label} ==");
+                self.step = Some(label);
+                line
+            }
             Event::Line(line) => {
                 self.summary = self.summary.with_line(&line);
                 line

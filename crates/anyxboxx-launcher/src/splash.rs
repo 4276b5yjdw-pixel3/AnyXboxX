@@ -121,8 +121,13 @@ impl Splash {
         }
     }
 
+    /// The picture as a texture, once decoded.
+    pub fn texture(&self) -> Option<&TextureHandle> {
+        self.texture.as_ref()
+    }
+
     /// Takes the decoded picture when the thread is done.
-    fn poll_image(&mut self, ctx: &egui::Context) {
+    pub fn poll(&mut self, ctx: &egui::Context) {
         let Some(rx) = &self.pending else {
             return;
         };
@@ -141,16 +146,17 @@ impl Splash {
         is_visible(self.started.elapsed(), job_running, self.hidden_for_job)
     }
 
-    /// Draws the splash over the whole window; `status` is the line under the picture and
-    /// `fraction` the bar (None for no bar).
+    /// Draws the splash over the whole window: `title` (the step) and `status` under the picture,
+    /// then the bar (`fraction` None when the length is unknown: a band slides along it).
     pub fn show(
         &mut self,
         ctx: &egui::Context,
         job_running: bool,
+        title: &str,
         status: &str,
         fraction: Option<f32>,
     ) {
-        self.poll_image(ctx);
+        self.poll(ctx);
         let screen = ctx.content_rect();
         egui::Area::new(egui::Id::new("splash"))
             .order(egui::Order::Foreground)
@@ -161,7 +167,7 @@ impl Splash {
                 ui.painter()
                     .add(egui::Shape::mesh(theme::gradient_mesh(rect)));
                 let art = self.paint_art(ui, rect);
-                paint_status(ui, art, status, fraction);
+                paint_status(ui, art, title, status, fraction);
                 if response.clicked() && !job_running {
                     self.started -= STARTUP_DURATION;
                 }
@@ -170,8 +176,8 @@ impl Splash {
                         pos2(rect.center().x, rect.bottom() - 28.0),
                         vec2(160.0, 32.0),
                     );
-                    if ui
-                        .put(button, theme::accent_button(true, "Show details"))
+                    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(button));
+                    if theme::glow_button(&mut child, true, "Show details", button.size(), false)
                         .clicked()
                     {
                         self.hidden_for_job = true;
@@ -183,7 +189,7 @@ impl Splash {
 
     /// Paints the picture, or the title when there is none; returns the rectangle it took.
     fn paint_art(&self, ui: &egui::Ui, rect: Rect) -> Rect {
-        let room = vec2(rect.width() - 48.0, rect.height() - 150.0);
+        let room = vec2(rect.width() - 48.0, rect.height() - 230.0);
         let size = fit_square(room, 720.0);
         let art = Rect::from_center_size(
             pos2(rect.center().x, rect.top() + 24.0 + size.y / 2.0),
@@ -236,23 +242,28 @@ fn vignette(art: Rect) -> Mesh {
     mesh
 }
 
-fn paint_status(ui: &mut egui::Ui, art: Rect, status: &str, fraction: Option<f32>) {
+fn paint_status(ui: &mut egui::Ui, art: Rect, title: &str, status: &str, fraction: Option<f32>) {
     let center_x = art.center().x;
-    let text_y = art.bottom() + 26.0;
+    let y = art.bottom() + 24.0;
     let painter = ui.painter();
     painter.text(
-        pos2(center_x, text_y),
+        pos2(center_x, y),
+        Align2::CENTER_CENTER,
+        title,
+        FontId::proportional(21.0),
+        Color32::WHITE,
+    );
+    painter.text(
+        pos2(center_x, y + 28.0),
         Align2::CENTER_CENTER,
         status,
-        FontId::proportional(15.0),
-        theme::TEXT,
+        FontId::proportional(14.0),
+        theme::TEXT_MUTED,
     );
-    if let Some(fraction) = fraction {
-        let width = art.width().min(520.0);
-        let bar = Rect::from_center_size(pos2(center_x, text_y + 30.0), vec2(width, 26.0));
-        let mut child = ui.new_child(egui::UiBuilder::new().max_rect(bar));
-        theme::gradient_bar(&mut child, fraction, "");
-    }
+    let width = art.width().min(520.0);
+    let bar = Rect::from_center_size(pos2(center_x, y + 62.0), vec2(width, 26.0));
+    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(bar));
+    theme::gradient_bar(&mut child, fraction, "");
 }
 
 #[cfg(test)]

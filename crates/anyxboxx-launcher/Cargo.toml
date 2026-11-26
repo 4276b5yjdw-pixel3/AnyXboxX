@@ -16,6 +16,7 @@ anyxboxx = { path = "../anyxboxx" }
 eframe = "0.34"
 image = { version = "0.25", default-features = false, features = ["png"] }
 regex = "1"
+rfd = "0.15"
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
 thiserror.workspace = true

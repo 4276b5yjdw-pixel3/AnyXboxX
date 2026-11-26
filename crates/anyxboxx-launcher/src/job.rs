@@ -50,7 +50,7 @@ fn run_steps(steps: Vec<Step>, tx: &Sender<Event>) -> Event {
 
 /// Runs one command, forwarding both of its streams line by line; returns its exit code.
 fn run_one(mut command: Command, tx: &Sender<Event>) -> std::io::Result<i32> {
-    let mut child = command
+    let mut child = crate::noconsole::hide_console(&mut command)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

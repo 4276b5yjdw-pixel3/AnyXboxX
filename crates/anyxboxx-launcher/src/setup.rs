@@ -159,7 +159,9 @@ pub fn probe(system_root: &Path, kits_bin: &Path, adapters: Option<Vec<Adapter>>
 
 /// The first line of `rustc --version`, e.g. `rustc 1.98.1 (...)`.
 pub fn rustc_version() -> Option<String> {
-    let output = Command::new("rustc").arg("--version").output().ok()?;
+    let mut command = Command::new("rustc");
+    command.arg("--version");
+    let output = crate::noconsole::hide_console(&mut command).output().ok()?;
     if !output.status.success() {
         return None;
     }

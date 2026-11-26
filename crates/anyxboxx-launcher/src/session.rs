@@ -7,6 +7,7 @@ use anyxboxx::run::XgMode;
 
 use crate::env::{self, EnvError, Xg};
 use crate::launch::Plan;
+use crate::options::LaunchOptions;
 use crate::processes::{self, GuardError, ProcessSource};
 use crate::profile::Profile;
 
@@ -23,6 +24,8 @@ pub struct Settings {
     pub jobs: u32,
     /// The advanced panel's override of the one-game guard (for hosts without `tasklist`).
     pub skip_process_check: bool,
+    /// The Play page's launch options.
+    pub options: LaunchOptions,
 }
 
 impl Default for Settings {
@@ -34,6 +37,7 @@ impl Default for Settings {
             xg_mode: XgMode::Real,
             jobs: 0,
             skip_process_check: false,
+            options: LaunchOptions::default(),
         }
     }
 }
@@ -66,7 +70,8 @@ pub fn make_plan(
     profile: &Profile,
 ) -> Result<Plan, SessionError> {
     let game_dir = settings.game_path().ok_or(SessionError::NoGameFolder)?;
-    let overrides = env::parse_overrides(&settings.overrides)?;
+    let mut overrides = settings.options.env_pairs();
+    overrides.extend(env::parse_overrides(&settings.overrides)?);
     let xg_text = settings.xg_dll.trim().trim_matches('"');
     let xg = (!xg_text.is_empty()).then(|| Xg {
         dll: PathBuf::from(xg_text),
