@@ -1241,6 +1241,18 @@ def vop3(name, vdst, sources, op_sel=0, clamp=0, abs_bits=0, neg=0, omod=0):
     return low, sources[0] | sources[1] << 9 | sources[2] << 18 | omod << 27 | neg << 29
 
 
+def test_vop3_integer_clamp_matches_the_python_model():
+    exe = binary()
+    names = ("v_add_nc_u32", "v_sub_nc_u32", "v_subrev_nc_u32", "v_add_co_u32",
+             "v_sub_co_u32", "v_subrev_co_u32", "v_ashrrev_i32", "v_add3_u32", "v_mad_u64_u32")
+    for lanes in (32, 64):
+        for name in names:
+            for a, b in ((0xFFFFFFFF, 2), (0, 2), (2, 0xFFFFFFFF)):
+                setup = (vop1("v_mov_b32", 1, LITERAL), a, vop1("v_mov_b32", 2, LITERAL), b)
+                instruction = vop3(name, 8, (V0 + 1, V0 + 2, 128), clamp=1, abs_bits=4)
+                assert_same(exe, lanes, False, [], program(*words(*setup, instruction)))
+
+
 def operand_select_cases():
     """(instruction, exécutée) : v_sat_pk_u8_i16 (seul résultat 16 bits du modèle) avec op_sel ou clamp,
     refusé par le modèle Python, et les formes qu'il exécute en ignorant op_sel (résultat 32 bits)."""

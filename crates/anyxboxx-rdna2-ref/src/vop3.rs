@@ -423,6 +423,11 @@ pub fn execute(
     }
     let fields = Fields::new(word);
     let is_float = is_float_result(name);
+    if fields.clamp && !is_float {
+        return Err(Error::Untranslated(format!(
+            "{name}: clamp on integer result"
+        )));
+    }
     let destination = fields.vdst as usize;
     for lane in wave.active()? {
         let mut values = [0u32; 3];
