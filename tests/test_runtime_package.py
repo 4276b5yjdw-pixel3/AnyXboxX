@@ -148,3 +148,39 @@ def test_package_mount_without_game_directory_fails(runtime_dir, monkeypatch):
             ctypes.byref(block), True) == 0x80070003
     finally:
         tasks.method(17, None, P)(queue)
+
+
+class PackageVersion(ctypes.Structure):
+    _fields_ = [("major", ctypes.c_uint16), ("minor", ctypes.c_uint16),
+                ("build", ctypes.c_uint16), ("revision", ctypes.c_uint16)]
+
+
+class PackageDetails(ctypes.Structure):
+    _fields_ = [("identifier", ctypes.c_char_p), ("version", PackageVersion), ("kind", ctypes.c_uint32),
+                ("display_name", ctypes.c_char_p), ("description", ctypes.c_char_p), ("publisher", ctypes.c_char_p),
+                ("store_id", ctypes.c_char_p), ("installing", ctypes.c_bool), ("index", ctypes.c_uint32),
+                ("count", ctypes.c_uint32), ("age_restricted", ctypes.c_bool), ("title_id", ctypes.c_char_p)]
+
+
+def test_enumerate_local_package(runtime_dir, tmp_path, monkeypatch):
+    (tmp_path / "MicrosoftGame.config").write_text(
+        '<Game><Identity Name="Package.Test" Publisher="Publisher" Version="1.2.3.4"/>'
+        '<ShellVisuals DefaultDisplayName="Test Game"/><TitleId>1234ABCD</TitleId><StoreId>store</StoreId></Game>',
+        encoding="utf-8")
+    monkeypatch.setenv("ANYXBOXX_GAME_DIR", str(tmp_path))
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    enumerate_packages = api.method(39, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32, P, P)
+    assert enumerate_packages(0, 0, None, None) == E_INVALIDARG
+    found = []
+    callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, P, ctypes.POINTER(PackageDetails))
+    def on_package(_context, details):
+        item = details.contents
+        found.append((item.identifier, item.version.major, item.version.minor, item.version.build,
+                      item.version.revision, item.display_name, item.publisher, item.store_id, item.title_id,
+                      item.installing, item.index, item.count))
+        return True
+    callback = callback_type(on_package)
+    assert enumerate_packages(0, 0, None, ctypes.cast(callback, P)) == S_OK
+    assert found == [(b"Package.Test", 1, 2, 3, 4, b"Test Game", b"Publisher", b"store", b"1234ABCD", False, 0, 1)]
+    found.clear()
+    assert enumerate_packages(1, 0, None, ctypes.cast(callback, P)) == S_OK and not found

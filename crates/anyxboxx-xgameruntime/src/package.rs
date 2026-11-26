@@ -98,6 +98,7 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (30, write_stats as *const c_void),
         (37, crate::package_mount::mount_async as *const c_void),
         (38, crate::package_mount::mount_result as *const c_void),
+        (39, crate::package_enumerate::enumerate as *const c_void),
         (41, package_kind as *const c_void),
     ]
 }

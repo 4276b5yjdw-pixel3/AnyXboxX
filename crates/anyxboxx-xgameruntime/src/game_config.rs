@@ -66,6 +66,16 @@ pub fn package_name() -> String {
     attribute_text(&read_text(), "Identity", "Name")
 }
 
+pub fn package_details() -> (String, String, String, String) {
+    let text = read_text();
+    (
+        attribute_text(&text, "Identity", "Publisher"),
+        attribute_text(&text, "Identity", "Version"),
+        attribute_text(&text, "ShellVisuals", "DefaultDisplayName"),
+        element_text(&text, "StoreId"),
+    )
+}
+
 fn attribute_text(text: &str, element: &str, attribute: &str) -> String {
     let Some(start) = text.find(&format!("<{element}")) else {
         return String::new();

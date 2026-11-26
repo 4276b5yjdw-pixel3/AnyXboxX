@@ -27,6 +27,7 @@ mod log;
 mod networking;
 mod object;
 mod package;
+mod package_enumerate;
 mod package_monitor;
 mod package_mount;
 mod registry;
