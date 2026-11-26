@@ -84,7 +84,7 @@ fn execute_vector(
     vector::execute(wave, name, &fields, literal)
 }
 
-/// Runs one VOPC instruction. The 32-bit compares take the SDWA form (`ext_compare`) and refuse DPP16
+/// Runs one VOPC instruction. The integer 16-bit and 32-bit compares take SDWA and refuse DPP16
 /// and DPP8; the 64-bit and class compares read an extension code as a plain source, which fails on the
 /// first active lane, as in the Python (they are dispatched before its SDWA and DPP check).
 fn execute_compare(
