@@ -188,6 +188,9 @@ if (-not $NoTunedSettings) {
         VICTORY_WINDOW_SKIP_SAME         = '1'         # windows leave out pages that hold what they last sent (#358)
         VICTORY_MERGE_SUBMISSIONS        = '1'         # consecutive title submissions as one host submission (#358)
         VICTORY_PAGE_WRITES              = '5'         # host copies under finished reads (#358)
+        VICTORY_STEP_INDEX               = '1'         # step copies found by an index (#383)
+        VICTORY_CARD_SYNC_BATCH          = '1'         # card copies recorded in three steps (#383)
+        VICTORY_PARALLEL_REFRESH         = '1'         # texture checks on the helper pool (#383)
     }
     foreach ($name in $tuned.Keys) {
         Set-Item -Path "Env:$name" -Value $tuned[$name]

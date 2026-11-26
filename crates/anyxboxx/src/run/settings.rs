@@ -53,6 +53,10 @@ pub const TUNED: &[(&str, &str)] = &[
     ("VICTORY_WINDOW_SKIP_SAME", "1"),
     ("VICTORY_MERGE_SUBMISSIONS", "1"),
     ("VICTORY_PAGE_WRITES", "5"),
+    // PR #383 (fxceless/victory-gta6 ports), measured 2026-11-26 in one run alternating every 20 s (RTX 4070 SUPER, Series X): 12.7 -> 14.8 fps median, +17 %.
+    ("VICTORY_STEP_INDEX", "1"),
+    ("VICTORY_CARD_SYNC_BATCH", "1"),
+    ("VICTORY_PARALLEL_REFRESH", "1"),
 ];
 
 /// Linux (Proton) + AMD measured set (PR #199, RX 9070 XT / RADV / vkd3d-proton).
