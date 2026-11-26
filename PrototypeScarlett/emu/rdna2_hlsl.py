@@ -18,7 +18,7 @@ from emu import (rdna2, rdna2_exec_cmp16, rdna2_exec_div, rdna2_exec_pkf16, rdna
 from emu.rdna2_exec_cmpf16 import COMPAREF16
 from emu.rdna2_exec_ops import signed
 from emu.rdna2_exec_ops import SIXTEEN_BIT_RESULTS, VECTOR_NO_OPERATION
-from emu.rdna2_exec_vop3 import MAD64, Fields, float_inputs, float_result
+from emu.rdna2_exec_vop3 import LITERAL_VOP2, MAD64, Fields, float_inputs, float_result
 from emu.rdna2_hlsl_clamp import CARRY, carry_write, integer_template, refuse_integer_clamp
 from emu.rdna2_hlsl_memory import memory_statements
 from emu.rdna2_hlsl_ops import (BRANCHES, HELPERS as ALU_HELPERS, SCALAR, VECTOR, Untranslatable, source_high,
@@ -213,6 +213,8 @@ def _vop3(name, opcode, fields, literal, active=ACTIVE):
         raise Untranslatable(f"non traduite en HLSL : {name} (VOP3)")
     if name in SIXTEEN_BIT_RESULTS and (fields.op_sel or fields.clamp):
         raise Untranslatable(f"non traduite en HLSL : {name} avec op_sel/clamp (VOP3, résultat 16 bits)")
+    if name in LITERAL_VOP2 and literal is None:
+        raise Untranslatable(f"non traduite en HLSL : {name} en VOP3 sans littéral")
     template = VECTOR[name] if is_float else integer_template(name, fields.clamp, VECTOR[name])
     expression = template.format(a=a, b=b, c=c, d=f"v[{fields.vdst}]", k=hexa(literal or 0))
     if is_float and (fields.clamp or fields.omod):

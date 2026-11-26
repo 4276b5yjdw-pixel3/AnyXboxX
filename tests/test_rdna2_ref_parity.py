@@ -276,7 +276,7 @@ def random_program(rng):
         if family == "VOP3" and (
             (name in VECTOR3 and opcode >= 0x200)
             or name in SAD_NAMES
-            or (name in VECTOR and name not in LITERAL_OPERATION_NAMES and (0x100 <= opcode < 0x140 or 0x180 <= opcode < 0x200))
+            or (name in VECTOR and (0x100 <= opcode < 0x140 or 0x180 <= opcode < 0x200))
             or (name in VECTOR_COMPARE and opcode < 0x100)
             or name in VOP3_CARRY + VOP3_MAD64 + VOP3_LANE + DIV_NAMES
             or name in COMPARE64
@@ -441,6 +441,20 @@ def test_random_scalar_programs_match_the_python_model():
         scalars.append((124, rng.randrange(256)))                    # M0, the index of the movrel forms
         words = program(*random_program(rng))
         assert_same(exe, lanes, scc, scalars, words)
+
+
+def test_vop3_literal_operations_match_the_python_model():
+    """VOP3 v_madmk/madak/fmamk/fmaak_f32: refused without a literal, matching with a literal operand."""
+    exe = binary()
+    for name in LITERAL_OPERATION_NAMES:
+        opcode = OPCODES["VOP3", name]
+        low = 0x35 << 26 | opcode << 16 | 3
+        without_literal = program(low, 256 | (257 << 9))
+        assert run_python(32, False, [], without_literal) == "error untranslated\n"
+        assert_same(exe, 32, False, [], without_literal)
+        with_literal = program(low, LITERAL | (257 << 9), 0x4000_0000)
+        assert run_python(32, False, [], with_literal).startswith("steps")
+        assert_same(exe, 32, False, [], with_literal)
 
 
 # Operand bit patterns the division helpers treat specially: zeros, infinities, NaNs, subnormals, the
