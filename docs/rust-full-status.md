@@ -4,7 +4,7 @@ French version: [fr/rust-full-status.md](fr/rust-full-status.md). Plan: [archite
 
 ## Base: main (Neptune VIctory)
 
-This branch now contains `origin/main` (merge of PR #277 and everything before it): `third_party/victory` is main's Neptune tree, with two of our patches re-applied on top (VICTORY_KEYBOARD and VICTORY_WINDOW_MODE=borderless, commit b27dbae4) and the rust/full changes to xmem (EraFields) and xasync (commit following it). `anyxboxx run` gives VIctory main's launcher set: the release build, the Neptune switch set (39 variables, measured on 2026-11-25), `-Quality` (`--quality`), `--override`, `--auto-a`, `--frametime-dump`, `--warm`, `--precompile`, `--diag`/`--dred`. The golden copy of main's script is `tests/fixtures/lancer_victory_neptune.ps1`; `tests/test_anyxboxx_run.py` and `tests/test_lanceur_victory.py` check the Rust settings against it. The graphical launcher starts the game detached (its log under `%LOCALAPPDATA%\AnyXboxX\logs`), closes once the game is up unless "Keep the launcher open" is on, and warms the shader cache automatically when the marker of this build and environment is missing or stale (`warm-state.txt`).
+This branch now contains `origin/main` (merge of PR #277 and everything before it): `third_party/victory` is main's Neptune tree, with two of our patches re-applied on top (VICTORY_KEYBOARD and VICTORY_WINDOW_MODE=borderless, commit b27dbae4) and the rust/full changes to xmem (EraFields) and xasync (commit following it). `anyxboxx run` gives VIctory main's launcher set: the release build, the Neptune switch set (42 variables: 39 measured on 2026-11-25, plus the three switches of PR #358 measured on 2026-11-26), `-Quality` (`--quality`), `--override`, `--auto-a`, `--frametime-dump`, `--warm`, `--precompile`, `--diag`/`--dred`. The golden copy of main's script is `tests/fixtures/lancer_victory_neptune.ps1`; `tests/test_anyxboxx_run.py` and `tests/test_lanceur_victory.py` check the Rust settings against it. The graphical launcher starts the game detached (its log under `%LOCALAPPDATA%\AnyXboxX\logs`), closes once the game is up unless "Keep the launcher open" is on, and warms the shader cache automatically when the marker of this build and environment is missing or stale (`warm-state.txt`).
 
 Ported since: the packed f16, mixed-precision FMA and `v_dot2_f32_f16` forms of VOP3P, and `v_pk_fmac_f16` (VOP2 and VOP3), are in `crates/anyxboxx-rdna2-ref` (`half.rs`, `pkf16.rs`, `pkf16_mix.rs`); the parity tests of `tests/test_rdna2_ref_parity.py` pass again (38 of 38; 1808 pytest tests passed on 2026-11-26).
 
@@ -47,7 +47,7 @@ VKD3D_CONFIG=descriptor_heap "$PROTON/files/bin/wine" target/x86_64-pc-windows-m
 ```
 
 - `anyxboxx run` sets the Windows tuned set (`TUNED`), not the `linux-amd` profile, which only the graphical launcher reads. Wine passes the Linux environment on, so export `VKD3D_CONFIG=descriptor_heap` (the title's view heap is larger than vkd3d-proton's default cap) and, for the `linux-amd` values, add `--no-tuned-settings` and export them yourself.
-- The graphical launcher has no `--victory-exe` yet: its Play and Shaders pages start with the cargo build, which fails under Proton.
+- The graphical launcher also accepts `--victory-exe <path>` (or `--victory-exe=<path>`) to run a prebuilt `victory.exe` on its Play and Shaders pages without a cargo build or a local repository checkout.
 
 ### Graphical launcher (`crates/anyxboxx-launcher`)
 
