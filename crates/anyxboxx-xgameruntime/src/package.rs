@@ -28,6 +28,42 @@ unsafe extern "system" fn identifier(
 unsafe extern "system" fn packaged(_this: *mut c_void) -> bool {
     true
 }
+
+unsafe extern "system" fn user_locale(
+    _this: *mut c_void,
+    size: usize,
+    output: *mut c_char,
+) -> HResult {
+    const LOCALE_NAME_MAX_LENGTH: usize = 85;
+    let mut wide = [0u16; LOCALE_NAME_MAX_LENGTH];
+    // SAFETY: wide has the documented capacity for a locale name.
+    let length = unsafe {
+        windows_sys::Win32::Globalization::GetUserDefaultLocaleName(
+            wide.as_mut_ptr(),
+            wide.len() as i32,
+        )
+    };
+    if length == 0 {
+        // SAFETY: GetLastError reads this thread's last error.
+        let error = unsafe { windows_sys::Win32::Foundation::GetLastError() };
+        return if error == 0 {
+            0
+        } else {
+            (0x8007_0000 | (error & 0xffff)) as i32
+        };
+    }
+    let locale = String::from_utf16_lossy(&wide[..length as usize - 1]);
+    let bytes = locale.as_bytes();
+    if output.is_null() || size <= bytes.len() {
+        return E_NOT_SUFFICIENT_BUFFER;
+    }
+    // SAFETY: the caller supplies size writable bytes and we checked their length.
+    unsafe {
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), output.cast(), bytes.len());
+        output.add(bytes.len()).write(0);
+    }
+    S_OK
+}
 unsafe extern "system" fn package_kind(
     _this: *mut c_void,
     _id: *const c_char,
@@ -127,6 +163,7 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (6, crate::package_monitor::close as *const c_void),
         (7, crate::package_monitor::progress as *const c_void),
         (8, crate::package_monitor::update as *const c_void),
+        (11, user_locale as *const c_void),
         (12, chunk_availability as *const c_void),
         (13, enumerate_chunks as *const c_void),
         (15, crate::package_monitor::install as *const c_void),

@@ -195,3 +195,14 @@ def test_package_empty_chunks_features_and_download_estimate(runtime_dir):
                           ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_bool))
     assert estimate(None, 0, None, ctypes.byref(size), ctypes.byref(confirm)) == S_OK
     assert size.value == 0 and not confirm.value
+
+
+def test_package_user_locale_and_buffer_size(runtime_dir):
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    locale = api.method(11, ctypes.c_uint32, ctypes.c_size_t, P)
+    wide = ctypes.create_unicode_buffer(85)
+    assert ctypes.windll.kernel32.GetUserDefaultLocaleName(wide, len(wide)) > 0
+    expected = wide.value.encode("utf-8")
+    output = ctypes.create_string_buffer(len(expected) + 1)
+    assert locale(len(expected), output) == E_INSUFFICIENT_BUFFER
+    assert locale(len(output), output) == S_OK and output.value == expected
