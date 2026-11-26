@@ -20,6 +20,11 @@ REPO = Path(__file__).resolve().parents[1]
 RUST_RELEASE = REPO / "target" / "release"
 # DLL name in the runtime folder → (Rust cdylib in target/release, pytest files of the C++ DLL).
 PORTED = {
+    "xgameruntime.dll": (
+        "xgameruntime.dll",
+        [str(p.relative_to(REPO)) for pattern in ("tests/test_gdk_*.py", "tests/test_runtime_*.py")
+         for p in sorted(REPO.glob(pattern))] + ["tests/test_native_services.py"],
+    ),
 }
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows DLLs")
 
@@ -41,7 +46,8 @@ def test_cpp_tests_pass_against_the_rust_dll(tmp_path, name):
         pytest.skip("Rust DLL or C++ runtime not built")
     folder = mixed_runtime(tmp_path, name, rust_file)
     env = {**os.environ, "ANYXBOXX_RUNTIME": str(folder), "ANYXBOXX_REQUIRE_RUNTIME": "1"}
-    done = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *test_files],
+    done = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                           f"--basetemp={tmp_path / 'nested'}", *test_files],
                           cwd=REPO, env=env, capture_output=True, text=True, timeout=600)
     summary = done.stdout.strip().splitlines()[-1] if done.stdout.strip() else done.stderr
     assert done.returncode == 0, done.stdout[-4000:]
