@@ -184,3 +184,14 @@ def test_enumerate_local_package(runtime_dir, tmp_path, monkeypatch):
     assert found == [(b"Package.Test", 1, 2, 3, 4, b"Test Game", b"Publisher", b"store", b"1234ABCD", False, 0, 1)]
     found.clear()
     assert enumerate_packages(1, 0, None, ctypes.cast(callback, P)) == S_OK and not found
+
+
+def test_package_empty_chunks_features_and_download_estimate(runtime_dir):
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    assert api.method(13, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_uint32, P, P)(None, 0, None, None) == S_OK
+    assert api.method(33, ctypes.c_uint32, ctypes.c_char_p, P, P)(None, None, None) == S_OK
+    size, confirm = ctypes.c_uint64(9), ctypes.c_bool(True)
+    estimate = api.method(18, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_uint32, P,
+                          ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_bool))
+    assert estimate(None, 0, None, ctypes.byref(size), ctypes.byref(confirm)) == S_OK
+    assert size.value == 0 and not confirm.value

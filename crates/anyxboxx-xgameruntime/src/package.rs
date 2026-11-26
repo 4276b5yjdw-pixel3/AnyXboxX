@@ -58,6 +58,45 @@ unsafe extern "system" fn chunk_availability(
     }
     S_OK
 }
+
+unsafe extern "system" fn enumerate_chunks(
+    _this: *mut c_void,
+    _id: *const c_char,
+    _count: u32,
+    _context: *mut c_void,
+    _callback: *mut c_void,
+) -> HResult {
+    S_OK
+}
+
+unsafe extern "system" fn enumerate_features(
+    _this: *mut c_void,
+    _id: *const c_char,
+    _context: *mut c_void,
+    _callback: *mut c_void,
+) -> HResult {
+    S_OK
+}
+
+unsafe extern "system" fn estimate_download(
+    _this: *mut c_void,
+    _id: *const c_char,
+    _count: u32,
+    _selectors: *mut c_void,
+    size: *mut u64,
+    confirm: *mut bool,
+) -> HResult {
+    // SAFETY: non-null outputs are writable according to the caller's contract.
+    unsafe {
+        if !size.is_null() {
+            *size = 0;
+        }
+        if !confirm.is_null() {
+            *confirm = false;
+        }
+    }
+    S_OK
+}
 #[repr(C)]
 struct WriteStats {
     interval: u64,
@@ -89,13 +128,16 @@ pub fn methods() -> Vec<(usize, *const c_void)> {
         (7, crate::package_monitor::progress as *const c_void),
         (8, crate::package_monitor::update as *const c_void),
         (12, chunk_availability as *const c_void),
+        (13, enumerate_chunks as *const c_void),
         (15, crate::package_monitor::install as *const c_void),
         (16, crate::package_monitor::install_async as *const c_void),
         (17, crate::package_monitor::install_result as *const c_void),
+        (18, estimate_download as *const c_void),
         (24, crate::package_mount::path_size as *const c_void),
         (25, crate::package_mount::path as *const c_void),
         (26, crate::package_mount::close as *const c_void),
         (30, write_stats as *const c_void),
+        (33, enumerate_features as *const c_void),
         (37, crate::package_mount::mount_async as *const c_void),
         (38, crate::package_mount::mount_result as *const c_void),
         (39, crate::package_enumerate::enumerate as *const c_void),
