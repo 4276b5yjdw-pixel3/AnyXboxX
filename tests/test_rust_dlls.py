@@ -45,7 +45,8 @@ def test_cpp_tests_pass_against_the_rust_dll(tmp_path, name):
             pytest.fail(f"absent: {missing or RUNTIME_DIR} (cargo build --release; cmake runtime/)")
         pytest.skip("Rust DLL or C++ runtime not built")
     folder = mixed_runtime(tmp_path, name, rust_file)
-    env = {**os.environ, "ANYXBOXX_RUNTIME": str(folder), "ANYXBOXX_REQUIRE_RUNTIME": "1"}
+    env = {**os.environ, "ANYXBOXX_RUNTIME": str(folder), "ANYXBOXX_REQUIRE_RUNTIME": "1",
+           "ANYXBOXX_TEST_RUST_XGAMERUNTIME": "1"}
     done = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
                            f"--basetemp={tmp_path / 'nested'}", *test_files],
                           cwd=REPO, env=env, capture_output=True, text=True, timeout=600)
