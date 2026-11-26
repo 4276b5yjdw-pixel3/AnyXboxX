@@ -79,6 +79,73 @@ uint F16Rndne(uint h) {                           // au plus proche pair, en ent
   bool up = r > half || (r == half && ((t >> f) & 1u) != 0u);
   return s | (t + (up ? 1u << f : 0u));           // la retenue passe dans l'exposant
 }
+uint F16Rcp(uint h) {
+  uint s = h & 0x8000u, a = h & 0x7FFFu;
+  if (a > 0x7C00u) return 0x7E00u;
+  if (a == 0u) return s | 0x7C00u;
+  if (a == 0x7C00u) return s;
+  precise float r = 1.0f / asfloat(F16ToF32(h));
+  return F32ToF16(asuint(r));
+}
+uint F16Sqrt(uint h) {
+  uint a = h & 0x7FFFu;
+  if (a > 0x7C00u) return 0x7E00u;
+  if (a == 0u) return h;
+  if ((h & 0x8000u) != 0u) return 0x7E00u;
+  if (a == 0x7C00u) return 0x7C00u;
+  precise float r = sqrt(asfloat(F16ToF32(h)));
+  return F32ToF16(asuint(r));
+}
+uint F16Rsq(uint h) {
+  uint s = h & 0x8000u, a = h & 0x7FFFu;
+  if (a > 0x7C00u) return 0x7E00u;
+  if (a == 0u) return s | 0x7C00u;
+  if (s != 0u) return 0x7E00u;
+  if (a == 0x7C00u) return 0u;
+  precise float r = 1.0f / sqrt(asfloat(F16ToF32(h)));
+  return F32ToF16(asuint(r));
+}
+uint F16Log(uint h) {
+  uint a = h & 0x7FFFu;
+  if (a > 0x7C00u) return 0x7E00u;
+  if (a == 0u) return 0xFC00u;
+  if ((h & 0x8000u) != 0u) return 0x7E00u;
+  if (a == 0x7C00u) return 0x7C00u;
+  if (h == 0x3C00u) return 0u;
+  precise float r = log2(asfloat(F16ToF32(h)));
+  return F32ToF16(asuint(r));
+}
+uint F16Exp(uint h) {
+  uint a = h & 0x7FFFu;
+  if (a > 0x7C00u) return 0x7E00u;
+  if (a == 0u) return 0x3C00u;
+  if (h == 0xFC00u) return 0u;
+  if (h == 0x7C00u) return 0x7C00u;
+  precise float x = asfloat(F16ToF32(h));
+  if (x >= 16.0f) return 0x7C00u;
+  if (x <= -25.0f) return 0u;
+  precise float r = exp2(x);
+  return F32ToF16(asuint(r));
+}
+uint F16Trig(uint h, bool is_cos) {
+  uint a = h & 0x7FFFu;
+  if (a >= 0x7C00u) return 0x7E00u;
+  if (a == 0u) return is_cos ? 0x3C00u : h;
+  precise float x = abs(asfloat(F16ToF32(h)));
+  bool neg = (h & 0x8000u) != 0u && !is_cos;
+  precise float t = x - trunc(x);
+  uint q = uint(floor(t * 4.0f));
+  precise float u = t - float(q) * 0.25f;
+  if (is_cos) q = (q + 1u) & 3u;
+  if (u == 0.0f) {
+    if ((q & 1u) == 0u) return 0u;
+    return ((q == 3u) != neg) ? 0xBC00u : 0x3C00u;
+  }
+  if ((q & 1u) != 0u) u = 0.25f - u;
+  precise float val = u > 0.125f ? cos((0.25f - u) * 6.283185307179586f) : sin(u * 6.283185307179586f);
+  uint bits = F32ToF16(asuint(val));
+  return (bits != 0u && ((q >= 2u) != neg)) ? (bits ^ 0x8000u) : bits;
+}
 """
 
 # Expression de chaque opération : {a} {b} {c} sources, {d} moitié basse de vdst avant l'instruction, {k} littéral.
@@ -95,6 +162,10 @@ TEMPLATES = {
     "v_ceil_f16": "F32ToF16(asuint(ceil(asfloat(F16ToF32({a})))))",
     "v_trunc_f16": "F32ToF16(asuint(trunc(asfloat(F16ToF32({a})))))",
     "v_rndne_f16": "F16Rndne({a})",
+    # Transcendantes f16 (ISA RDNA 2, §12.8, VOP1 84-88 et 96-97, p. 147-149).
+    "v_rcp_f16": "F16Rcp({a})", "v_sqrt_f16": "F16Sqrt({a})", "v_rsq_f16": "F16Rsq({a})",
+    "v_log_f16": "F16Log({a})", "v_exp_f16": "F16Exp({a})",
+    "v_sin_f16": "F16Trig({a}, false)", "v_cos_f16": "F16Trig({a}, true)",
 }
 
 
