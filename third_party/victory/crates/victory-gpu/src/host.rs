@@ -8470,6 +8470,9 @@ impl Host {
     }
 
     pub(crate) fn upload_buffer(&self, size: u64) -> Option<(ID3D12Resource, *mut u8)> {
+        if crate::alloc_backoff::refused() {
+            return None;
+        }
         MADE[0].fetch_add(1, Ordering::Relaxed);
         MADE[1].fetch_add(size, Ordering::Relaxed);
         let heap = D3D12_HEAP_PROPERTIES {
@@ -8510,6 +8513,7 @@ impl Host {
         match made {
             Ok(()) => Some((buffer?, data.cast())),
             Err(e) => {
+                crate::alloc_backoff::note(&e);
                 tracing::warn!(error = %e, size, "no upload buffer");
                 None
             }
