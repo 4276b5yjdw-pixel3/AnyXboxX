@@ -1,27 +1,24 @@
 //! The splash screen: shown for a moment at start-up and while a long job runs. Its picture is
 //! never in the repository (it may carry third-party marks); it is read at run time from
 //! `ANYXBOXX_LAUNCHER_SPLASH`, else `%LOCALAPPDATA%\AnyXboxX\launcher\splash.png`. Without a
-//! picture the gradient and the title "AnyXboxX" are drawn instead.
+//! picture the gradient and the title "AnyXboxX" are drawn instead. The painting is in
+//! `ui_launch`; this module holds the picture, the timing and what the status line says.
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
 
-use eframe::egui::{
-    self, Align2, Color32, ColorImage, CornerRadius, FontId, Rect, TextureHandle, TextureOptions,
-    epaint::Mesh, pos2, vec2,
-};
+use eframe::egui::{self, ColorImage, TextureHandle, TextureOptions};
 
 use crate::progress::Progress;
-use crate::theme;
 
 /// Environment variable that points at the splash picture.
 pub const SPLASH_ENV: &str = "ANYXBOXX_LAUNCHER_SPLASH";
 /// How long the splash stays at start-up.
 pub const STARTUP_DURATION: Duration = Duration::from_millis(2000);
 /// The picture is shrunk to this many pixels on its longest side before it becomes a texture.
-const MAX_TEXTURE_SIDE: u32 = 1024;
+const MAX_TEXTURE_SIDE: u32 = 2048;
 
 /// The first existing picture among the override and the local folder.
 pub fn resolve_path(
@@ -57,12 +54,6 @@ pub fn current_path() -> Option<PathBuf> {
 /// user hid it for this job.
 pub fn is_visible(elapsed: Duration, job_running: bool, hidden_for_job: bool) -> bool {
     elapsed < STARTUP_DURATION || (job_running && !hidden_for_job)
-}
-
-/// The largest square of side at most `side` that fits `available`, as a size.
-pub fn fit_square(available: egui::Vec2, side: f32) -> egui::Vec2 {
-    let s = available.x.min(available.y).min(side).max(0.0);
-    vec2(s, s)
 }
 
 /// The line under the picture: the translate progress, else the last log line, else `idle`.
@@ -146,124 +137,15 @@ impl Splash {
         is_visible(self.started.elapsed(), job_running, self.hidden_for_job)
     }
 
-    /// Draws the splash over the whole window: `title` (the step) and `status` under the picture,
-    /// then the bar (`fraction` None when the length is unknown: a band slides along it).
-    pub fn show(
-        &mut self,
-        ctx: &egui::Context,
-        job_running: bool,
-        title: &str,
-        status: &str,
-        fraction: Option<f32>,
-    ) {
-        self.poll(ctx);
-        let screen = ctx.content_rect();
-        egui::Area::new(egui::Id::new("splash"))
-            .order(egui::Order::Foreground)
-            .fixed_pos(screen.min)
-            .show(ctx, |ui| {
-                ui.set_clip_rect(screen);
-                let (rect, response) = ui.allocate_exact_size(screen.size(), egui::Sense::click());
-                ui.painter()
-                    .add(egui::Shape::mesh(theme::gradient_mesh(rect)));
-                let art = self.paint_art(ui, rect);
-                paint_status(ui, art, title, status, fraction);
-                if response.clicked() && !job_running {
-                    self.started -= STARTUP_DURATION;
-                }
-                if job_running {
-                    let button = Rect::from_center_size(
-                        pos2(rect.center().x, rect.bottom() - 28.0),
-                        vec2(160.0, 32.0),
-                    );
-                    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(button));
-                    if theme::glow_button(&mut child, true, "Show details", button.size(), false)
-                        .clicked()
-                    {
-                        self.hidden_for_job = true;
-                    }
-                }
-            });
-        ctx.request_repaint_after(Duration::from_millis(50));
+    /// Ends the start-up moment now (a click on the splash).
+    pub fn skip_startup(&mut self) {
+        self.started -= STARTUP_DURATION;
     }
 
-    /// Paints the picture, or the title when there is none; returns the rectangle it took.
-    fn paint_art(&self, ui: &egui::Ui, rect: Rect) -> Rect {
-        let room = vec2(rect.width() - 48.0, rect.height() - 230.0);
-        let size = fit_square(room, 720.0);
-        let art = Rect::from_center_size(
-            pos2(rect.center().x, rect.top() + 24.0 + size.y / 2.0),
-            size,
-        );
-        let painter = ui.painter();
-        match &self.texture {
-            Some(texture) => {
-                egui::Image::new(texture)
-                    .corner_radius(CornerRadius::same(24))
-                    .fit_to_exact_size(size)
-                    .paint_at(ui, art);
-                painter.add(egui::Shape::mesh(vignette(art)));
-                painter.rect_stroke(
-                    art,
-                    CornerRadius::same(24),
-                    egui::Stroke::new(1.5_f32, theme::HOT_PINK.gamma_multiply(0.7)),
-                    egui::StrokeKind::Outside,
-                );
-            }
-            None => {
-                painter.text(
-                    art.center(),
-                    Align2::CENTER_CENTER,
-                    "AnyXboxX",
-                    FontId::proportional((size.x / 6.0).clamp(32.0, 96.0)),
-                    Color32::WHITE,
-                );
-            }
-        }
-        art
+    /// Hides the launch screen until the next job ("Show details").
+    pub fn hide_for_job(&mut self) {
+        self.hidden_for_job = true;
     }
-}
-
-/// A dark band at the bottom of the picture, so the status text reads on any image.
-fn vignette(art: Rect) -> Mesh {
-    let band = Rect::from_min_max(
-        pos2(art.left(), art.bottom() - art.height() * 0.28),
-        art.max,
-    );
-    let clear = Color32::from_rgba_unmultiplied(10, 4, 20, 0);
-    let dark = Color32::from_rgba_unmultiplied(10, 4, 20, 190);
-    let mut mesh = Mesh::default();
-    mesh.colored_vertex(band.left_top(), clear);
-    mesh.colored_vertex(band.right_top(), clear);
-    mesh.colored_vertex(band.left_bottom(), dark);
-    mesh.colored_vertex(band.right_bottom(), dark);
-    mesh.add_triangle(0, 1, 2);
-    mesh.add_triangle(1, 3, 2);
-    mesh
-}
-
-fn paint_status(ui: &mut egui::Ui, art: Rect, title: &str, status: &str, fraction: Option<f32>) {
-    let center_x = art.center().x;
-    let y = art.bottom() + 24.0;
-    let painter = ui.painter();
-    painter.text(
-        pos2(center_x, y),
-        Align2::CENTER_CENTER,
-        title,
-        FontId::proportional(21.0),
-        Color32::WHITE,
-    );
-    painter.text(
-        pos2(center_x, y + 28.0),
-        Align2::CENTER_CENTER,
-        status,
-        FontId::proportional(14.0),
-        theme::TEXT_MUTED,
-    );
-    let width = art.width().min(520.0);
-    let bar = Rect::from_center_size(pos2(center_x, y + 62.0), vec2(width, 26.0));
-    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(bar));
-    theme::gradient_bar(&mut child, fraction, "");
 }
 
 #[cfg(test)]
@@ -326,13 +208,6 @@ mod tests {
         assert!(!is_visible(long, false, false));
         assert!(is_visible(long, true, false));
         assert!(!is_visible(long, true, true));
-    }
-
-    #[test]
-    fn fit_square_is_the_largest_that_fits() {
-        assert_eq!(fit_square(vec2(1000.0, 400.0), 720.0), vec2(400.0, 400.0));
-        assert_eq!(fit_square(vec2(1000.0, 900.0), 720.0), vec2(720.0, 720.0));
-        assert_eq!(fit_square(vec2(-5.0, 10.0), 720.0), vec2(0.0, 0.0));
     }
 
     #[test]

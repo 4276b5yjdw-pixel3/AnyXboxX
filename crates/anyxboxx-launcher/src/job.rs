@@ -1,13 +1,17 @@
 //! Runs a list of commands one after the other on a background thread, streaming their output
 //! lines to the window. A step that exits non-zero ends the list; the exit code is reported.
 //! A step with a log file (the game) is started detached instead: its output goes to that file
-//! and the list ends with `Event::Detached` once the game is up.
+//! and the list ends with `Event::Detached` once the game is up. A job can be cancelled: the
+//! running command is killed and the list ends with `Event::Cancelled`.
 
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
+use std::time::Duration;
 
 use crate::detached;
 use crate::progress::LineSplitter;
@@ -25,7 +29,12 @@ pub enum Event {
     Failed(String),
     /// The game is running on its own (process id, log file): the launcher may close.
     Detached { pid: u32, log: PathBuf },
+    /// The user cancelled: the running command was stopped and no further step ran.
+    Cancelled,
 }
+
+/// How often a running command is looked at for its end or a cancel.
+const WAIT_POLL: Duration = Duration::from_millis(100);
 
 /// One command of a job, with the name the window shows for it.
 pub struct Step {
@@ -67,22 +76,38 @@ impl Step {
 }
 
 /// Starts the steps on a thread; events go to `tx`. Returns the thread to join when wanted.
+#[cfg(test)]
 pub fn spawn(steps: Vec<Step>, tx: Sender<Event>) -> JoinHandle<()> {
+    spawn_cancellable(steps, tx, Arc::new(AtomicBool::new(false)))
+}
+
+/// As `spawn`, stopping when `cancel` turns true: the running command is killed, the steps after
+/// it never start. A game already started detached is left running (it belongs to the player).
+pub fn spawn_cancellable(
+    steps: Vec<Step>,
+    tx: Sender<Event>,
+    cancel: Arc<AtomicBool>,
+) -> JoinHandle<()> {
     std::thread::spawn(move || {
-        let code = run_steps(steps, &tx);
+        let code = run_steps(steps, &tx, &cancel);
         // The window may have closed: nothing to report to then.
         let _ = tx.send(code);
     })
 }
 
-fn run_steps(steps: Vec<Step>, tx: &Sender<Event>) -> Event {
+fn run_steps(steps: Vec<Step>, tx: &Sender<Event>, cancel: &AtomicBool) -> Event {
     for step in steps {
+        if cancel.load(Ordering::Relaxed) {
+            return Event::Cancelled;
+        }
         let _ = tx.send(Event::Started(step.label.clone()));
         let outcome = match step.detach_log {
             Some(log) => run_detached(step.command, log, tx),
-            None => run_one(step.command, tx)
-                .map(Event::Finished)
-                .map_err(|e| e.to_string()),
+            None => match run_one(step.command, tx, cancel) {
+                Ok(Some(code)) => Ok(Event::Finished(code)),
+                Ok(None) => return Event::Cancelled,
+                Err(error) => Err(error.to_string()),
+            },
         };
         match outcome {
             Ok(Event::Finished(0)) => {
@@ -118,8 +143,14 @@ fn run_detached(command: Command, log: PathBuf, tx: &Sender<Event>) -> Result<Ev
     }
 }
 
-/// Runs one command, forwarding both of its streams line by line; returns its exit code.
-fn run_one(mut command: Command, tx: &Sender<Event>) -> std::io::Result<i32> {
+/// Runs one command, forwarding both of its streams line by line; returns its exit code, or
+/// `None` when it was cancelled (killed; its readers are left to end with the pipes, since a
+/// grandchild may still hold them).
+fn run_one(
+    mut command: Command,
+    tx: &Sender<Event>,
+    cancel: &AtomicBool,
+) -> std::io::Result<Option<i32>> {
     let mut child = crate::noconsole::hide_console(&mut command)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -138,12 +169,22 @@ fn run_one(mut command: Command, tx: &Sender<Event>) -> std::io::Result<i32> {
     .into_iter()
     .flatten()
     .collect();
-    let status = child.wait()?;
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        if cancel.load(Ordering::Relaxed) {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Ok(None);
+        }
+        std::thread::sleep(WAIT_POLL);
+    };
     for reader in readers {
         let _ = reader.join();
     }
     // A process killed without an exit code counts as failed, as the PowerShell launcher did.
-    Ok(status.code().unwrap_or(1))
+    Ok(Some(status.code().unwrap_or(1)))
 }
 
 fn forward(mut stream: Box<dyn Read + Send>, tx: Sender<Event>) -> JoinHandle<()> {
@@ -204,6 +245,52 @@ mod tests {
         ]);
         assert_eq!(events.last(), Some(&Event::Finished(3)));
         assert!(!events.iter().any(|e| *e == Event::Started("never".into())));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_cancelled_job_kills_its_step_and_runs_nothing_after() {
+        let (tx, rx) = mpsc::channel();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let mut slow = Command::new(std::env::current_exe().expect("exe"));
+        slow.args(["--ignored", "--exact", "detached::tests::sleeper"]);
+        let handle = spawn_cancellable(
+            vec![
+                Step::new("slow", slow),
+                Step::new("never", shell("echo nope")),
+            ],
+            tx,
+            Arc::clone(&cancel),
+        );
+        std::thread::sleep(Duration::from_millis(300));
+        cancel.store(true, Ordering::Relaxed);
+        let started = std::time::Instant::now();
+        handle.join().expect("job thread");
+        assert!(
+            started.elapsed() < Duration::from_secs(10),
+            "stopped quickly"
+        );
+        let events: Vec<Event> = rx.try_iter().collect();
+        assert_eq!(events.last(), Some(&Event::Cancelled));
+        assert!(!events.contains(&Event::Started("never".into())));
+    }
+
+    #[test]
+    fn a_job_cancelled_before_it_starts_runs_nothing() {
+        let (tx, rx) = mpsc::channel();
+        let cancel = Arc::new(AtomicBool::new(true));
+        spawn_cancellable(
+            vec![Step::new(
+                "ghost",
+                Command::new("anyxboxx-no-such-program-xyz"),
+            )],
+            tx,
+            cancel,
+        )
+        .join()
+        .expect("job thread");
+        let events: Vec<Event> = rx.try_iter().collect();
+        assert_eq!(events, vec![Event::Cancelled]);
     }
 
     #[test]

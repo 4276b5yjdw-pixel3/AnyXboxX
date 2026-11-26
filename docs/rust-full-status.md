@@ -51,9 +51,9 @@ VKD3D_CONFIG=descriptor_heap "$PROTON/files/bin/wine" target/x86_64-pc-windows-m
 
 ### Graphical launcher (`crates/anyxboxx-launcher`)
 
-Style: a dusk gradient with translucent cards (`theme.rs`, colour maths tested for WCAG AA) and a splash screen (`splash.rs`) shown for 2 s and while a job runs. The splash picture is never committed: it is read from `ANYXBOXX_LAUNCHER_SPLASH`, else `%LOCALAPPDATA%\AnyXboxX\launcher\splash.png`; without one, the gradient and the title are drawn.
+Style: a dusk gradient with translucent cards (`theme.rs`, colour maths tested for WCAG AA, including text over the picture overlay blended in linear light), one 8-point spacing scale, one type scale and one set of radii (`tokens.rs`), and hand-painted controls with hover, press and keyboard focus states (`widgets.rs`). The splash picture is never committed: it is read from `ANYXBOXX_LAUNCHER_SPLASH`, else `%LOCALAPPDATA%\AnyXboxX\launcher\splash.png`; without one, the gradient and the title are drawn. Home shows it across a hero with a slow zoom and a pointer parallax; when PLAY builds VIctory or warms the shaders, a full-window launch screen (`ui_launch.rs`) shows the stages (Building VIctory, Preloading shaders, Starting the game), a bar fed by VIctory's progress lines, the elapsed time and the time left (`launch_progress.rs`, tested), and Cancel, which kills the running step (`job.rs`). The About lines give the version and the git commit (embedded by `build.rs`). `--page <home|setup|folder|shaders|play>` opens a page; debug builds also take `--preview-launch` to show the launch screen without running anything.
 
-It is built with egui through eframe 0.34: pure Rust, no C++ binding, no installer. The window has four pages with progress bars, a log and a few dialogs, which immediate-mode egui draws in a few hundred lines. Raw Win32 would have meant hand-written message loops and layout for the same pages. The logic lives in plain modules that the window only calls, so the 80 tests never open a window.
+It is built with egui through eframe 0.34: pure Rust, no C++ binding, no installer. The window has four pages with progress bars, a log and a few dialogs, which immediate-mode egui draws in a few hundred lines. Raw Win32 would have meant hand-written message loops and layout for the same pages. The logic lives in plain modules that the window only calls, so the 190 tests never open a window.
 
 | Page | What it does | Limits |
 | --- | --- | --- |
@@ -91,7 +91,7 @@ Profiles (`crates/anyxboxx-launcher/profiles.toml`, one test each):
 | `runtime/xmem` | `crates/anyxboxx-xmem` (ERA attributes shared with VIctory's xmem module) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
 | `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (task queue = VIctory's `xasync`, which already serves the XThread methods) | 66 of the 90 GDK tests passed at the last full measure; not re-measured since | ported since then: save store and GameSave (`save_store.rs`, `save_interface.rs`), local storage, the offline XStore (`store.rs`), HDR, networking, gamer picture, DXGI frame counter. Still C++: `package_interface.cpp` |
 | `runtime/launcher` | `crates/anyxboxx-native-launcher` | `tests/test_rust_native_launcher_parity.py` runs the synthetic native launcher suite against both implementations | kept as `anyxboxx_cpp.exe` for parity; TomBox-dependent cases require its DLLs |
-| Graphical launcher | `crates/anyxboxx-launcher` (new) | 80 Rust tests | |
+| Graphical launcher | `crates/anyxboxx-launcher` (new) | 190 Rust tests | |
 
 How the Rust runtime DLLs and native launcher reach the runtime folder: `cargo build --release` builds them, and `runtime/CMakeLists.txt` copies them from `target/release` into `runtime/build/bin` (`rust_dlls.cmake`; a missing one stops the build with the command to run). The native launcher is `runtime/build/bin/anyxboxx.exe`; the separate `target/release/anyxboxx.exe` is the VIctory CLI. So `cargo build --release` now comes before `cmake` (CI, AGENTS.md, READMEs).
 
