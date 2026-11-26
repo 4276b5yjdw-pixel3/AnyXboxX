@@ -219,6 +219,15 @@ def test_scalar_packs_match_the_python_model():
                 assert_same(exe, 32, scc, [(0, 0x12345678), (1, 0x9abcdef0)], program(*words))
 
 
+def test_sdwa_integer_output_modifiers_match_the_python_model():
+    exe = binary()
+    instruction = vop2("v_and_b32", 3, 0xF9, 0)
+    for lanes in (32, 64):
+        for flags in (0, 1 << 13, 1 << 14, 2 << 14, 3 << 14):
+            program_words = program(instruction, 6 << 8 | 6 << 16 | 6 << 24 | flags)
+            assert_same(exe, lanes, False, [], program_words)
+
+
 # Float literals the model treats specially: NaN, infinities, signed zeros, subnormals, the largest finite
 # value, one. Half the literals come from this list, the rest are random 32-bit patterns.
 SPECIAL_LITERALS = (
