@@ -101,3 +101,50 @@ def test_install_chunks_async_returns_monitor(runtime_dir):
         api.method(6, None, P)(monitor)
     finally:
         tasks.method(17, None, P)(queue)
+
+
+def test_package_mount_returns_game_directory(runtime_dir, tmp_path, monkeypatch):
+    from test_runtime_cpp import AsyncBlock, TaskQueueApi, THREAD_POOL
+    monkeypatch.setenv("ANYXBOXX_GAME_DIR", str(tmp_path))
+    tasks = TaskQueueApi(runtime_dir)
+    queue = P()
+    assert tasks.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(P))(
+        THREAD_POOL, THREAD_POOL, ctypes.byref(queue)) == S_OK
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    block = AsyncBlock(queue=queue)
+    try:
+        assert api.method(37, ctypes.c_uint32, ctypes.c_char_p, ctypes.POINTER(AsyncBlock))(
+            b"Test.Package", ctypes.byref(block)) == S_OK
+        assert tasks.method(3, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.c_bool)(
+            ctypes.byref(block), True) == S_OK
+        mount = P()
+        assert api.method(38, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.POINTER(P))(
+            ctypes.byref(block), ctypes.byref(mount)) == S_OK and mount.value
+        length = ctypes.c_size_t()
+        assert api.method(24, ctypes.c_uint32, P, ctypes.POINTER(ctypes.c_size_t))(
+            mount, ctypes.byref(length)) == S_OK
+        buf = ctypes.create_string_buffer(length.value)
+        path = api.method(25, ctypes.c_uint32, P, ctypes.c_size_t, P)
+        assert path(mount, length.value - 1, buf) == E_INSUFFICIENT_BUFFER
+        assert path(mount, length.value, buf) == S_OK and buf.value.decode("utf-8") == str(tmp_path)
+        api.method(26, None, P)(mount)
+    finally:
+        tasks.method(17, None, P)(queue)
+
+
+def test_package_mount_without_game_directory_fails(runtime_dir, monkeypatch):
+    from test_runtime_cpp import AsyncBlock, TaskQueueApi, THREAD_POOL
+    monkeypatch.delenv("ANYXBOXX_GAME_DIR", raising=False)
+    tasks = TaskQueueApi(runtime_dir)
+    queue = P()
+    assert tasks.method(12, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(P))(
+        THREAD_POOL, THREAD_POOL, ctypes.byref(queue)) == S_OK
+    api = GdkInterface(runtime_dir, PROVIDER, IID)
+    block = AsyncBlock(queue=queue)
+    try:
+        assert api.method(37, ctypes.c_uint32, ctypes.c_char_p, ctypes.POINTER(AsyncBlock))(
+            b"Test.Package", ctypes.byref(block)) == S_OK
+        assert tasks.method(3, ctypes.c_uint32, ctypes.POINTER(AsyncBlock), ctypes.c_bool)(
+            ctypes.byref(block), True) == 0x80070003
+    finally:
+        tasks.method(17, None, P)(queue)
