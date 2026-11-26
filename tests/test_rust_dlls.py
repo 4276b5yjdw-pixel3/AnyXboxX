@@ -27,6 +27,8 @@ PORTED = {
     ),
 }
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows DLLs")
+# Skip reasons that only mean the machine lacks an optional component.
+ALLOWED_SKIPS = ("runtime GDK de Windows absent",)
 
 
 def mixed_runtime(tmp_path, name, rust_file):
@@ -54,7 +56,10 @@ def test_cpp_tests_pass_against_the_rust_dll(tmp_path, name):
     assert done.returncode == 0, done.stdout[-4000:]
     passed = re.search(r"(\d+) passed", summary)
     skips = [line for line in done.stdout.splitlines() if line.startswith("SKIPPED")]
-    assert passed and int(passed.group(1)) > 0 and "skipped" not in summary, (summary, skips)
+    # Only skips that depend on the machine are accepted: the Windows GDK runtime is not
+    # installed on CI, and that test compares against it, not against our DLL.
+    unexpected = [line for line in skips if not any(reason in line for reason in ALLOWED_SKIPS)]
+    assert passed and int(passed.group(1)) > 0 and not unexpected, (summary, unexpected)
 
 
 def exports(path):
