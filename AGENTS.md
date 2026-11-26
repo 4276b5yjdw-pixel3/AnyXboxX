@@ -4,7 +4,7 @@ Guide for AI coding agents and contributors working in this repository. Human co
 
 ## What the project is
 
-AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett") executables on Windows by high-level emulation: console system calls are served by a C++ runtime (native mode, Wine-style) or by Python handlers inside a Unicorn sandbox (isolated mode). A second track translates console RDNA 2 GPU shaders to HLSL/DXIL. It does not run commercial games.
+AnyXboxX is a GPL-3.0-or-later prototype that runs Xbox Series X (GDK, "Scarlett") executables on Windows by high-level emulation: console system calls are served by a C++ runtime (native mode, Wine-style) or by Python handlers inside a Unicorn sandbox (isolated mode). A second track translates console RDNA 2 GPU shaders to HLSL/DXIL. It runs the Xbox Series build 1.0.2.1 of GTA VI through VIctory (`anyxboxx run` or the graphical launcher, from your own copy of the game); the repository holds no game files.
 
 ## Layout
 
@@ -61,4 +61,4 @@ cmake --build runtime/build --config Release
 
 Own a copy of the executable and of the build? Start with `python tools/jour_j.py <package folder>` ([docs/day-one.md](docs/day-one.md)): its report stays outside the repository. To launch the game under VIctory, use `anyxboxx run`; the native launcher and `scarlett.py --lancer` are the other entry points.
 
-Open issues list what remains, each with a "done when" checklist. Most console-library and Direct3D 12.x work is blocked on a legally usable Scarlett executable; RDNA 2 shader work (`emu/rdna2*`) and GDK runtime functions (`runtime/xgameruntime`) can progress from public documentation.
+Open issues list what remains, each with a "done when" checklist. The game runs under VIctory, so console-library and Direct3D 12.x work is measured on your own copy (rule 1); RDNA 2 shader work (`crates/anyxboxx-rdna2-ref`, `emu/rdna2*`) and GDK runtime functions (`crates/anyxboxx-xgameruntime`) can also progress from public documentation.

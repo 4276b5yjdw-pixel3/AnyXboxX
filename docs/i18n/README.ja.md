@@ -35,7 +35,7 @@ AnyXboxX は Xbox GDK の実行ファイル（PE32+ x86-64 形式）を読み込
 AnyXboxX は 1 つのビルドに特化しています: **Xbox Series 版 Grand Theft Auto VI、バージョン 1.0.2.1**。このゲームが必要とするもの（インポートするシステム関数、使用するシェーダーと Direct3D 12.x メソッド）だけを変換します。ほかのゲームは、この変換が完了してから試します。本プロジェクトは同じビルドを対象とする [VIctory](https://github.com/Marvisak/VIctory)（Marvisak、GPL-3.0 以降）を土台にしています。VIctory は `third_party/victory` にコピーされており、フォーク `fxceless/victory-fork`（GPL-3.0）のコミット `7b0f736` を出発点としています。Marvisak と各プルリクエストの作者に感謝します。個別のクレジットは [THIRD_PARTY.md](../../THIRD_PARTY.md) にあります。
 
 > [!IMPORTANT]
-> **ゲームはプレイできません。** 現在地はこのページ上部のボックスを参照してください。このリポジトリにはゲームファイル、鍵、実行ファイルは含まれず、その入手方法も説明しません。
+> **ゲームは動作します。** GTA VI 1.0.2.1 は起動し、カットシーンを再生し、約 14 fps でオープンワールドに到達します（Series X モード、RTX 4070 SUPER、2026-11-25 計測）。一部のグラフィックはまだ欠けており、レイトレーシングは無効です。 現在地はこのページ上部のボックスを参照してください。このリポジトリにはゲームファイル、鍵、実行ファイルは含まれず、その入手方法も説明しません。
 
 オンラインの状況ページ（必要なディスク容量を含む）: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**。
 
@@ -63,10 +63,6 @@ AnyXboxX は 1 つのビルドに特化しています: **Xbox Series 版 Grand 
 ```
 
 C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present` を 1 回ごとに計測します。DXGI がゲームの DLL（SDL3）によって動的に読み込まれる場合も同様です。ここから、毎秒のフレーム数、1 フレームの平均時間、そして「1% ロー」（最も遅い 1% のフレームの速度で、カクつきが分かります）を求めます。`--fps` はこれらの値をウィンドウのタイトルに表示します。`--banc-perf` は N 秒間計測し（最初の 1 秒は読み込みなので除きます）、「60 fps を維持」の判定を出します（目標に届かなければ終了コードは 2）。これらのオプションを付けなければ、何も横取りしません。
-
-![SimpleTriangle：毎秒のフレーム数](../images/fps-simpletriangle.svg)
-
-![testgdk：毎秒のフレーム数](../images/fps-testgdk.svg)
 
 2 つのテストゲームは垂直同期なしで動作し、ネイティブモードで SimpleTriangle は約 11,700 fps、testgdk は約 12,600 fps です。
 
@@ -128,17 +124,6 @@ C++ ランタイムは、ゲームの DXGI スワップチェーンの `Present`
 | D3D12.X から Direct3D 12 / Vulkan へのグラフィックス変換 | ⏳ 未着手 |
 | コンソールの XMA2 音声：TomBox による FFmpeg デコーダーの Rust 移植（LGPL、公開 FATE サンプルで FFmpeg との差は最大 1）で WAV にデコード。`anyxboxx_xma <in.xma> <out.wav>`、単一ストリームのファイル | 🟡 進行中 |
 
-<table>
-<tr>
-<td><img src="../images/demo-virage.png" alt="車が右に曲がる" width="380"></td>
-<td><img src="../images/rapport-compatibilite.png" alt="デモの互換性レポート" width="380"></td>
-</tr>
-<tr>
-<td align="center">デモはキーボードの矢印キーに反応します。</td>
-<td align="center">ログに互換性レポートが表示されます。</td>
-</tr>
-</table>
-
 ## デモを試す
 
 Windows で、Tcl/Tk 付きの 64 ビット版 Python 3.12 をインストールし、リポジトリのルートで PowerShell を開きます。
@@ -166,8 +151,6 @@ cmake --build runtime/build --config Release
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
 ```
 
-![AnyXboxX のネイティブモードで起動した SimpleTriangle](../images/simpletriangle-anyxboxx.png)
-
 AnyXboxX は実行ファイル自体を読み込み、Wine と同じようにプロセッサ上で直接実行します。Xbox ランタイム（`xgameruntime.dll`）は AnyXboxX が提供し、ウィンドウと DirectX 12 は PC のものを使います。**注意：ネイティブモードではプログラムは隔離されません。** このモードは信頼できるプログラムにのみ使ってください。`--rapport` と `--banc` は引き続き Unicorn 内で隔離されます。`ANYXBOXX_TRACE=1` を指定すると、傍受した呼び出しが表示されます。詳細：[docs/test-game.md](../test-game.md)。
 
 ## パッケージを隔離モードで起動する
@@ -190,15 +173,11 @@ AnyXboxX は実行ファイル自体を読み込み、Wine と同じようにプ
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --banc <dossier>
 ```
 
-![Scarlett パッケージの DLL に対するテストベンチ](../images/banc-dll.svg)
-
 詳細な結果：[docs/progress.md](../progress.md)。ネイティブ実行と比較したフリーのテストゲーム：[docs/test-game.md](../test-game.md)。追加の DLL フォルダー（例：Visual C++ の DLL）をターゲットの後ろに指定できます：`--rapport <cible> <dossier>`。
 
 レポートには、インポートされた関数、すでにエミュレートされている割合、不足している関数が一覧表示されます。インターフェースでは、**Open an Xbox folder…**（Xbox フォルダーを開く）ボタンが `MicrosoftGame.Config` を読み取り、このレポートを表示してからプログラムを起動します。エミュレートされていない呼び出しはすべてログに表示されます。
 
 ## アーキテクチャ
-
-![AnyXboxX のモジュール構成図](../images/architecture.svg)
 
 | モジュール | 役割 |
 |---|---|

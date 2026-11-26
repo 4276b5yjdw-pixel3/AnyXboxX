@@ -35,7 +35,7 @@ AnyXboxX 加载 Xbox GDK 可执行文件（PE32+ x86-64 格式），并用 Unico
 AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，版本 1.0.2.1**。只翻译这款游戏需要的部分（它导入的系统函数、它使用的着色器和 Direct3D 12.x 方法）。待这部分翻译完成后，再尝试其他游戏。本项目基于面向同一版本的 [VIctory](https://github.com/Marvisak/VIctory)（Marvisak，GPL-3.0 或更高版本）：它复制在 `third_party/victory` 中，以分支仓库 `fxceless/victory-fork`（GPL-3.0）的提交 `7b0f736` 为起点。感谢 Marvisak 和这些 pull request 的作者，逐一致谢见 [THIRD_PARTY.md](../../THIRD_PARTY.md)。
 
 > [!IMPORTANT]
-> **游戏目前无法游玩。** 当前进展见本页顶部的方框。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。
+> **游戏可以运行。** GTA VI 1.0.2.1 能启动、播放过场动画，并以约 14 fps 进入开放世界（Series X 模式，RTX 4070 SUPER，2026-11-25 实测）；部分画面仍缺失，光线追踪已关闭。 当前进展见本页顶部的方框。本仓库不包含任何游戏文件、密钥或可执行文件，也不说明如何获取它们。
 
 在线状态页面（含所需磁盘空间）：**[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**。
 
@@ -63,10 +63,6 @@ AnyXboxX 专注于一个版本：**Xbox Series 版《Grand Theft Auto VI》，�
 ```
 
 C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI 是由游戏的某个 DLL（SDL3）动态加载的也一样。它由此得出每秒帧数、单帧平均耗时和“1% 低值”（最慢的 1% 帧的速率，可以反映卡顿）。`--fps` 会把这些数值显示在窗口标题中。`--banc-perf` 测量 N 秒，不计入第一秒（加载），并给出“稳定 60 帧/秒”的结论（未达标时返回码为 2）。不使用这些选项时，不会拦截任何内容。
-
-![SimpleTriangle：每秒帧数](../images/fps-simpletriangle.svg)
-
-![testgdk：每秒帧数](../images/fps-testgdk.svg)
 
 两个测试游戏都在关闭垂直同步的情况下运行：原生模式下，SimpleTriangle 约 11,700 帧/秒，testgdk 约 12,600 帧/秒。
 
@@ -128,17 +124,6 @@ C++ 运行时会为游戏 DXGI 交换链的每次 `Present` 计时，即使 DXGI
 | 将 D3D12.X 图形转换为 Direct3D 12 / Vulkan | ⏳ 待完成 |
 | 主机 XMA2 音频：由 TomBox 将 FFmpeg 解码器移植到 Rust 的版本解码为 WAV（LGPL，在公开 FATE 样本上与 FFmpeg 最多相差 1）；`anyxboxx_xma <in.xma> <out.wav>`，单流文件 | 🟡 进行中 |
 
-<table>
-<tr>
-<td><img src="../images/demo-virage.png" alt="汽车向右转弯" width="380"></td>
-<td><img src="../images/rapport-compatibilite.png" alt="演示的兼容性报告" width="380"></td>
-</tr>
-<tr>
-<td align="center">演示会响应键盘方向键。</td>
-<td align="center">日志中显示兼容性报告。</td>
-</tr>
-</table>
-
 ## 试用演示
 
 在 Windows 上，安装带有 Tcl/Tk 的 64 位 Python 3.12，然后在仓库根目录打开 PowerShell。
@@ -166,8 +151,6 @@ cmake --build runtime/build --config Release
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
 ```
 
-![由 AnyXboxX 以原生模式启动的 SimpleTriangle](../images/simpletriangle-anyxboxx.png)
-
 AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器上运行它。Xbox 运行时（`xgameruntime.dll`）由 AnyXboxX 提供；窗口和 DirectX 12 则使用电脑自身的。**注意：在原生模式下，程序没有被隔离。** 请仅对可信的程序使用此模式；`--rapport` 和 `--banc` 仍然在 Unicorn 中隔离运行。`ANYXBOXX_TRACE=1` 会显示被拦截的调用。详情：[docs/test-game.md](../test-game.md)。
 
 ## 以隔离模式运行游戏包
@@ -190,15 +173,11 @@ AnyXboxX 会加载可执行文件本身，并像 Wine 一样直接在处理器�
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --banc <dossier>
 ```
 
-![针对 Scarlett 包中 DLL 的测试台](../images/banc-dll.svg)
-
 详细结果：[docs/progress.md](../progress.md)。与原生运行结果对比的免费测试游戏：[docs/test-game.md](../test-game.md)。目标之后可以再跟一个额外的 DLL 文件夹（例如 Visual C++ 的 DLL）：`--rapport <cible> <dossier>`。
 
 报告会列出导入的函数、已模拟的百分比以及缺失的函数。在界面中，**Open an Xbox folder…**（打开 Xbox 文件夹）按钮会读取 `MicrosoftGame.Config`，显示该报告，然后启动程序；每个未模拟的调用都会出现在日志中。
 
 ## 架构
-
-![AnyXboxX 模块示意图](../images/architecture.svg)
 
 | 模块 | 作用 |
 |---|---|

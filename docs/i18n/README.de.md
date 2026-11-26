@@ -35,7 +35,7 @@ AnyXboxX lädt Xbox-GDK-Programmdateien (Format PE32+ x86-64) und führt deren C
 AnyXboxX ist auf einen einzigen Build spezialisiert: **Grand Theft Auto VI für Xbox Series, Version 1.0.2.1**. Übersetzt wird nur, was dieses Spiel braucht (die importierten Systemfunktionen, die verwendeten Shader und Direct3D-12.x-Methoden). Andere Spiele werden erprobt, sobald diese Übersetzung vollständig ist. Das Projekt baut auf [VIctory](https://github.com/Marvisak/VIctory) (Marvisak, GPL-3.0 oder neuer) auf, das denselben Build anvisiert: es liegt als Kopie in `third_party/victory`, ausgehend vom Fork `fxceless/victory-fork` (GPL-3.0) im Commit `7b0f736`. Dank an Marvisak und an die Autoren dieser Pull Requests, einzeln aufgeführt in [THIRD_PARTY.md](../../THIRD_PARTY.md).
 
 > [!IMPORTANT]
-> **Das Spiel ist nicht spielbar.** Den aktuellen Stand zeigt der Kasten oben auf dieser Seite. Dieses Repository enthält keine Spieldateien, Schlüssel oder ausführbaren Dateien und erklärt nicht, wie man sie erhält.
+> **Das Spiel läuft.** GTA VI 1.0.2.1 startet, spielt seine Zwischensequenzen ab und erreicht die offene Welt mit etwa 14 fps (Series-X-Modus, RTX 4070 SUPER, gemessen am 25.11.2026); einige Grafiken fehlen noch, Raytracing ist aus. Den aktuellen Stand zeigt der Kasten oben auf dieser Seite. Dieses Repository enthält keine Spieldateien, Schlüssel oder ausführbaren Dateien und erklärt nicht, wie man sie erhält.
 
 Statusseite online, mit dem benötigten Speicherplatz: **[loopersalty.github.io/AnyXboxX](https://loopersalty.github.io/AnyXboxX/)**.
 
@@ -63,10 +63,6 @@ Die Grafik wird mit `scarlett.py --traduction <Paketordner> docs/images/traducti
 ```
 
 Die C++-Runtime misst die Dauer jedes `Present` der DXGI-Swap-Chain des Spiels, auch wenn DXGI von einer DLL des Spiels dynamisch geladen wird (SDL3). Daraus ergeben sich die Bilder pro Sekunde, die durchschnittliche Bildzeit und der „1-%-Tiefstwert“ (die Rate der langsamsten 1 % der Bilder, der Ruckler sichtbar macht). `--fps` zeigt diese Werte im Fenstertitel an. `--banc-perf` misst N Sekunden lang, ohne die erste (Laden), und gibt das Urteil „konstant 60 Bilder/s“ aus (Rückgabecode 2, wenn das Ziel verfehlt wird). Ohne diese Optionen wird nichts abgefangen.
-
-![SimpleTriangle: Bilder pro Sekunde](../images/fps-simpletriangle.svg)
-
-![testgdk: Bilder pro Sekunde](../images/fps-testgdk.svg)
 
 Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s für SimpleTriangle und 12.600 Bilder/s für testgdk, im nativen Modus.
 
@@ -128,17 +124,6 @@ Beide Testspiele laufen ohne vertikale Synchronisation: etwa 11.700 Bilder/s fü
 | D3D12.X-Grafik nach Direct3D 12 / Vulkan | ⏳ offen |
 | XMA2-Konsolenaudio: von TomBox' Rust-Portierung des FFmpeg-Decoders in WAV dekodiert (LGPL, 1 LSB Abstand zu FFmpeg beim öffentlichen FATE-Beispiel); `anyxboxx_xma <ein.xma> <aus.wav>`, Dateien mit einem Stream | 🟡 in Arbeit |
 
-<table>
-<tr>
-<td><img src="../images/demo-virage.png" alt="Das Auto biegt nach rechts ab" width="380"></td>
-<td><img src="../images/rapport-compatibilite.png" alt="Kompatibilitätsbericht der Demo" width="380"></td>
-</tr>
-<tr>
-<td align="center">Die Demo reagiert auf die Pfeiltasten der Tastatur.</td>
-<td align="center">Das Protokoll zeigt den Kompatibilitätsbericht an.</td>
-</tr>
-</table>
-
 ## Die Demo ausprobieren
 
 Installiere unter Windows 64-Bit-Python 3.12 mit Tcl/Tk und öffne dann PowerShell im Stammverzeichnis des Repositorys.
@@ -166,8 +151,6 @@ Das kompilierte Demoprogramm ist `PrototypeScarlett/demo.pe`; sein Quellcode ist
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --natif <dossier ou fichier .exe> [dossiers de DLL…]
 ```
 
-![SimpleTriangle, von AnyXboxX im nativen Modus gestartet](../images/simpletriangle-anyxboxx.png)
-
 AnyXboxX lädt die Programmdatei selbst und führt sie direkt auf dem Prozessor aus, wie Wine. Die Xbox-Runtime (`xgameruntime.dll`) wird von AnyXboxX bereitgestellt; das Fenster und DirectX 12 stammen vom PC. **Achtung: Im nativen Modus ist das Programm nicht isoliert.** Verwende diesen Modus nur für vertrauenswürdige Programme; `--rapport` und `--banc` bleiben in Unicorn isoliert. `ANYXBOXX_TRACE=1` zeigt die abgefangenen Aufrufe an. Details: [docs/test-game.md](../test-game.md).
 
 ## Ein Paket im isolierten Modus starten
@@ -190,15 +173,11 @@ Der Prüfstand lädt alle PE-Module eines Ordners und führt deren Initialisieru
 .\.venv\Scripts\python.exe .\PrototypeScarlett\scarlett.py --banc <dossier>
 ```
 
-![Prüfstand für die DLLs eines Scarlett-Pakets](../images/banc-dll.svg)
-
 Detaillierte Ergebnisse: [docs/progress.md](../progress.md). Freies Testspiel im Vergleich zu seiner nativen Ausführung: [docs/test-game.md](../test-game.md). Ein zusätzlicher DLL-Ordner (zum Beispiel die Visual-C++-DLLs) kann auf das Ziel folgen: `--rapport <cible> <dossier>`.
 
 Der Bericht listet die importierten Funktionen, den bereits emulierten Anteil in Prozent und die fehlenden Funktionen auf. In der Oberfläche liest die Schaltfläche **Open an Xbox folder…** (Xbox-Ordner öffnen) die Datei `MicrosoftGame.Config`, zeigt diesen Bericht an und startet dann das Programm; jeder nicht emulierte Aufruf erscheint im Protokoll.
 
 ## Architektur
-
-![Schema der Module von AnyXboxX](../images/architecture.svg)
 
 | Modul | Aufgabe |
 |---|---|
