@@ -1253,6 +1253,16 @@ def test_vop3_integer_clamp_matches_the_python_model():
                 assert_same(exe, lanes, False, [], program(*words(*setup, instruction)))
 
 
+def test_vop3_carry_mask_at_last_scalar_register():
+    exe = binary()
+    instruction = vop3("v_subrev_co_ci_u32", 8, (V0, 128, 128), abs_bits=7, op_sel=15)
+    # SDST uses bits 8-14, including the op_sel bits: all ones designate s127.
+    for lanes in (32, 64):
+        program_words = program(*instruction)
+        assert run_python(lanes, False, [], program_words).startswith("steps" if lanes == 32 else "error untranslated")
+        assert_same(exe, lanes, False, [], program_words)
+
+
 def operand_select_cases():
     """(instruction, exécutée) : v_sat_pk_u8_i16 (seul résultat 16 bits du modèle) avec op_sel ou clamp,
     refusé par le modèle Python, et les formes qu'il exécute en ignorant op_sel (résultat 32 bits)."""
