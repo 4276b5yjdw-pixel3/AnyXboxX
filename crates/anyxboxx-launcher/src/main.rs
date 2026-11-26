@@ -14,6 +14,7 @@
 
 mod anim;
 mod app;
+mod app_check;
 mod cache;
 mod env;
 mod format;
@@ -22,6 +23,7 @@ mod host;
 mod job;
 mod launch;
 mod loglevel;
+mod manifest;
 mod noconsole;
 mod options;
 mod picker;
@@ -37,6 +39,7 @@ mod toast;
 mod ui;
 mod ui_chrome;
 mod ui_home;
+mod ui_manifest;
 mod ui_options;
 mod ui_pages;
 mod verify;

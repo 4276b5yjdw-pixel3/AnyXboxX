@@ -5,10 +5,12 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 
+use crate::app_check::ManifestState;
 use crate::cache;
 use crate::host::{self, Adapter, GpuVendor, Host};
 use crate::job::{self, Event, Step};
 use crate::launch;
+use crate::manifest::Outcome;
 use crate::picker::{self, Pick};
 use crate::processes::Tasklist;
 use crate::profile::{Profile, Profiles};
@@ -18,7 +20,7 @@ use crate::setup::{self, Item};
 use crate::splash::Splash;
 use crate::store::{self, Stored};
 use crate::toast::Toasts;
-use crate::verify::{self, Report};
+use crate::verify::Report;
 
 /// Lines kept in the log view.
 const LOG_CAPACITY: usize = 2000;
@@ -58,7 +60,11 @@ pub struct App {
     pub settings: Settings,
     pub tab: Tab,
     pub verify: Verify,
-    verify_rx: Option<Receiver<Result<Report, String>>>,
+    pub(crate) verify_rx: Option<Receiver<Result<Report, String>>>,
+    pub(crate) verify_started: Option<std::time::Instant>,
+    /// The optional SHA-256 manifest job; it never gates PLAY.
+    pub manifest: ManifestState,
+    pub(crate) manifest_rx: Option<Receiver<Outcome>>,
     pub running: Option<Running>,
     pub log: VecDeque<String>,
     pub summary: Summary,
@@ -129,6 +135,9 @@ impl App {
             tab: Tab::Home,
             verify: Verify::NotRun,
             verify_rx: None,
+            verify_started: None,
+            manifest: ManifestState::NotRun,
+            manifest_rx: None,
             running: None,
             log: VecDeque::new(),
             summary: Summary::default(),
@@ -194,6 +203,7 @@ impl App {
         match picker::validate_game_folder(dir) {
             Ok(()) => {
                 self.settings.game_dir = dir.display().to_string();
+                self.manifest = ManifestState::NotRun;
                 self.notice = Some(format!("Game folder saved: {}", dir.display()));
                 self.start_verify();
             }
@@ -263,21 +273,6 @@ impl App {
         self.summary.last_progress.as_ref()
     }
 
-    /// Starts the folder check on a thread.
-    pub fn start_verify(&mut self) {
-        let Some(dir) = self.settings.game_path() else {
-            self.notice = Some("Type the game folder first.".to_string());
-            return;
-        };
-        let (tx, rx) = mpsc::channel();
-        std::thread::spawn(move || {
-            let result = verify::verify_folder(&dir).map_err(|e| e.to_string());
-            let _ = tx.send(result);
-        });
-        self.verify = Verify::Running;
-        self.verify_rx = Some(rx);
-    }
-
     /// Starts the play steps, or the shader preloading alone; refused while a game runs.
     pub fn start(&mut self, precompile_only: bool) {
         if self.is_busy() {
@@ -342,6 +337,7 @@ impl App {
     pub fn poll(&mut self) {
         self.poll_dialog();
         self.poll_verify();
+        self.poll_manifest();
         let Some(running) = &self.running else {
             return;
         };
@@ -377,20 +373,10 @@ impl App {
         self.last_saved = now;
     }
 
-    fn poll_verify(&mut self) {
-        let Some(rx) = &self.verify_rx else {
-            return;
-        };
-        if let Ok(result) = rx.try_recv() {
-            self.verify = match result {
-                Ok(report) => Verify::Done(report),
-                Err(error) => Verify::Failed(error),
-            };
-            self.verify_rx = None;
-            let launch = std::mem::take(&mut self.launch_when_ready);
-            if launch && matches!(&self.verify, Verify::Done(report) if report.is_ok()) {
-                self.start(false);
-            }
+    pub(crate) fn log_line(&mut self, line: String) {
+        self.log.push_back(line);
+        while self.log.len() > LOG_CAPACITY {
+            self.log.pop_front();
         }
     }
 
