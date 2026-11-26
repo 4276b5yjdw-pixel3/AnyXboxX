@@ -368,6 +368,14 @@ pub fn execute(
     }
     let fields = Fields::new(word);
     let opcode = ((word >> 16) & 0x3FF) as u32;
+    if (name.ends_with("_u16") || name.ends_with("_i16"))
+        && crate::compare::is_compare(name)
+        && (word >> 11) & 0xf != 0
+    {
+        return Err(Error::Untranslated(format!(
+            "{name}: op_sel on a 16-bit compare"
+        )));
+    }
     if crate::vector::is_no_operation(name) {
         return Ok(true);
     }

@@ -1277,6 +1277,22 @@ def compare_operands():
             vop2("v_mul_f32", 6, LITERAL, 4), 0x7F7FFFFF]
 
 
+def test_integer16_compares_match_the_python_model():
+    exe = binary()
+    names = [name for name in COMPARE32_NAMES if name.endswith(("_i16", "_u16"))]
+    assert len(names) == 24
+    setup = [vop2("v_mul_u32_u24", 1, LITERAL, 0), 0x80018001,
+             vop2("v_xor_b32", 2, LITERAL, 1), 0xFFFF8000]
+    for lanes in (32, 64):
+        for name in names:
+            for instruction in ((vopc(name, V0 + 1, 2),),
+                                (vopc(name, 0xF9, 2), 1 | 5 << 16 | 4 << 24),
+                                (vopc(name, 0xFA, 2), 0),
+                                vop3(name, 20, (V0 + 1, V0 + 2, 128)),
+                                vop3(name, 20, (V0 + 1, V0 + 2, 128), op_sel=1)):
+                assert_same(exe, lanes, False, [], program(*words(*setup, instruction)))
+
+
 def sdwa_compare_word(rng, lanes, vsrc1):
     """Mot SDWA d'une comparaison : sources lisibles (VGPR v0-v7 ou SGPR lisible), SDST hors de s127
     en wave64 (le modèle Python écrirait s128)."""
