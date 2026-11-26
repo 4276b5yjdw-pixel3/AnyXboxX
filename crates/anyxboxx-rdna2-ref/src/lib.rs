@@ -32,6 +32,7 @@ pub mod flat;
 pub mod float;
 pub mod format_access;
 pub mod format_convert;
+mod format_d16;
 pub mod format_exec;
 pub mod format_table;
 pub mod image_desc;

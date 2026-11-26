@@ -858,7 +858,6 @@ def refused_format_accesses():
         (5 | 4 << 3 | 20 << 12, 0, mubuf("buffer_store_format_x", vdata=8, srsrc=2)),         # DST_SEL Y X
         (1 << 12, 0, mtbuf("tbuffer_load_format_xyz", 23, vdata=8, srsrc=2)),                 # 3 sur 16_16
         (1 << 12, 0, mtbuf("tbuffer_load_format_x", 22, vdata=8, srsrc=2, tfe=1)),            # tfe
-        (1 << 12, 0, mtbuf("tbuffer_load_format_d16_x", 22, vdata=8, srsrc=2)),               # _d16
         (IDENTITY | 27 << 12, 0, mubuf("buffer_load_format_x", vdata=8, srsrc=2, offset=1)),  # non aligné
         (IDENTITY | 22 << 12, 0, (lds[0] | 1 << 16, lds[1])),                                 # lds
         (IDENTITY | 22 << 12, 1 << 31, lds),                                                  # SWIZZLE_ENABLE
@@ -1037,8 +1036,7 @@ D16_BIT = 1 << 31                               # mot 2 d'une instruction MIMG :
 
 
 def refused_d16_accesses():
-    """(scalaires, instruction) : les formes _d16 typées (MUBUF, MTBUF) et les images d16, refusées par
-    les deux modèles (rdna2_exec_format et rdna2_image ne les prennent pas en charge)."""
+    """Formes _d16 typées (MUBUF, MTBUF) et images d16, à comparer avec le modèle Python."""
     buffer = buffer_descriptor(2, IDENTITY | 22 << 12)
     image = [(16 + i, value) for i, value in
              enumerate(rdna2_image.encode_image(IMAGE_ADDRESS, rdna2_image.FORMAT_32_FLOAT, 4, 4)) if value]
@@ -1057,15 +1055,30 @@ def refused_d16_accesses():
     return cases
 
 
-def test_refused_d16_typed_and_image_accesses_match_the_python_model():
+def test_d16_typed_and_image_accesses_match_the_python_model():
     exe = binary()
     cases = refused_d16_accesses()
     assert len(cases) >= 28, len(cases)
     for scalars, instruction in cases:
         program_words = words(instruction)
         for lanes in (32, 64):
-            assert run_python(lanes, False, scalars, program_words) == "error untranslated\n", instruction
             assert_same(exe, lanes, False, scalars, program_words)
+
+
+def test_d16_buffer_formats_match_the_python_model():
+    exe = binary()
+    memory = [(0x2000, [0xFFEF_FFAF, 0x8009_7FF7, 0x7F80_0001, 0xFFFF_1234])]
+    for family, encode in (("MUBUF", mubuf), ("MTBUF", mtbuf)):
+        for (kind, name), _ in sorted(OPCODES.items()):
+            if kind != family or "_format_d16" not in name:
+                continue
+            for fmt in range(1, 78):
+                scalars = buffer_descriptor(2, IDENTITY | fmt << 12)
+                instruction = (encode(name, fmt, vdata=8, srsrc=2) if family == "MTBUF"
+                               else encode(name, vdata=8, srsrc=2))
+                program_words = words(vop1("v_mov_b32", 8, LITERAL), 0xCAFE_BABE,
+                                      vop1("v_mov_b32", 9, LITERAL), 0xFACE_1234, instruction)
+                assert_same(exe, 32, False, scalars, program_words, memory)
 
 
 FLOAT32_SPECIALS = (0x00000000, 0x80000000, 0x3F800000, 0xBF800000, 0x40000000, 0x3F000000, 0x7FC00001,
