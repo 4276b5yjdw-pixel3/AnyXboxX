@@ -47,13 +47,14 @@ def test_cpp_tests_pass_against_the_rust_dll(tmp_path, name):
     folder = mixed_runtime(tmp_path, name, rust_file)
     env = {**os.environ, "ANYXBOXX_RUNTIME": str(folder), "ANYXBOXX_REQUIRE_RUNTIME": "1",
            "ANYXBOXX_TEST_RUST_XGAMERUNTIME": "1"}
-    done = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+    done = subprocess.run([sys.executable, "-m", "pytest", "-q", "-rs", "-p", "no:cacheprovider",
                            f"--basetemp={tmp_path / 'nested'}", *test_files],
                           cwd=REPO, env=env, capture_output=True, text=True, timeout=600)
     summary = done.stdout.strip().splitlines()[-1] if done.stdout.strip() else done.stderr
     assert done.returncode == 0, done.stdout[-4000:]
     passed = re.search(r"(\d+) passed", summary)
-    assert passed and int(passed.group(1)) > 0 and "skipped" not in summary, summary
+    skips = [line for line in done.stdout.splitlines() if line.startswith("SKIPPED")]
+    assert passed and int(passed.group(1)) > 0 and "skipped" not in summary, (summary, skips)
 
 
 def exports(path):
