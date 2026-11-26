@@ -62,7 +62,7 @@ Le graphique est régénéré par `scarlett.py --traduction <dossier du paquet> 
 | Étape | État |
 |---|---|
 | Lanceur graphique Rust `anyxboxx-launcher` et `anyxboxx run` : vérification de la machine, compilation de VIctory, chauffe du cache des shaders, lancement du jeu | ✅ fait |
-| Le build Xbox Series 1.0.2.1 tourne avec VIctory : démarrage, cinématiques, monde ouvert (environ 16–17 fps dans le monde, mode Series X, RTX 4070 SUPER) | 🟡 en cours |
+| Le build Xbox Series 1.0.2.1 tourne avec VIctory (base combinée : avatarmanz/VIctory-7900XTX + codec-d/cool_fox + nos correctifs) : démarrage, cinématiques, monde ouvert (environ 16 fps médian dans le monde et 18–20 en cinématique sous Linux, Proton, RX 9070 XT, RADV patché ; visages, éclairage intérieur en ray tracing et ordre des images des vidéos corrigés ; pas mesuré sous Windows avec cette base) | 🟡 en cours |
 | Émulation de la mémoire unifiée : copies et relectures entre la mémoire de la console et celle du PC (principal coût du CPU) | 🟡 en cours |
 | Éclairage en ray tracing (le constructeur de structures BVH est coupé) | ⏳ à faire |
 | Interrupteur NVIDIA Smooth Motion dans le lanceur, préréglages pour les cartes de 8 et 12 Go | ✅ fait |
