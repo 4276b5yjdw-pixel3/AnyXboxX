@@ -20,8 +20,11 @@ use std::sync::{Arc, Mutex};
 
 use windows::Win32::Graphics::Direct3D12::*;
 
-use crate::host::{HostList, host};
+use crate::host::{Host, HostList, host};
 use crate::object::This;
+
+#[cfg(test)]
+mod zero_upload_tests;
 
 macro_rules! once {
     ($($arg:tt)*) => {{
@@ -877,35 +880,11 @@ pub(crate) fn card_writes(list: &HostList, resource: This, texture: &ID3D12Resou
         // SAFETY: a live resource.
         let d = unsafe { texture.GetDesc() };
         for level in (0..u32::from(d.MipLevels).min(32)).filter(|&level| fresh & (1u32 << level) != 0) {
-            let mut footprint = D3D12_PLACED_SUBRESOURCE_FOOTPRINT::default();
-            let mut bytes = 0u64;
-            // SAFETY: outputs for one subresource.
-            unsafe {
-                host.device
-                    .GetCopyableFootprints(&d, level, 1, 0, Some(&mut footprint), None, None, Some(&mut bytes));
-            }
-            let Some((buffer, data)) = list.upload(host, bytes) else {
+            if record_zero_level(list, host, texture, &d, level).is_none() {
                 // (With the levels that share its tiles, if it is one of
                 // the small ones.)
                 unzeroed |= tiled.with_level(level);
-                continue;
-            };
-            // SAFETY: a mapped buffer of `bytes` bytes, just made.
-            unsafe { std::ptr::write_bytes(data, 0, bytes as usize) };
-            let to = D3D12_TEXTURE_COPY_LOCATION {
-                // SAFETY: a borrowed pointer the location never releases.
-                pResource: unsafe { std::mem::transmute_copy(texture) },
-                Type: D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-                Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { SubresourceIndex: level },
-            };
-            let from = D3D12_TEXTURE_COPY_LOCATION {
-                // SAFETY: as above; the list holds the buffer until it is reset.
-                pResource: unsafe { std::mem::transmute_copy(&buffer) },
-                Type: D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-                Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { PlacedFootprint: footprint },
-            };
-            // SAFETY: an open list; both locations name live resources.
-            unsafe { list.list.CopyTextureRegion(&to, 0, 0, 0, &from, None) };
+            }
         }
     }
     // A new level without its zeros gets no tiles from this list: the
@@ -930,6 +909,46 @@ pub(crate) fn card_writes(list: &HostList, resource: This, texture: &ID3D12Resou
         step.ran.store(true, std::sync::atomic::Ordering::Relaxed);
         step.on_demand.card_wrote(levels, memory);
     });
+}
+
+fn record_zero_level(
+    list: &HostList,
+    host: &Host,
+    texture: &ID3D12Resource,
+    desc: &D3D12_RESOURCE_DESC,
+    level: u32,
+) -> Option<()> {
+    let mut footprint = D3D12_PLACED_SUBRESOURCE_FOOTPRINT::default();
+    let mut bytes = 0u64;
+    // SAFETY: outputs for one subresource.
+    unsafe {
+        host.device
+            .GetCopyableFootprints(desc, level, 1, 0, Some(&mut footprint), None, None, Some(&mut bytes));
+    }
+    let buffer = if let Some(buffer) = host.texture_zero_upload(bytes) {
+        list.keep(&buffer);
+        buffer
+    } else {
+        let (buffer, data) = list.upload(host, bytes)?;
+        // SAFETY: a mapped buffer of `bytes` bytes, just made.
+        unsafe { data.write_bytes(0, bytes as usize) };
+        buffer
+    };
+    let to = D3D12_TEXTURE_COPY_LOCATION {
+        // SAFETY: a borrowed pointer the location never releases.
+        pResource: unsafe { std::mem::transmute_copy(texture) },
+        Type: D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+        Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { SubresourceIndex: level },
+    };
+    let from = D3D12_TEXTURE_COPY_LOCATION {
+        // SAFETY: as above; the list holds the buffer until it is reset.
+        pResource: unsafe { std::mem::transmute_copy(&buffer) },
+        Type: D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+        Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { PlacedFootprint: footprint },
+    };
+    // SAFETY: an open list; both locations name live resources.
+    unsafe { list.list.CopyTextureRegion(&to, 0, 0, 0, &from, None) };
+    Some(())
 }
 
 impl Staging {

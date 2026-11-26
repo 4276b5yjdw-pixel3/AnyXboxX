@@ -55,6 +55,8 @@ pub(crate) struct Host {
     messages: Option<ID3D12InfoQueue>,
     next_rtv: AtomicU32,
     presenter: Mutex<Option<Presenter>>,
+    /// Immutable upload buffer for initializing newly mapped texture levels.
+    mip_clear_upload: Mutex<Option<(ID3D12Resource, u64)>>,
     /// The adapter the device is on, for its memory budget
     /// ([`Host::video_memory`]); `None` if the system does not name it.
     adapter: Option<IDXGIAdapter3>,
@@ -766,6 +768,7 @@ fn create() -> windows::core::Result<Host> {
             messages,
             next_rtv: AtomicU32::new(0),
             presenter: Mutex::new(None),
+            mip_clear_upload: Mutex::new(None),
             adapter,
         })
     }
@@ -8004,6 +8007,31 @@ impl Host {
                 None
             }
         }
+    }
+
+    /// A shared, zero-filled source for mip initialization. Callers keep a
+    /// reference in their list through submission, including when this cache grows.
+    pub(crate) fn texture_zero_upload(&self, bytes: u64) -> Option<ID3D12Resource> {
+        // Limit how much upload memory can stay idle for texture clears.
+        const MAX_CACHED: u64 = 4 << 20;
+        if bytes > MAX_CACHED {
+            return None;
+        }
+        let mut cached = self.mip_clear_upload.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((buffer, capacity)) = cached.as_ref()
+            && *capacity >= bytes
+        {
+            return Some(buffer.clone());
+        }
+        let capacity = bytes.max(64 << 10).next_power_of_two();
+        let (buffer, data) = self.upload_buffer(capacity)?;
+        // SAFETY: a freshly mapped upload buffer. After this fill it only
+        // serves as the source of copies.
+        unsafe { data.write_bytes(0, capacity as usize) };
+        let previous = cached.replace((buffer.clone(), capacity));
+        drop(cached);
+        drop(previous);
+        Some(buffer)
     }
 
     pub(crate) fn upload_buffer(&self, size: u64) -> Option<(ID3D12Resource, *mut u8)> {
