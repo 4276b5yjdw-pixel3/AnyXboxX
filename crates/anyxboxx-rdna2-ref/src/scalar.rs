@@ -205,6 +205,9 @@ pub fn execute(
     f: &Fields,
     literal: Option<u32>,
 ) -> Result<bool, Error> {
+    if name == "s_version" {
+        return Ok(true);
+    }
     if crate::movrel::scalar(wave, name, f, literal)? {
         return Ok(true);
     }

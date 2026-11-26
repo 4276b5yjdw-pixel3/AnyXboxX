@@ -472,6 +472,14 @@ def smem(name, sdata, sbase, offset=0, soffset=125, glc=0):
     return first, soffset << 25 | offset & 0x1FFFFF
 
 
+def test_scalar_hints_match_the_python_model():
+    words = program(sopk("s_version", 7, 0x2000),
+                    *smem("s_atc_probe", 7, 4, offset=0x64),
+                    *smem("s_atc_probe_buffer", 3, 8))
+    for lanes in (32, 64):
+        assert_same(binary(), lanes, True, [(3, 0x12345678), (7, 0xabcdef01)], words)
+
+
 def test_scalar_memory_programs_match_the_python_model():
     exe = binary()
     cases = [
