@@ -81,7 +81,7 @@ Profiles (`crates/anyxboxx-launcher/profiles.toml`, one test each):
 | `runtime/d3d12_xs` | `crates/anyxboxx-d3d12-xs` | `test_d3d12_virtual_memory.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
 | `runtime/tls` (`anyxboxx_tls.dll`) | `crates/anyxboxx-tls`, a `no_std` cdylib | `test_native_tls.py`, `test_native_tls_callbacks.py`, identical export table | **deleted** |
 | `runtime/xmem` | `crates/anyxboxx-xmem` (ERA attributes shared with VIctory's xmem module) | `test_xmem_era.py`, `test_xmem_virtual.py`, `test_runtime_cpp.py`, identical export table | **deleted** |
-| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (task queue = VIctory's `xasync`, which already serves the XThread methods) | 66 of the 90 GDK tests passed at the last full measure; not re-measured since | ported since then: save store and GameSave (`save_store.rs`, `save_interface.rs`), local storage, the offline XStore (`store.rs`), HDR, networking, gamer picture, DXGI frame counter. Still C++: `package_interface.cpp` |
+| `runtime/xgameruntime` | `crates/anyxboxx-xgameruntime` (task queue = VIctory?s `xasync`) | 89 requested pytest cases passed against the Rust DLL, including the restored DLL export and runtime parity checks (Windows, 2026-11-26) | XPackage identity, enumeration, locale, installation monitors, mounts and availability are ported. Chunk and UWP uninstall return logged `E_NOTIMPL`; package uninstall logs and returns `false`. The C++ DLL remains as an oracle. |
 | `runtime/launcher` | `crates/anyxboxx-native-launcher` | `tests/test_rust_native_launcher_parity.py` runs the synthetic native launcher suite against both implementations | kept as `anyxboxx_cpp.exe` for parity; TomBox-dependent cases require its DLLs |
 | Graphical launcher | `crates/anyxboxx-launcher` (new) | 80 Rust tests | |
 
@@ -91,7 +91,7 @@ TLS carrier finding: as a `no_std` cdylib, its TLS block holds exactly the carri
 
 **Still C++:**
 
-- `runtime/xgameruntime`: `package_interface.cpp` (package and store-package calls). The C++ DLL is still built and tested.
+- `runtime/xgameruntime`: retained as the C++ parity oracle. XPackage is ported with the explicit uninstall refusals above; the C++ DLL is still built.
 - `runtime/launcher`: retained as the `anyxboxx_cpp.exe` parity oracle.
 - `runtime/gpu_runner`: phase 4.
 - `runtime/third_party/libhttpclient-task`: goes with xgameruntime.
@@ -111,12 +111,14 @@ python -m ruff check --select W605,F,E9 PrototypeScarlett tests tools → All ch
 cargo test --release --workspace       → 198 passed, 0 failed
 cargo clippy --release --workspace --all-targets → 0 warnings
 cargo fmt --check                      → clean
-cargo test -p anyxboxx-xgameruntime   → 64 passed (save store, local storage, store, handles included)
+cargo test --release -p anyxboxx-xgameruntime ? 65 passed (including XAsync cleanup/status race regression)
 cargo test -p anyxboxx-rdna2-ref      → 122 passed (decoder, wave, memory, integer and float atomics, scalar, vector, SDWA/DPP, VOPC SDWA, compares, VOP3, SAD, division, f64, movrel, dot products, LDS, vector memory, typed formats, images, exports, interpolation, program counter, cache controls, step loop)
 python -m pytest tests/test_rdna2_ref_parity.py → 28 passed of 28 (fixed programs, EXP (120 seeded programs), VINTRP (150 seeded programs), the program counter instructions, the MUBUF cache controls, 300 seeded random programs, division and f64 dedicated tests, scalar memory, LDS, FLAT/GLOBAL/SCRATCH, MUBUF, typed formats and images, float atomics, VOPC SDWA and DPP (200 seeded programs), and the refusals shared by both models: typed and image `_d16`, VOP3P beyond the dot products, VOP3 16-bit op_sel; Python model vs Rust binary). `test_wide_operations_match_the_python_model` passes since `ea9fee97` (canonical NaN for f64 sqrt and rsq of negative inputs).
 ```
 
-The counts above for `xgameruntime` and `rdna2-ref` are from the crate runs in the development worktree; the 1251 and 198 figures were measured before those crates grew, and are not re-run here.
+On 2026-11-26, `cargo build --release --workspace`, `cargo test --release --workspace`, crate Clippy with `-D warnings`, `cargo fmt --check`, and the documented Ruff check passed. CMake built `runtime/build-ninja` with Ninja. The 89-case pytest run used the Rust xgameruntime in a mixed runtime; `tests/test_rust_dlls.py` also compared its exports against the C++ DLL. No game was run.
+
+The `rdna2-ref`, 1251 pytest and 198 workspace figures above are from the earlier measure; the workspace and xgameruntime checks were rerun as noted.
 
 The runtime was built from this branch (cargo, then CMake). With `ANYXBOXX_REQUIRE_RUNTIME=1`, the TomBox DLL tests also need `python tools/build_tombox.py`.
 
