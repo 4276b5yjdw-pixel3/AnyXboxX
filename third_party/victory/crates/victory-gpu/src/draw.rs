@@ -220,6 +220,43 @@ fn raw_all() -> bool {
     *ON.get_or_init(|| std::env::var_os("VICTORY_INDIRECT_RAW").is_some_and(|v| v == "2"))
 }
 
+/// (Neptune) `VICTORY_INDIRECT_RAW=3`: as 2, but a record that can be clamped in its list's
+/// prelude is clamped there and not drawn raw.
+///
+/// With 2 (the launcher's set) the card took garbage records as they stood: in about half the
+/// runs of the world on `main` the card hung as the title entered the world (device removed,
+/// "the GPU will not respond to more commands", always with 35 submissions of 275 lists in the
+/// air), stopped in a run of indirect commands between two barriers. With every record clamped
+/// (no `VICTORY_INDIRECT_RAW`) no run of four hung, at about 10 fps against 16-18: of some 6,500
+/// records a frame, 2,200 were clamped ahead in the lists' preludes, one pass for many records,
+/// and 4,300 in place, each a dispatch of ours between two waits for every earlier shader write.
+/// This clamps the first kind and draws the second raw.
+fn raw_but_ahead() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("VICTORY_INDIRECT_RAW").is_some_and(|v| v == "3"))
+}
+
+/// How an indirect record is drawn: from the title's own record (`Raw`), clamped in its list's
+/// prelude (`Ahead`), or clamped in place before it (`InPlace`). `raw`: `VICTORY_INDIRECT_RAW=2`;
+/// `raw_ahead`: `=3`; `rawable`: the kind and shape the raw path takes (not a dispatch split
+/// for its first group's number); `aheadable`: the shape the prelude clamp takes, and nothing
+/// the list recorded before may write the record.
+#[derive(Debug, PartialEq, Eq)]
+enum Route {
+    Raw,
+    Ahead,
+    InPlace,
+}
+
+fn route(raw: bool, raw_ahead: bool, rawable: bool, aheadable: bool) -> Route {
+    match (raw || raw_ahead, rawable, aheadable) {
+        (true, _, true) if raw_ahead => Route::Ahead,
+        (true, true, _) => Route::Raw,
+        (_, _, true) => Route::Ahead,
+        _ => Route::InPlace,
+    }
+}
+
 fn raw_indirect() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| std::env::var_os("VICTORY_INDIRECT_RAW").is_some_and(|v| v == "1"))
@@ -3314,7 +3351,20 @@ impl State {
         // (`VICTORY_INDIRECT_RAW=2`: also dispatches and records with a count, as the title
         // gave them; not a dispatch that is split into parts for its first group's number.)
         let split = kind == DISPATCH && max == 1 && count.is_none() && group_base(p).is_some();
-        if raw_all() && matches!(kind, DRAW | INDEXED | MESH | DISPATCH) && !split {
+        let rawable = matches!(kind, DRAW | INDEXED | MESH | DISPATCH) && !split;
+        // (Neptune) A single record without a count buffer, which nothing the list has recorded
+        // so far lets its shaders write, can be clamped in the list's prelude (below). Not asked
+        // where the record is drawn raw whatever the answer (`VICTORY_INDIRECT_RAW=2`).
+        let aheadable = !(raw_all() && rawable)
+            && clamp_ahead()
+            && !windows()
+            && kind != DISPATCH
+            && max == 1
+            && count.is_none()
+            && crate::indirect::ahead_layout(kind, stride, args.offset(arguments))
+            && !list.gpu_written(arguments as usize, len as usize);
+        let way = route(raw_all(), raw_but_ahead(), rawable, aheadable);
+        if way == Route::Raw {
             self.window = None;
             args.refresh(list, arguments, len);
             if let Some((s, at)) = &counter {
@@ -3357,17 +3407,9 @@ impl State {
             }
             return true;
         }
-        // (Neptune) A single record without a count buffer, which nothing
-        // the list has recorded so far lets its shaders write: clamped in
-        // the list's prelude, and drawn from its slot there.
-        if clamp_ahead()
-            && !windows()
-            && kind != DISPATCH
-            && max == 1
-            && count.is_none()
-            && crate::indirect::ahead_layout(kind, stride, args.offset(arguments))
-            && !list.gpu_written(arguments as usize, len as usize)
-        {
+        // (Neptune) Clamped in the list's prelude, and drawn from its slot there (in place below
+        // if the prelude has no room).
+        if way == Route::Ahead {
             args.refresh(list, arguments, len);
             if let Some((slots, at)) = list.clamp_ahead(&args.buffer, args.offset(arguments), kind, stride) {
                 self.window = None;
@@ -3916,5 +3958,31 @@ pub(crate) fn depth_bounds(list: &HostList, min: f32, max: f32) {
     {
         // SAFETY: an open list on a device that supports depth bounds.
         unsafe { l1.OMSetDepthBounds(min, max) };
+    }
+}
+
+#[cfg(test)]
+mod route_tests {
+    use super::{Route, route};
+
+    /// `VICTORY_INDIRECT_RAW=3`: a record the prelude can clamp is clamped there; only the
+    /// others are drawn raw, and a record of neither shape is clamped in place.
+    #[test]
+    fn with_3_records_clamped_ahead_are_not_drawn_raw() {
+        assert_eq!(route(false, true, true, true), Route::Ahead);
+        assert_eq!(route(false, true, true, false), Route::Raw);
+        assert_eq!(route(false, true, false, false), Route::InPlace);
+        assert_eq!(route(false, true, false, true), Route::Ahead);
+    }
+
+    /// `VICTORY_INDIRECT_RAW=2` and no switch: as before.
+    #[test]
+    fn with_2_and_without_the_switch_records_go_as_before() {
+        assert_eq!(route(true, false, true, true), Route::Raw);
+        assert_eq!(route(true, false, true, false), Route::Raw);
+        assert_eq!(route(true, false, false, true), Route::Ahead);
+        assert_eq!(route(true, false, false, false), Route::InPlace);
+        assert_eq!(route(false, false, true, true), Route::Ahead);
+        assert_eq!(route(false, false, true, false), Route::InPlace);
     }
 }
