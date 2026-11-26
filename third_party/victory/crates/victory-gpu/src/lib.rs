@@ -61,11 +61,14 @@ pub mod shader_cache;
 #[cfg(windows)]
 mod memory;
 #[cfg(windows)]
+mod merge;
+#[cfg(windows)]
 mod ramline;
 #[cfg(windows)]
 mod shadow;
 #[cfg(windows)]
 mod windowup;
+mod resultring;
 #[cfg(windows)]
 mod tiles;
 pub mod signature;
