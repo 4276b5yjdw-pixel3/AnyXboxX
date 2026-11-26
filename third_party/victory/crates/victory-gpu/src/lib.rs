@@ -23,6 +23,9 @@ mod copystat;
 pub mod descriptor;
 pub mod device;
 #[cfg(windows)]
+mod alloc_backoff;
+mod commit_gate;
+#[cfg(windows)]
 mod ambient;
 #[cfg(windows)]
 mod draw;
@@ -61,11 +64,14 @@ pub mod shader_cache;
 #[cfg(windows)]
 mod memory;
 #[cfg(windows)]
+mod merge;
+#[cfg(windows)]
 mod ramline;
 #[cfg(windows)]
 mod shadow;
 #[cfg(windows)]
 mod windowup;
+mod resultring;
 #[cfg(windows)]
 mod tiles;
 pub mod signature;
