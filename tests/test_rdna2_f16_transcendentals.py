@@ -12,7 +12,7 @@ import pytest
 
 import test_rdna2_hlsl_wave64 as wave64
 from emu import rdna2_exec, rdna2_gpu, rdna2_hlsl, rdna2_hlsl_graphics
-from test_rdna2_exec import EXEC_LO, LITERAL, ONE, TWO, V, program, sop1, vop1, vop3
+from test_rdna2_exec import EXEC_LO, LITERAL, ONE, TWO, V, const, program, sop1, sop2, sopc, sopp, vop1, vop2, vop3
 from test_rdna2_exec_memory import INPUT, global_
 from test_rdna2_graphics import PIXEL_SHADER, VERTEX_SHADER, WIDTH
 from test_rdna2_hlsl import compare, store_lane, with_lane_offset
@@ -76,6 +76,7 @@ ISA_CASES = {
         (0x0000, 0x3C00),  # exp2(+0.0) = 1.0
         (0x3C00, 0x4000),  # exp2(1.0) = 2.0
         (0xBC00, 0x3800),  # exp2(-1.0) = 0.5
+        (0x11C5, 0x3C01),  # exp2(1477 * 2^-21) > 1 + 2^-11 (double-rounding boundary)
         (0xCE00, 0x0001),  # exp2(-24.0) = 2^-24 (smallest subnormal)
         (0xCE40, 0x0000),  # exp2(-25.0) underflows -> +0.0
         (0x4B80, 0x7800),  # exp2(15.0) = 32768.0
@@ -116,11 +117,11 @@ ISA_CASES = {
     ],
 }
 
-# 32 lanes covering special values, subnormals, exact quarter-turns and general finite values (no 0.5 ULP ties).
+# 32 lanes covering special values, subnormals, exact quarter-turns, general finite values and the 0x11C5 boundary.
 GPU_INPUTS = [
     0x0000, 0x8000, 0x3C00, 0xBC00, 0x4000, 0xC000, 0x4400, 0xC400,
     0x3800, 0xB800, 0x3400, 0xB400, 0x3A00, 0xBA00, 0x3000, 0xB000,
-    0x3E00, 0xBE00, 0x4200, 0x4800, 0xCE00, 0xCE40, 0x4B80, 0x4C00,
+    0x3E00, 0xBE00, 0x11C5, 0x4800, 0xCE00, 0xCE40, 0x4B80, 0x4C00,
     0x0001, 0x8001, 0x03FF, 0x7BFF, 0xFBFF, 0x7C00, 0xFC00, 0x7E01,
 ]
 
@@ -236,3 +237,48 @@ def test_f16_transcendentals_match_interpreter_in_wave64_on_gpu():
     ]
     expected, actual = wave64.compare(wave64.with_lane_offset(*words), memory=_gpu_memory(64))
     assert actual == expected
+
+
+def _exhaustive_program(name):
+    """Wave32 loop sweeping all 65,536 binary16 bit patterns (0x0000..0xFFFF) into u0[h * 4]."""
+    loop_body = [
+        vop2("v_add_nc_u32", 1, 4, 0),
+        vop2("v_lshlrev_b32", 31, const(2), 1),
+        vop1("v_mov_b32", 2, const(0)),
+        vop1(name, 2, V + 1),
+        *global_("global_store_dword", addr=31, data=2, saddr=2),
+        sop2("s_add_u32", 4, 4, const(32)),
+        sopc("s_cmp_lt_u32", 4, 5),
+    ]
+    return program(
+        sop1("s_mov_b32", 4, const(0)),
+        sop1("s_mov_b32", 5, LITERAL), 0x10000,
+        *loop_body,
+        sopp("s_cbranch_scc1", -(len(loop_body) + 1)),
+    )
+
+
+@pytest.mark.parametrize("name", NAMES)
+def test_exhaustive_program_translates_cleanly(name):
+    hlsl = rdna2_hlsl.translate(_exhaustive_program(name), {2: 0})
+    assert "while" in hlsl and "switch (pc)" not in hlsl
+
+
+@gpu
+@pytest.mark.parametrize("name", NAMES)
+def test_f16_transcendentals_exhaustive_parity_on_gpu(name):
+    """Exhaustive interpreter vs HLSL (GPU/WARP) parity over all 65,536 binary16 inputs."""
+    data = _exhaustive_program(name)
+    size = 65536 * 4
+    wave = rdna2_exec.Wave()
+    wave.memory.write(0, bytes(size))
+    wave.s[2] = 0
+    rdna2_exec.run(data, wave)
+    expected = struct.unpack("<65536I", wave.memory.read(0, size))
+    actual = struct.unpack("<65536I", rdna2_gpu.run(rdna2_hlsl.translate(data, {2: 0}), bytes(size)))
+    mismatches = [
+        (hex(h), hex(expected[h]), hex(actual[h]))
+        for h in range(65536)
+        if actual[h] != expected[h]
+    ]
+    assert not mismatches, f"{name}: {len(mismatches)} mismatches (first 10: {mismatches[:10]})"
