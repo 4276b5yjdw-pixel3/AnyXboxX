@@ -1658,30 +1658,43 @@ impl<T> Spare<T> {
         Some(self.kept.remove(at).0)
     }
 
-    /// Keeps `thing` (`size` bytes) unless that takes the kept bytes past
-    /// `most`: then it comes back.
-    fn give(&mut self, thing: T, size: u64, most: u64) -> Option<T> {
-        if self.bytes + size > most {
-            return Some(thing);
+    /// Keeps a returned chunk by releasing the oldest idle chunks as needed.
+    /// An oversized chunk is released on its own.
+    fn give(&mut self, thing: T, size: u64, most: u64, released: &mut Vec<(T, u64)>) {
+        if size > most {
+            released.push((thing, size));
+            return;
+        }
+        let room = most - size;
+        if self.bytes > room {
+            let mut count = 0;
+            while self.bytes > room {
+                self.bytes -= self.kept[count].1;
+                count += 1;
+            }
+            released.extend(self.kept.drain(..count));
         }
         self.bytes += size;
         self.kept.push((thing, size));
-        None
     }
 }
 
 /// Scratch chunks no list holds.
 static SPARE: Mutex<Spare<Chunk>> = Mutex::new(Spare::new());
 
+#[cfg(test)]
+mod scratch_tests;
+
 /// A scratch chunk of `size` bytes: one kept ([`SPARE`]) or a new one.
 fn take_chunk(host: &Host, size: u64) -> Option<Chunk> {
-    if scratch_pool()
-        && let Some(chunk) = SPARE.lock().unwrap_or_else(|e| e.into_inner()).take(size)
-    {
-        ALIVE[3].fetch_sub(1, Ordering::Relaxed);
-        ALIVE[4].fetch_sub(size, Ordering::Relaxed);
-        ALIVE[5].fetch_add(1, Ordering::Relaxed);
-        return Some(chunk);
+    if scratch_pool() {
+        let mut spare = SPARE.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(chunk) = spare.take(size) {
+            ALIVE[3].store(spare.kept.len() as u64, Ordering::Relaxed);
+            ALIVE[4].store(spare.bytes, Ordering::Relaxed);
+            ALIVE[5].fetch_add(1, Ordering::Relaxed);
+            return Some(chunk);
+        }
     }
     let (buffer, data) = host.upload_buffer(size)?;
     name(&buffer, || "list scratch".into());
@@ -1696,37 +1709,28 @@ fn take_chunk(host: &Host, size: u64) -> Option<Chunk> {
     })
 }
 
-/// A list is done with `chunks` (it was reset after its submissions ran,
-/// or dropped): kept for the next list, or freed past [`SPARE_MOST`] and
-/// without the pool.
+/// A reset or dropped list returns its scratch chunks. Keep the most recently
+/// returned chunks up to [`SPARE_MOST`] while pooling is enabled.
 fn give_chunks(chunks: Vec<(Chunk, u64)>) {
     if chunks.is_empty() {
         return;
     }
     let mut freed = Vec::new();
-    {
+    if scratch_pool() {
         let mut spare = SPARE.lock().unwrap_or_else(|e| e.into_inner());
         for (chunk, size) in chunks {
-            let back = if scratch_pool() {
-                spare.give(chunk, size, SPARE_MOST)
-            } else {
-                Some(chunk)
-            };
-            match back {
-                None => {
-                    ALIVE[3].fetch_add(1, Ordering::Relaxed);
-                    ALIVE[4].fetch_add(size, Ordering::Relaxed);
-                }
-                Some(chunk) => {
-                    ALIVE[1].fetch_sub(1, Ordering::Relaxed);
-                    ALIVE[2].fetch_sub(size, Ordering::Relaxed);
-                    freed.push(chunk);
-                }
-            }
+            spare.give(chunk, size, SPARE_MOST, &mut freed);
         }
+        ALIVE[3].store(spare.kept.len() as u64, Ordering::Relaxed);
+        ALIVE[4].store(spare.bytes, Ordering::Relaxed);
+    } else {
+        freed = chunks;
     }
-    // Freed outside the lock.
-    drop(freed);
+    // Release the resources outside the pool lock.
+    for (_chunk, size) in freed {
+        ALIVE[1].fetch_sub(1, Ordering::Relaxed);
+        ALIVE[2].fetch_sub(size, Ordering::Relaxed);
+    }
 }
 
 /// What the host keeps for copies in the card's own memory
@@ -9349,19 +9353,26 @@ mod spare {
     #[test]
     fn kept_things_come_back_by_size_within_the_limit() {
         let mut spare: Spare<u32> = Spare::new();
+        let mut released = Vec::new();
         assert_eq!(spare.take(4), None);
-        assert_eq!(spare.give(1, 4, 10), None);
-        assert_eq!(spare.give(2, 1, 10), None);
-        assert_eq!(spare.give(3, 4, 10), None);
+        spare.give(1, 4, 10, &mut released);
+        spare.give(2, 1, 10, &mut released);
+        spare.give(3, 4, 10, &mut released);
+        assert!(released.is_empty());
         assert_eq!(spare.bytes, 9);
-        // Past the limit: handed back, nothing changes.
-        assert_eq!(spare.give(4, 4, 10), Some(4));
-        assert_eq!(spare.bytes, 9);
-        assert_eq!(spare.take(2), None, "no thing of that size");
+        // A six-byte chunk needs space from both of the oldest entries.
+        spare.give(4, 6, 10, &mut released);
+        assert_eq!(released, [(1, 4), (2, 1)]);
+        assert_eq!(spare.bytes, 10);
+        spare.give(5, 11, 10, &mut released);
+        assert_eq!(released, [(1, 4), (2, 1), (5, 11)]);
+        assert_eq!(spare.bytes, 10);
+        assert_eq!(spare.take(1), None);
+        assert_eq!(spare.take(6), Some(4));
+        spare.give(6, 4, 10, &mut released);
+        assert_eq!(spare.take(4), Some(6));
         assert_eq!(spare.take(4), Some(3));
-        assert_eq!(spare.take(4), Some(1));
         assert_eq!(spare.take(4), None);
-        assert_eq!(spare.take(1), Some(2));
         assert_eq!(spare.bytes, 0);
         assert!(spare.kept.is_empty());
     }
