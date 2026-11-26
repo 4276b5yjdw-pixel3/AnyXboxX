@@ -329,6 +329,10 @@ Since PR #358 (2026-11-26), `VICTORY_WINDOW_SKIP_SAME=1` (transient windows leav
 
 Since PR #386, `VICTORY_STEP_INDEX=1` (a submission's steps find their copy by an index instead of a search), `VICTORY_CARD_SYNC_BATCH=1` (card copies recorded in three steps) and `VICTORY_PARALLEL_REFRESH=1` (texture checks on the helper pool), ported from fxceless/victory-gta6 in PR #383, are launcher defaults too. Measured by the maintainer on 2026-11-26 in one run with the three set to `alt` (on and off every 20 s, so both halves see the same scenes; RTX 4070 SUPER, Series X): 14.8 fps median with them against 12.7 without, +17 %.
 
+`VICTORY_HEAP_SCAN_ALT=1` is a launcher default too: the heap pass scans every kept descriptor slot once every 16 passes instead of every pass. Read from the VIctory logs of 2026-11-26, that full scan was the largest single cause of frames over 100 ms (see [research/stutter-2026-11-26.md](research/stutter-2026-11-26.md)). Measured by the maintainer in one run with it set to `alt` (RTX 4070 SUPER, Series X): 15.2 fps median against 14.2, and 1 frame window over 100 ms against 4.
+
+Do not turn on `VICTORY_CLAMP_AFTER_WRITER` (#377): with it, character faces draw black, only eyes and hair showing (seen by the maintainer on 2026-11-26 in a run with that switch alone, Series X). `VICTORY_WAVE32_NVIDIA` alone was not involved.
+
 `VICTORY_RELAY_WIDE_MERGE=1` (the relay's landed pieces merged on the kept threads) is in VIctory, off by default, and has not been measured.
 
 `-Quality` applies the picture-first set on top of the defaults: `VICTORY_CARD_WINDOWS_MB=0` (windows are read fresh each frame instead of kept as card copies), `VICTORY_CARD_BUFFERS_MB=1024`, `VICTORY_LIST_POOL_MOST=256`, `VICTORY_LIST_POOL_MB=256` and `VICTORY_TEXTURE_STAGE_MB=192`. It costs about half the frame rate: measured about 7 to 9 fps against 14 to 17, with 51 to 93 texture refusals against 296 (log auto-ram-2326, measured by the maintainer; the picture is judged better, with lighting, shadows and textures, observed). `-Override` still wins over it.
